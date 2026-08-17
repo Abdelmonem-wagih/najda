@@ -4,12 +4,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import '../../../../core/constants/app_constants.dart';
-import '../../../../core/theme/app_theme.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/theme/design.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/shared/widgets/app_widgets.dart';
 import '../../auth/presentation/cubit/auth_cubit.dart';
 
 class ReportDetailsPage extends StatefulWidget {
@@ -38,9 +40,8 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> {
   final _medAnswers = <String, String>{};
   final _notesCtrl = TextEditingController();
 
-  // Medical questions
   static const _questions = [
-    ('consciousness_level', 'مستوى الوعي', ['واعٍ تماماً', 'يستجيب للصوت', 'يستجيب للألم فقط', 'فاقد الوعي']),
+    ('consciousness_level', 'مستوى الوعي', ['واعٍ تماماً', 'يستجيب للصوت', 'يستجيب للألم', 'فاقد الوعي']),
     ('breathing', 'التنفس', ['طبيعي', 'سريع', 'بطيء', 'مكتوم', 'متوقف']),
     ('pulse', 'النبض', ['طبيعي', 'سريع', 'بطيء', 'غير منتظم', 'لا يوجد']),
     ('bleeding', 'النزيف', ['لا يوجد', 'خفيف', 'متوسط', 'شديد']),
@@ -68,10 +69,7 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> {
         ? AppConstants.emergencyReportsCollection
         : AppConstants.reportsCollection;
 
-    final doc = await FirebaseFirestore.instance
-        .collection(collection)
-        .doc(widget.reportId)
-        .get();
+    final doc = await FirebaseFirestore.instance.collection(collection).doc(widget.reportId).get();
 
     if (mounted && doc.exists) {
       setState(() {
@@ -86,13 +84,10 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> {
 
   void _startLocation() async {
     final perm = await Geolocator.checkPermission();
-    if (perm == LocationPermission.denied) {
-      await Geolocator.requestPermission();
-    }
+    if (perm == LocationPermission.denied) await Geolocator.requestPermission();
     _myPos = await Geolocator.getCurrentPosition();
     _posStream = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high, distanceFilter: 15),
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 15),
     ).listen((p) {
       if (mounted) setState(() => _myPos = p);
     });
@@ -104,47 +99,35 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> {
         ? AppConstants.emergencyReportsCollection
         : AppConstants.reportsCollection;
 
-    await FirebaseFirestore.instance
-        .collection(collection)
-        .doc(widget.reportId)
-        .update({'status': newStatus, 'updatedAt': FieldValue.serverTimestamp()});
+    await FirebaseFirestore.instance.collection(collection).doc(widget.reportId).update({
+      'status': newStatus,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
 
-    // Also update paramedic status
-    final uid =
-        (context.read<AuthCubit>().state as AuthAuthenticated).user.id;
-    await FirebaseFirestore.instance
-        .collection(AppConstants.paramedicCollection)
-        .doc(uid)
-        .update({'status': newStatus, 'updatedAt': FieldValue.serverTimestamp()});
+    final uid = (context.read<AuthCubit>().state as AuthAuthenticated).user.id;
+    await FirebaseFirestore.instance.collection(AppConstants.paramedicCollection).doc(uid).update({
+      'status': newStatus,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
 
     if (mounted) {
       setState(() {
         _report!['status'] = newStatus;
         _submitting = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('تم تحديث الحالة',
-            style: TextStyle(fontFamily: 'Cairo')),
-        backgroundColor: NC.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث الحالة بنجاح')));
     }
   }
 
   Future<void> _submitMedicalReport() async {
     setState(() => _submitting = true);
-    final user =
-        (context.read<AuthCubit>().state as AuthAuthenticated).user;
+    final user = (context.read<AuthCubit>().state as AuthAuthenticated).user;
 
-    await FirebaseFirestore.instance
-        .collection(AppConstants.medicalReportsCollection)
-        .add({
+    await FirebaseFirestore.instance.collection(AppConstants.medicalReportsCollection).add({
       'reportId': widget.reportId,
       'reportType': widget.reportType,
       'paramedicId': user.id,
-      'paramedicName': user.paramedicFullName,
-      'ambulanceId': user.ambulanceId ?? '',
+      'paramedicName': user.fullName,
       'medicalAnswers': _medAnswers,
       'additionalNotes': _notesCtrl.text.trim(),
       'submittedAt': FieldValue.serverTimestamp(),
@@ -158,31 +141,18 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> {
     final lat = (_report?['latitude'] as num?)?.toDouble();
     final lng = (_report?['longitude'] as num?)?.toDouble();
     if (lat == null || lng == null) return;
-
     final url = Uri.parse('google.navigation:q=$lat,$lng&mode=d');
-    final fallback = Uri.parse(
-        'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving');
     if (await canLaunchUrl(url)) {
       await launchUrl(url);
     } else {
-      await launchUrl(fallback, mode: LaunchMode.externalApplication);
+      await launchUrl(Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng'));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(body: NajdaLoader(message: 'جارٍ التحميل...'));
-    }
-    if (_report == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('تفاصيل البلاغ')),
-        body: const NajdaEmptyState(
-          icon: Icons.error_outline,
-          title: 'لم يتم العثور على البلاغ',
-        ),
-      );
-    }
+    if (_loading) return const Scaffold(body: AppLoader(message: 'تحميل التفاصيل...'));
+    if (_report == null) return const Scaffold(body: AppEmptyState(icon: Icons.error, title: 'البلاغ غير موجود'));
 
     final status = _report!['status'] as String? ?? 'assigned';
     final lat = (_report?['latitude'] as num?)?.toDouble();
@@ -192,19 +162,20 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> {
     final address = _report!['address'] as String? ?? '';
 
     return Scaffold(
-      backgroundColor: NajdaColors.surface,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
+        backgroundColor: AppColors.navy,
         title: const Text('تفاصيل البلاغ'),
         actions: [
           if (phone.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.phone_outlined),
+              icon: const Icon(Icons.phone),
               onPressed: () => launchUrl(Uri.parse('tel:$phone')),
             ),
         ],
       ),
       body: _showMedicalForm
-          ? _MedicalFormView(
+          ? _MedicalForm(
               questions: _questions,
               answers: _medAnswers,
               notesCtrl: _notesCtrl,
@@ -215,141 +186,52 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> {
           : SingleChildScrollView(
               child: Column(
                 children: [
-                  // Map
                   if (lat != null && lng != null)
                     SizedBox(
-                      height: 220,
+                      height: 250,
                       child: GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: LatLng(lat, lng),
-                          zoom: 15,
-                        ),
+                        initialCameraPosition: CameraPosition(target: LatLng(lat, lng), zoom: 15),
                         markers: {
-                          Marker(
-                            markerId: const MarkerId('patient'),
-                            position: LatLng(lat, lng),
-                            infoWindow: InfoWindow(title: patientName),
-                            icon: BitmapDescriptor.defaultMarkerWithHue(
-                                BitmapDescriptor.hueRed),
-                          ),
+                          Marker(markerId: const MarkerId('patient'), position: LatLng(lat, lng)),
                           if (_myPos != null)
                             Marker(
                               markerId: const MarkerId('me'),
-                              position: LatLng(
-                                  _myPos!.latitude, _myPos!.longitude),
-                              icon: BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueBlue),
-                              infoWindow: const InfoWindow(title: 'موقعي'),
+                              position: LatLng(_myPos!.latitude, _myPos!.longitude),
+                              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
                             ),
                         },
                         onMapCreated: (c) => _mapCtrl = c,
                       ),
                     ),
-
                   Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(AppSpacing.lg),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Status
-                        Row(
-                          children: [
-                            Text('الحالة الحالية:',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleSmall),
-                            const SizedBox(width: 10),
-                            NajdaStatusBadge(status),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Patient info
-                        NajdaCard(
+                        AppCard(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(children: [
-                                const Icon(Icons.person_outlined,
-                                    color: NC.primary, size: 18),
-                                const SizedBox(width: 8),
-                                Text('بيانات المريض',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium),
-                              ]),
-                              const Divider(height: 20),
-                              _row(context, 'الاسم', patientName),
-                              if (phone.isNotEmpty)
-                                _row(context, 'الهاتف', phone),
-                              if (address.isNotEmpty)
-                                _row(context, 'الموقع', address),
-                              if (_report!['consciousnessLevel'] != null &&
-                                  (_report!['consciousnessLevel'] as String)
-                                      .isNotEmpty)
-                                _row(context, 'مستوى الوعي',
-                                    _report!['consciousnessLevel']),
-                              if (_report!['type'] != null)
-                                _row(context, 'النوع', _report!['type']),
+                              Row(
+                                children: [
+                                  Text('الحالة:', style: AppTextStyles.titleMedium),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  AppStatusBadge(status: status),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              const Divider(),
+                              const SizedBox(height: AppSpacing.md),
+                              _buildInfoRow('الاسم', patientName),
+                              if (phone.isNotEmpty) _buildInfoRow('الهاتف', phone),
+                              if (address.isNotEmpty) _buildInfoRow('الموقع', address),
+                              if (_report!['type'] != null) _buildInfoRow('نوع الحادث', _report!['type']),
                             ],
                           ),
                         ),
-
-                        // Medical info
-                        if (_hasMedInfo()) ...[
-                          const SizedBox(height: 12),
-                          NajdaCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(children: [
-                                  const Icon(
-                                      Icons.medical_information_outlined,
-                                      color: NC.primary,
-                                      size: 18),
-                                  const SizedBox(width: 8),
-                                  Text('البيانات الطبية',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium),
-                                ]),
-                                const Divider(height: 20),
-                                if ((_report!['chronicDiseases'] as List?)
-                                        ?.isNotEmpty ==
-                                    true)
-                                  _row(
-                                      context,
-                                      'أمراض مزمنة',
-                                      (_report!['chronicDiseases']
-                                              as List)
-                                          .join('، ')),
-                                if ((_report!['allergies'] as List?)
-                                        ?.isNotEmpty ==
-                                    true)
-                                  _row(
-                                      context,
-                                      'حساسية',
-                                      (_report!['allergies'] as List)
-                                          .join('، ')),
-                              ],
-                            ),
-                          ),
-                        ],
-
-                        const SizedBox(height: 20),
-
-                        // Action buttons
-                        _ActionButtons(
-                          status: status,
-                          submitting: _submitting,
-                          onNavigate: _openNavigation,
-                          onArrived: () =>
-                              _updateStatus(AppConstants.paramedicArrived),
-                          onMedicalForm: () =>
-                              setState(() => _showMedicalForm = true),
-                          onComplete: () =>
-                              _updateStatus(AppConstants.paramedicAvailable),
-                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        _buildActionButtons(status),
+                        const SizedBox(height: AppSpacing.xl),
                       ],
                     ),
                   ),
@@ -359,129 +241,54 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> {
     );
   }
 
-  bool _hasMedInfo() {
-    final c = _report!['chronicDiseases'];
-    final a = _report!['allergies'];
-    return (c is List && c.isNotEmpty) || (a is List && a.isNotEmpty);
-  }
-
-  Widget _row(BuildContext context, String label, String val) {
+  Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(label,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: NajdaColors.textSecondary)),
-          ),
-          Expanded(
-            child: Text(val,
-                style: Theme.of(context).textTheme.bodyMedium),
-          ),
+          SizedBox(width: 100, child: Text(label, style: AppTextStyles.bodySmall)),
+          Expanded(child: Text(value, style: AppTextStyles.bodyMedium)),
         ],
       ),
     );
   }
-}
 
-// ─── Action buttons ───────────────────────────────────────────────────────────
-class _ActionButtons extends StatelessWidget {
-  final String status;
-  final bool submitting;
-  final VoidCallback onNavigate;
-  final VoidCallback onArrived;
-  final VoidCallback onMedicalForm;
-  final VoidCallback onComplete;
-
-  const _ActionButtons({
-    required this.status,
-    required this.submitting,
-    required this.onNavigate,
-    required this.onArrived,
-    required this.onMedicalForm,
-    required this.onComplete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isOnMission = status == AppConstants.paramedicOnMission ||
-        status == AppConstants.statusAssigned ||
-        status == AppConstants.statusInProgress;
-    final isArrived = status == AppConstants.paramedicArrived ||
-        status == AppConstants.statusArrived;
+  Widget _buildActionButtons(String status) {
+    final isOnMission = status == AppConstants.statusAssigned || status == AppConstants.statusInProgress;
+    final isArrived = status == AppConstants.paramedicArrived || status == AppConstants.statusArrived;
     final isToHospital = status == AppConstants.paramedicOnWayToHospital;
 
     return Column(
       children: [
-        // Navigate button — always visible
-        ElevatedButton.icon(
-          onPressed: onNavigate,
-          icon: const Icon(Icons.navigation_outlined, size: 18),
-          label: const Text('فتح الملاحة',
-              style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: NC.success,
-            minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        const SizedBox(height: 10),
-
+        AppButton(label: 'الملاحة إلى الموقع', onPressed: _openNavigation, icon: Icons.navigation_rounded),
+        const SizedBox(height: AppSpacing.md),
         if (isOnMission)
-          ElevatedButton.icon(
-            onPressed: submitting ? null : onArrived,
-            icon: const Icon(Icons.check_circle_outline, size: 18),
-            label: Text(
-                submitting ? 'جارٍ التحديث...' : 'تحديد الوصول للمريض',
-                style: const TextStyle(fontFamily: 'Cairo')),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: NC.primary,
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
+          AppButton(
+            label: 'تأكيد الوصول للموقع',
+            onPressed: () => _updateStatus(AppConstants.paramedicArrived),
+            isLoading: _submitting,
+            icon: Icons.check_circle_rounded,
           ),
-
         if (isArrived)
-          ElevatedButton.icon(
-            onPressed: onMedicalForm,
-            icon: const Icon(Icons.assignment_outlined, size: 18),
-            label: const Text('إرسال التقرير الطبي',
-                style: TextStyle(fontFamily: 'Cairo')),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: NajdaColors.accent,
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
+          AppButton(
+            label: 'تعبئة التقرير الطبي',
+            onPressed: () => setState(() => _showMedicalForm = true),
+            icon: Icons.assignment_rounded,
           ),
-
         if (isToHospital)
-          ElevatedButton.icon(
-            onPressed: submitting ? null : onComplete,
-            icon: const Icon(Icons.local_hospital_outlined, size: 18),
-            label: Text(
-                submitting ? 'جارٍ التحديث...' : 'تسليم للمستشفى / إنهاء المهمة',
-                style: const TextStyle(fontFamily: 'Cairo')),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
+          AppButton(
+            label: 'إنهاء المهمة / تسليم المريض',
+            onPressed: () => _updateStatus(AppConstants.paramedicAvailable),
+            isLoading: _submitting,
+            icon: Icons.local_hospital_rounded,
           ),
       ],
     );
   }
 }
 
-// ─── Medical Form ─────────────────────────────────────────────────────────────
-class _MedicalFormView extends StatelessWidget {
+class _MedicalForm extends StatefulWidget {
   final List<(String, String, List<String>)> questions;
   final Map<String, String> answers;
   final TextEditingController notesCtrl;
@@ -489,7 +296,7 @@ class _MedicalFormView extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback onCancel;
 
-  const _MedicalFormView({
+  const _MedicalForm({
     required this.questions,
     required this.answers,
     required this.notesCtrl,
@@ -499,58 +306,41 @@ class _MedicalFormView extends StatelessWidget {
   });
 
   @override
+  State<_MedicalForm> createState() => _MedicalFormState();
+}
+
+class _MedicalFormState extends State<_MedicalForm> {
+  @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(children: [
-            const Icon(Icons.medical_services_outlined,
-                color: NC.primary),
-            const SizedBox(width: 10),
-            Text('التقرير الطبي',
-                style: Theme.of(context).textTheme.headlineSmall),
-          ]),
-          const SizedBox(height: 4),
-          Text('أجب على الأسئلة التالية قبل نقل المريض',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: NajdaColors.textSecondary)),
-          const SizedBox(height: 20),
-
-          ...questions.map((q) {
+          Text('التقرير الطبي الميداني', style: AppTextStyles.headlineLarge),
+          const SizedBox(height: AppSpacing.md),
+          ...widget.questions.map((q) {
             final (id, label, opts) = q;
             return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: NajdaCard(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: AppCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(label,
-                        style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 10),
+                    Text(label, style: AppTextStyles.titleLarge),
+                    const SizedBox(height: AppSpacing.sm),
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
+                      spacing: AppSpacing.sm,
                       children: opts.map((opt) {
-                        final sel = answers[id] == opt;
+                        final sel = widget.answers[id] == opt;
                         return ChoiceChip(
-                          label: Text(opt,
-                              style: TextStyle(
-                                  fontFamily: 'Cairo',
-                                  fontSize: 12,
-                                  color: sel
-                                      ? Colors.white
-                                      : NajdaColors.textPrimary)),
+                          label: Text(opt),
                           selected: sel,
-                          selectedColor: NC.primary,
-                          backgroundColor: NC.surface,
-                          onSelected: (_) {
-                            answers[id] = opt;
-                            // force rebuild via parent stateful
-                          },
+                          onSelected: (val) => setState(() => widget.answers[id] = opt),
+                          selectedColor: AppColors.primaryBlue.withOpacity(0.2),
+                          labelStyle: AppTextStyles.bodyMedium.copyWith(
+                            color: sel ? AppColors.primaryBlue : AppColors.textPrimary,
+                          ),
                         );
                       }).toList(),
                     ),
@@ -559,60 +349,25 @@ class _MedicalFormView extends StatelessWidget {
               ),
             );
           }),
-
-          NajdaCard(
+          AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('ملاحظات إضافية',
-                    style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 10),
+                Text('ملاحظات إضافية', style: AppTextStyles.titleLarge),
+                const SizedBox(height: AppSpacing.sm),
                 TextField(
-                  controller: notesCtrl,
+                  controller: widget.notesCtrl,
                   maxLines: 3,
-                  style: NC.inputText(),
-                  decoration: const InputDecoration(
-                    hintText: 'أي ملاحظات طبية إضافية...',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(hintText: 'اكتب أي ملاحظات أخرى هنا...'),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-
-          ElevatedButton(
-            onPressed: submitting ? null : onSubmit,
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 52),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
-            ),
-            child: submitting
-                ? const SizedBox(
-                    height: 22,
-                    width: 22,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor:
-                            AlwaysStoppedAnimation(Colors.white)))
-                : const Text('إرسال التقرير الطبي',
-                    style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700)),
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton(
-            onPressed: onCancel,
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 46),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('إلغاء',
-                style: TextStyle(fontFamily: 'Cairo')),
-          ),
+          const SizedBox(height: AppSpacing.xl),
+          AppButton(label: 'إرسال التقرير', onPressed: widget.onSubmit, isLoading: widget.submitting),
+          const SizedBox(height: AppSpacing.md),
+          AppButton(label: 'إلغاء', isPrimary: false, onPressed: widget.onCancel),
+          const SizedBox(height: AppSpacing.xxl),
         ],
       ),
     );

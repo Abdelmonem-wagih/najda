@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/design.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/shared/widgets/app_widgets.dart';
 
 class NotificationsHistoryPage extends StatelessWidget {
   final bool showHistory;
@@ -8,24 +11,15 @@ class NotificationsHistoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: NC.base,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: NC.surface,
-        title: Text(showHistory ? 'سجل المهام' : 'الإشعارات',
-            style: NC.display(16)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: NC.textHigh, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
+        backgroundColor: AppColors.navy,
+        title: Text(showHistory ? 'سجل المهام' : 'الإشعارات'),
       ),
-      body: Center(
-        child: NajdaEmpty(
-          icon: showHistory
-              ? Icons.history_outlined
-              : Icons.notifications_outlined,
-          title: showHistory ? 'لا توجد مهام' : 'لا توجد إشعارات',
-        ),
+      body: AppEmptyState(
+        icon: showHistory ? Icons.history_rounded : Icons.notifications_none_rounded,
+        title: showHistory ? 'لا يوجد سجل للمهام' : 'لا توجد إشعارات حالياً',
+        subtitle: showHistory ? 'سيظهر هنا تاريخ المهام التي قمت بإنجازها' : 'ستصلك هنا إشعارات بالبلاغات الجديدة الموجهة إليك',
       ),
     );
   }

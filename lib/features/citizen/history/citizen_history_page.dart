@@ -4,8 +4,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/l10n/generated/app_localizations.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../core/theme/design.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/shared/widgets/app_widgets.dart';
 import '../../auth/presentation/cubit/auth_cubit.dart';
 
 class CitizenHistoryPage extends StatelessWidget {
@@ -14,34 +17,36 @@ class CitizenHistoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final historyTitle = l10n?.history ?? 'السجل';
-    final historyEmptyTitle = l10n?.historyEmpty ?? 'لا يوجد سجل بعد';
+    final historyTitle = l10n?.history ?? 'سجل البلاغات';
+    final historyEmptyTitle = l10n?.historyEmpty ?? 'لا توجد بلاغات سابقة';
     final authState = context.read<AuthCubit>().state;
 
-    // Guard: if not authenticated (e.g. during logout transition), show nothing
     if (authState is! AuthAuthenticated) {
       return Scaffold(
-        backgroundColor: NC.surface,
+        backgroundColor: AppColors.background,
         appBar: AppBar(title: Text(historyTitle)),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const AppLoader(),
       );
     }
 
     final uid = authState.user.id;
 
     return Scaffold(
-      backgroundColor: NC.surface,
-      appBar: AppBar(title: Text(historyTitle)),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.navy,
+        title: Text(historyTitle),
+      ),
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: _combineReports(uid),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const NajdaLoader(message: 'جارٍ التحميل...');
+            return const AppLoader(message: 'جارٍ تحميل السجل...');
           }
           if (snap.hasError) {
-            return NajdaEmptyState(
+            return AppEmptyState(
               icon: Icons.error_outline,
-              title: 'حدث خطأ',
+              title: 'حدث خطأ ما',
               subtitle: snap.error.toString(),
               actionLabel: 'إعادة المحاولة',
               onAction: () {},
@@ -49,16 +54,16 @@ class CitizenHistoryPage extends StatelessWidget {
           }
           final reports = snap.data ?? [];
           if (reports.isEmpty) {
-            return NajdaEmptyState(
+            return AppEmptyState(
               icon: Icons.history_outlined,
               title: historyEmptyTitle,
-              subtitle: 'لا توجد بلاغات سابقة لعرضها',
+              subtitle: 'ستظهر هنا البلاغات التي تقوم بإرسالها',
             );
           }
           return ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             itemCount: reports.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
             itemBuilder: (ctx, i) => _ReportCard(report: reports[i]),
           );
         },
@@ -121,69 +126,65 @@ class _ReportCard extends StatelessWidget {
     final ts = _parseTs(report);
     final type = report['type'] as String? ?? '';
 
-    return NajdaCard(
+    return AppCard(
       onTap: () => _showDetails(context, report),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(9),
+                padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
                   color: isEmergency
-                      ? NC.critical.withOpacity(0.1)
-                      : NC.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
+                      ? AppColors.criticalRed.withOpacity(0.1)
+                      : AppColors.primaryBlue.withOpacity(0.1),
+                  borderRadius: AppRadius.radiusMd,
                 ),
                 child: Icon(
                   isEmergency
                       ? Icons.emergency_outlined
                       : Icons.medical_services_outlined,
-                  color: isEmergency ? NC.critical : NC.primary,
-                  size: 20,
+                  color: isEmergency ? AppColors.criticalRed : AppColors.primaryBlue,
+                  size: 24,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       isEmergency ? 'بلاغ طوارئ' : _typeLabel(type),
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: AppTextStyles.titleLarge,
                     ),
                     Text(
                       ts != null
                           ? DateFormat('dd MMM yyyy – HH:mm', 'ar').format(ts)
                           : '—',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: NajdaColors.textMuted),
+                      style: AppTextStyles.bodySmall,
                     ),
                   ],
                 ),
               ),
-              NajdaStatusBadge(status),
+              AppStatusBadge(status: status),
             ],
           ),
 
           if (report['address'] != null &&
               (report['address'] as String).isNotEmpty) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpacing.md),
             const Divider(),
-            const SizedBox(height: 6),
+            const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
                 const Icon(Icons.location_on_outlined,
-                    size: 14, color: NajdaColors.textMuted),
-                const SizedBox(width: 6),
+                    size: 16, color: AppColors.textMuted),
+                const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
                     report['address'] as String,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: AppTextStyles.bodySmall,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -242,48 +243,46 @@ class _DetailsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: NajdaColors.cardBg,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.xl)),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xl),
       child: SingleChildScrollView(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Center(
               child: Container(
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                    color: NajdaColors.border,
+                    color: AppColors.border,
                     borderRadius: BorderRadius.circular(2)),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.lg),
             Text('تفاصيل البلاغ',
-                style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 20),
+                style: AppTextStyles.headlineMedium),
+            const SizedBox(height: AppSpacing.lg),
             ..._rows(report).map((row) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SizedBox(
                         width: 120,
                         child: Text(row.$1,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                    color: NajdaColors.textSecondary)),
+                            style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.textSecondary)),
                       ),
                       Expanded(
                         child: Text(row.$2,
-                            style: Theme.of(context).textTheme.bodyMedium),
+                            style: AppTextStyles.bodyLarge),
                       ),
                     ],
                   ),
                 )),
+            const SizedBox(height: AppSpacing.lg),
           ],
         ),
       ),
@@ -292,7 +291,7 @@ class _DetailsSheet extends StatelessWidget {
 
   List<(String, String)> _rows(Map<String, dynamic> r) {
     final rows = <(String, String)>[];
-    if (r['type'] != null) rows.add(('النوع', r['type']));
+    if (r['type'] != null) rows.add(('النوع', _typeLabel(r['type'])));
     if (r['consciousnessLevel'] != null && (r['consciousnessLevel'] as String).isNotEmpty)
       rows.add(('الوعي', r['consciousnessLevel']));
     if (r['injuryLocation'] != null && (r['injuryLocation'] as String).isNotEmpty)
@@ -303,5 +302,26 @@ class _DetailsSheet extends StatelessWidget {
     if (r['address'] != null && (r['address'] as String).isNotEmpty)
       rows.add(('الموقع', r['address']));
     return rows;
+  }
+
+  String _typeLabel(String key) {
+    const m = {
+      'carAccident': 'حادث سيارة',
+      'pedestrianHit': 'دهس مشاة',
+      'fallFromHeight': 'سقوط من ارتفاع',
+      'fall': 'سقوط عادي',
+      'electricShock': 'صدمة كهربائية',
+      'fireBurn': 'حريق / حروق',
+      'suffocation': 'اختناق',
+      'drowning': 'غرق',
+      'workInjury': 'إصابة عمل',
+      'poisoning': 'تسمم',
+      'assault': 'اعتداء',
+      'sportInjury': 'إصابة رياضية',
+      'gunshot': 'طلق ناري',
+      'stabbing': 'طعن',
+      'medicalEmergency': 'حالة مرضية',
+    };
+    return m[key] ?? key;
   }
 }

@@ -2,46 +2,46 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/route/app_routes.dart';
-import '../../../../core/theme/design.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/shared/widgets/app_widgets.dart';
 import '../../auth/presentation/cubit/auth_cubit.dart';
 
 class CitizenProfilePage extends StatelessWidget {
   const CitizenProfilePage({super.key});
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AuthCubit>().state;
     if (state is! AuthAuthenticated) {
-      return const Scaffold(body: Center(child: NajdaSpinner()));
+      return const Scaffold(body: AppLoader());
     }
     final user = state.user;
 
     return Scaffold(
-      backgroundColor: NC.base,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: NC.surface,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: NC.textHigh, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text('الملف الشخصي', style: NC.display(16)),
+        backgroundColor: AppColors.navy,
+        title: const Text('الملف الشخصي'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           children: [
-            // Avatar
+            // Profile Header
             Container(
-              width: 96,
-              height: 96,
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
-                gradient: NC.primaryGrad,
+                gradient: AppColors.primaryGradient,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: NC.primary.withOpacity(0.3),
+                    color: AppColors.primaryBlue.withOpacity(0.2),
                     blurRadius: 20,
-                    offset: const Offset(0, 8),
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
@@ -50,27 +50,20 @@ class CitizenProfilePage extends StatelessWidget {
                   user.fullName?.isNotEmpty == true
                       ? user.fullName![0].toUpperCase()
                       : '?',
-                  style: const TextStyle(
-                    fontFamily: NC.font,
-                    fontSize: 38,
-                    fontWeight: FontWeight.w800,
-                    color: NC.base,
-                  ),
+                  style: AppTextStyles.displayLarge.copyWith(color: AppColors.white),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            Text(user.fullName ?? '',
-                style: NC.display(20)),
-            const SizedBox(height: 4),
-            Text(user.phone ?? '',
-                style: NC.body(14, color: NC.textMid)),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.md),
+            Text(user.fullName ?? '', style: AppTextStyles.headlineLarge),
+            Text(user.phone ?? '', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+            const SizedBox(height: AppSpacing.xl),
 
-            // Info cards
-            _InfoSection(
+            // Info Sections
+            _buildInfoSection(
+              context,
               title: 'البيانات الشخصية',
-              icon: Icons.person_outline_rounded,
+              icon: Icons.person_outline,
               rows: [
                 ('الاسم الكامل', user.fullName ?? '—'),
                 ('رقم الهاتف', user.phone ?? '—'),
@@ -78,9 +71,10 @@ class CitizenProfilePage extends StatelessWidget {
                 ('جهة اتصال الطوارئ', user.emergencyContact ?? '—'),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
 
-            _InfoSection(
+            _buildInfoSection(
+              context,
               title: 'البيانات الطبية',
               icon: Icons.medical_information_outlined,
               rows: [
@@ -91,122 +85,39 @@ class CitizenProfilePage extends StatelessWidget {
                   ('معلومات إضافية', user.additionalInfo!),
               ],
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.xl),
 
-            // Logout
-            GestureDetector(
-              onTap: () => _confirmLogout(context),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  color: NC.critical.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: NC.critical.withOpacity(0.3)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.logout_rounded, color: NC.critical, size: 20),
-                    const SizedBox(width: 10),
-                    Text(
-                      'تسجيل الخروج',
-                      style: NC.label(15, color: NC.critical, weight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
+            // Logout Button
+            AppButton(
+              label: 'تسجيل الخروج',
+              isPrimary: false,
+              onPressed: () => _confirmLogout(context),
+              icon: Icons.logout_rounded,
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: AppSpacing.xxl),
           ],
         ),
       ),
     );
   }
 
-  void _confirmLogout(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: NC.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: NC.critical.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.logout_rounded, color: NC.critical, size: 32),
-              ),
-              const SizedBox(height: 20),
-              Text('تسجيل الخروج', style: NC.display(18)),
-              const SizedBox(height: 8),
-              Text(
-                'هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟',
-                textAlign: TextAlign.center,
-                style: NC.body(14),
-              ),
-              const SizedBox(height: 28),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text('إلغاء', style: NC.label(14, color: NC.textMid)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GradientButton(
-                      label: 'خروج',
-                      gradient: NC.criticalGrad,
-                      height: 48,
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.read<AuthCubit>().signOut();
-                        Navigator.pushNamedAndRemoveUntil(
-                            context, AppRoutes.login, (r) => false);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoSection extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final List<(String, String)> rows;
-
-  const _InfoSection({required this.title, required this.icon, required this.rows});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildInfoSection(BuildContext context,
+      {required String title, required IconData icon, required List<(String, String)> rows}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(right: 8, bottom: 10),
+          padding: const EdgeInsets.only(right: AppSpacing.xs, bottom: AppSpacing.sm),
           child: Row(
             children: [
-              Icon(icon, color: NC.primary, size: 18),
-              const SizedBox(width: 8),
-              Text(title, style: NC.label(14, weight: FontWeight.w700)),
+              Icon(icon, color: AppColors.primaryBlue, size: 20),
+              const SizedBox(width: AppSpacing.sm),
+              Text(title, style: AppTextStyles.titleLarge),
             ],
           ),
         ),
-        GlassCard(
-          padding: const EdgeInsets.all(16),
+        AppCard(
+          padding: EdgeInsets.zero,
           child: Column(
             children: rows.asMap().entries.map((entry) {
               final isLast = entry.key == rows.length - 1;
@@ -214,27 +125,53 @@ class _InfoSection extends StatelessWidget {
               return Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(
                           width: 120,
-                          child: Text(r.$1, style: NC.body(13, color: NC.textMid)),
+                          child: Text(r.$1, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
                         ),
                         Expanded(
-                          child: Text(r.$2, style: NC.label(14)),
+                          child: Text(r.$2, style: AppTextStyles.labelLarge),
                         ),
                       ],
                     ),
                   ),
-                  if (!isLast) const Divider(color: NC.cardBorder, height: 1),
+                  if (!isLast) const Divider(),
                 ],
               );
             }).toList(),
           ),
         ),
       ],
+    );
+  }
+
+  void _confirmLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusXl),
+        title: const Text('تسجيل الخروج'),
+        content: const Text('هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.criticalRed),
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<AuthCubit>().signOut();
+              Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (r) => false);
+            },
+            child: const Text('خروج'),
+          ),
+        ],
+      ),
     );
   }
 }

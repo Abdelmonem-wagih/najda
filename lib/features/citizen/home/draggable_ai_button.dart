@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/route/app_routes.dart';
-import '../../../core/theme/design.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radius.dart';
 
-// ─── Global route notifier ────────────────────────────────────────
-// Updated by [NajdaRouteObserver] so DraggableAiButton can react to
-// route changes without being rebuilt by the whole widget tree.
 final ValueNotifier<String?> currentRouteNotifier = ValueNotifier<String?>(null);
 
 class NajdaRouteObserver extends NavigatorObserver {
@@ -24,9 +22,6 @@ class NajdaRouteObserver extends NavigatorObserver {
   void didRemove(Route route, Route? previousRoute) => _update(previousRoute);
 }
 
-/// Draggable AI assistant button — floats over all citizen screens.
-/// Automatically hides itself when the AI chat page is open.
-/// User can drag it anywhere on screen; tap opens AiChatPage.
 class DraggableAiButton extends StatefulWidget {
   const DraggableAiButton({super.key});
 
@@ -47,9 +42,9 @@ class _DraggableAiButtonState extends State<DraggableAiButton>
     super.initState();
     _pulseCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 1.0, end: 1.08).animate(
+    _pulse = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
   }
@@ -67,7 +62,6 @@ class _DraggableAiButtonState extends State<DraggableAiButton>
     return ValueListenableBuilder<String?>(
       valueListenable: currentRouteNotifier,
       builder: (_, route, child) {
-        // Hide when user is already on the AI chat page
         if (route == AppRoutes.aiChat) return const SizedBox.shrink();
         return child!;
       },
@@ -75,23 +69,37 @@ class _DraggableAiButtonState extends State<DraggableAiButton>
         right: _right,
         bottom: _bottom,
         child: GestureDetector(
-          // Drag to reposition
           onPanUpdate: (d) {
             setState(() {
-              _right = (_right - d.delta.dx).clamp(0.0, size.width - 64);
-              _bottom = (_bottom - d.delta.dy).clamp(0.0, size.height - 64);
+              _right = (_right - d.delta.dx).clamp(0.0, size.width - 70);
+              _bottom = (_bottom - d.delta.dy).clamp(20.0, size.height - 100);
             });
           },
-          // Tap to open chat
           onTap: () {
             AppRouter.navigatorKey.currentState?.pushNamed(AppRoutes.aiChat);
           },
           child: ScaleTransition(
             scale: _pulse,
-            child: SvgPicture.asset(
-              'assets/svg/chatBot.svg',
-              width: 80,
-              height: 80,
+            child: Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryBlue.withOpacity(0.3),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+                border: Border.all(color: AppColors.primaryBlue.withOpacity(0.1), width: 2),
+              ),
+              padding: const EdgeInsets.all(12),
+              child: SvgPicture.asset(
+                'assets/svg/chatBot.svg',
+                fit: BoxFit.contain,
+              ),
             ),
           ),
         ),

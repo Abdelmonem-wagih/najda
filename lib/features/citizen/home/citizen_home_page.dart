@@ -7,7 +7,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/route/app_routes.dart';
-import '../../../core/theme/design.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_radius.dart';
+import '../../../core/shared/widgets/app_widgets.dart';
 import '../../auth/presentation/cubit/auth_cubit.dart';
 
 class CitizenHomePage extends StatefulWidget {
@@ -30,7 +34,7 @@ class _CitizenHomePageState extends State<CitizenHomePage>
       vsync: this,
       duration: const Duration(milliseconds: 1600),
     )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 0.95, end: 1.05).animate(
+    _pulse = Tween<double>(begin: 0.98, end: 1.02).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
   }
@@ -41,7 +45,6 @@ class _CitizenHomePageState extends State<CitizenHomePage>
     super.dispose();
   }
 
-  // ── SOS one-tap emergency ────────────────────────────────────────
   Future<void> _triggerSOS() async {
     setState(() => _sosLoading = true);
     HapticFeedback.heavyImpact();
@@ -54,7 +57,6 @@ class _CitizenHomePageState extends State<CitizenHomePage>
       final pos = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
 
-      // Send emergency report with full medical profile
       final docRef = await FirebaseFirestore.instance
           .collection('emergency_reports')
           .add({
@@ -76,7 +78,6 @@ class _CitizenHomePageState extends State<CitizenHomePage>
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      // Send WhatsApp to emergency contact
       if ((user.emergencyContact ?? '').isNotEmpty) {
         final msg = Uri.encodeComponent(
           '🚨 *تنبيه طوارئ نجدة*\n\n'
@@ -106,45 +107,39 @@ class _CitizenHomePageState extends State<CitizenHomePage>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => Dialog(
-        backgroundColor: NC.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: const BoxDecoration(
-                  gradient: NC.successGrad,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check_rounded,
-                    color: Colors.white, size: 38),
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusXl),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: const BoxDecoration(
+                color: AppColors.success,
+                shape: BoxShape.circle,
               ),
-              const SizedBox(height: 20),
-              Text('تم إرسال بلاغ الطوارئ!',
-                  style: NC.display(18), textAlign: TextAlign.center),
-              const SizedBox(height: 8),
-              Text('رقم البلاغ: R-$code',
-                  style: NC.label(14, color: NC.primary)),
-              const SizedBox(height: 6),
-              Text(
-                'الإسعاف في الطريق إليك. ابقَ في مكانك وحافظ على هدوئك.',
-                style: NC.body(13),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              GradientButton(
-                label: 'حسناً',
-                gradient: NC.primaryGrad,
-                height: 48,
-                onTap: () => Navigator.pop(context),
-              ),
-            ],
-          ),
+              child: const Icon(Icons.check_rounded,
+                  color: Colors.white, size: 38),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text('تم إرسال بلاغ الطوارئ!',
+                style: AppTextStyles.headlineLarge, textAlign: TextAlign.center),
+            const SizedBox(height: AppSpacing.sm),
+            Text('رقم البلاغ: R-$code',
+                style: AppTextStyles.labelLarge.copyWith(color: AppColors.primaryBlue)),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'الإسعاف في الطريق إليك. ابقَ في مكانك وحافظ على هدوئك.',
+              style: AppTextStyles.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AppButton(
+              label: 'حسناً',
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
         ),
       ),
     );
@@ -152,10 +147,10 @@ class _CitizenHomePageState extends State<CitizenHomePage>
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: NC.body(13, color: Colors.white)),
-      backgroundColor: NC.critical,
+      content: Text(msg),
+      backgroundColor: AppColors.criticalRed,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMd),
     ));
   }
 
@@ -165,373 +160,250 @@ class _CitizenHomePageState extends State<CitizenHomePage>
     final name = user.fullName?.split(' ').first ?? 'مرحباً';
 
     return Scaffold(
-      backgroundColor: NC.base,
-      body: Stack(
-        children: [
-          // ── Background radial glow ───────────────────────────────
-          Positioned(
-            top: -80,
-            right: -60,
-            child: Container(
-              width: 260,
-              height: 260,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    NC.critical.withOpacity(0.12),
-                    Colors.transparent,
-                  ],
+      backgroundColor: AppColors.background,
+      body: CustomScrollView(
+        slivers: [
+          // ── App Bar / Header ─────────────────────────────────────────
+          SliverAppBar(
+            expandedHeight: 120,
+            pinned: true,
+            backgroundColor: AppColors.navy,
+            automaticallyImplyLeading: false,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: const BoxDecoration(
+                  gradient: AppColors.navyGradient,
                 ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 100,
-            left: -80,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    NC.primary.withOpacity(0.08),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                // ── Header ─────────────────────────────────────────
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                    child: Row(
+                padding: const EdgeInsets.fromLTRB(20, 60, 20, 16),
+                child: Row(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('مرحباً، $name 👋',
-                                style: NC.display(22)),
-                            const SizedBox(height: 3),
-                            Text('كيف يمكننا مساعدتك اليوم؟',
-                                style: NC.body(13)),
-                          ],
+                        Text(
+                          'مرحباً، $name 👋',
+                          style: AppTextStyles.headlineLarge.copyWith(color: AppColors.white),
                         ),
-                        const Spacer(),
-                        GestureDetector(
-                          onTap: () => Navigator.pushNamed(
-                              context, AppRoutes.citizenProfile),
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              gradient: NC.primaryGrad,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Text(
-                                name.isNotEmpty ? name[0] : 'م',
-                                style: NC.display(18, color: NC.base),
-                              ),
-                            ),
-                          ),
+                        Text(
+                          'كيف يمكننا مساعدتك اليوم؟',
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.white.withOpacity(0.8)),
                         ),
                       ],
                     ),
-                  ),
-                ),
-
-                // ── SOS BUTTON ─────────────────────────────────────
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
-                    child: GestureDetector(
-                      onTap: _sosLoading ? null : _triggerSOS,
-                      child: ScaleTransition(
-                        scale: _pulse,
-                        child: Container(
-                          height: 180,
-                          decoration: BoxDecoration(
-                            gradient: NC.criticalGrad,
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: [
-                              BoxShadow(
-                                color: NC.critical.withOpacity(0.5),
-                                blurRadius: 36,
-                                spreadRadius: 2,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Stack(
-                            children: [
-                              // Grid pattern overlay
-                              Positioned.fill(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(28),
-                                  child: CustomPaint(painter: _GridPainter()),
-                                ),
-                              ),
-                              Center(
-                                child: _sosLoading
-                                    ? const CircularProgressIndicator(
-                                        color: Colors.white, strokeWidth: 3)
-                                    : Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Container(
-                                            width: 64,
-                                            height: 64,
-                                            decoration: BoxDecoration(
-                                              color: Colors.white
-                                                  .withOpacity(0.2),
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                  color: Colors.white
-                                                      .withOpacity(0.4),
-                                                  width: 2),
-                                            ),
-                                            child: const Icon(
-                                                Icons.emergency_outlined,
-                                                color: Colors.white,
-                                                size: 32),
-                                          ),
-                                          const SizedBox(height: 14),
-                                          Text('اضغط للطوارئ',
-                                              style: NC.display(24,
-                                                  color: Colors.white)),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'يُرسل موقعك + بياناتك الطبية فوراً',
-                                            style: NC.body(12,
-                                                color: Colors.white
-                                                    .withOpacity(0.8)),
-                                          ),
-                                        ],
-                                      ),
-                              ),
-                            ],
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => Navigator.pushNamed(
+                          context, AppRoutes.citizenProfile),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.white.withOpacity(0.3)),
+                        ),
+                        child: Center(
+                          child: Text(
+                            name.isNotEmpty ? name[0] : 'م',
+                            style: AppTextStyles.headlineMedium.copyWith(color: AppColors.white),
                           ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-
-                // ── Report incident (third party) ──────────────────
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                    child: GlassCard(
-                      onTap: () => Navigator.pushNamed(
-                          context, AppRoutes.citizenReport),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              gradient: NC.primaryGrad,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: const Icon(Icons.assignment_outlined,
-                                color: NC.base, size: 26),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('إبلاغ عن حادث',
-                                    style: NC.label(15)),
-                                const SizedBox(height: 3),
-                                Text(
-                                  'شاهدت حادثاً؟ أبلغ عنه لشخص آخر',
-                                  style: NC.body(12),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.chevron_right,
-                              color: NC.textLow),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // ── Quick Services ─────────────────────────────────
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                    child: SectionHeader('الخدمات'),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1.15,
-                    ),
-                    delegate: SliverChildListDelegate([
-                      _QuickCard(
-                        icon: Icons.medical_services_outlined,
-                        label: 'إسعافات أولية',
-                        sublabel: 'دليل بالصور',
-                        color: NC.primary,
-                        onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.citizenFirstAid),
-                      ),
-                      _QuickCard(
-                        icon: Icons.local_hospital_outlined,
-                        label: 'مستشفيات قريبة',
-                        sublabel: 'خريطة وأرقام',
-                        color: NC.success,
-                        onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.citizenHospitals),
-                      ),
-                      _QuickCard(
-                        icon: Icons.phone_outlined,
-                        label: 'أرقام الطوارئ',
-                        sublabel: 'اتصال مباشر',
-                        color: NC.warning,
-                        onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.citizenEmergency),
-                      ),
-                      _QuickCard(
-                        icon: Icons.history_outlined,
-                        label: 'سجل البلاغات',
-                        sublabel: 'بلاغاتك السابقة',
-                        color: const Color(0xFFBB86FC),
-                        onTap: () => Navigator.pushNamed(
-                            context, AppRoutes.citizenHistory),
-                      ),
-                    ]),
-                  ),
-                ),
-
-                // ── Health tips ────────────────────────────────────
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
-                    child: GlassCard(
-                      borderColor: NC.primary.withOpacity(0.3),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: NC.primary.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.lightbulb_outline,
-                                color: NC.primary, size: 20),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Text(
-                              'زر بروفايلك وأضف بياناتك الطبية لتسريع استجابة الطوارئ',
-                              style: NC.body(12, color: NC.textMid),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
+
+          // ── SOS Section ─────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  GestureDetector(
+                    onTap: _sosLoading ? null : _triggerSOS,
+                    child: ScaleTransition(
+                      scale: _pulse,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+                        decoration: BoxDecoration(
+                          gradient: AppColors.criticalGradient,
+                          borderRadius: AppRadius.radiusXl,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.criticalRed.withOpacity(0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: _sosLoading
+                            ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                            : Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(AppSpacing.md),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.emergency_outlined,
+                                        color: Colors.white, size: 40),
+                                  ),
+                                  const SizedBox(height: AppSpacing.md),
+                                  Text(
+                                    'طلب نجدة فورية',
+                                    style: AppTextStyles.displaySmall.copyWith(color: AppColors.white),
+                                  ),
+                                  Text(
+                                    'يُرسل موقعك وبياناتك الطبية فوراً',
+                                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.white.withOpacity(0.9)),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // ── Quick Actions ─────────────────────────────────
+                  AppCard(
+                    onTap: () => Navigator.pushNamed(
+                        context, AppRoutes.citizenReport),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryBlue.withOpacity(0.1),
+                            borderRadius: AppRadius.radiusMd,
+                          ),
+                          child: const Icon(Icons.assignment_outlined,
+                              color: AppColors.primaryBlue, size: 24),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('إبلاغ عن حادث', style: AppTextStyles.titleLarge),
+                              Text('شاهدت حادثاً؟ أبلغ عنه لمساعدة الآخرين',
+                                  style: AppTextStyles.bodySmall),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right, color: AppColors.textMuted),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Services Grid ─────────────────────────────────
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: AppSpacing.md,
+                crossAxisSpacing: AppSpacing.md,
+                childAspectRatio: 1.2,
+              ),
+              delegate: SliverChildListDelegate([
+                _buildServiceCard(
+                  context,
+                  icon: Icons.medical_services_outlined,
+                  label: 'إسعافات أولية',
+                  color: AppColors.primaryBlue,
+                  onTap: () => Navigator.pushNamed(
+                      context, AppRoutes.citizenFirstAid),
+                ),
+                _buildServiceCard(
+                  context,
+                  icon: Icons.local_hospital_outlined,
+                  label: 'مستشفيات',
+                  color: AppColors.success,
+                  onTap: () => Navigator.pushNamed(
+                      context, AppRoutes.citizenHospitals),
+                ),
+                _buildServiceCard(
+                  context,
+                  icon: Icons.phone_outlined,
+                  label: 'أرقام الطوارئ',
+                  color: AppColors.warning,
+                  onTap: () => Navigator.pushNamed(
+                      context, AppRoutes.citizenEmergency),
+                ),
+                _buildServiceCard(
+                  context,
+                  icon: Icons.history_outlined,
+                  label: 'سجل البلاغات',
+                  color: AppColors.accentBlue,
+                  onTap: () => Navigator.pushNamed(
+                      context, AppRoutes.citizenHistory),
+                ),
+              ]),
+            ),
+          ),
+
+          // ── Tip Card ────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: AppCard(
+                color: AppColors.primaryBlue.withOpacity(0.05),
+                border: BorderSide(color: AppColors.primaryBlue.withOpacity(0.1)),
+                child: Row(
+                  children: [
+                    const Icon(Icons.lightbulb_outline,
+                        color: AppColors.primaryBlue, size: 24),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Text(
+                        'حافظ على تحديث بياناتك الطبية لضمان حصولك على أفضل رعاية في حالات الطوارئ.',
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.primaryBlue),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xl)),
         ],
       ),
     );
   }
-}
 
-// ─── Quick service card ────────────────────────────────────────────
-class _QuickCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String sublabel;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _QuickCard({
-    required this.icon,
-    required this.label,
-    required this.sublabel,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget _buildServiceCard(BuildContext context,
+      {required IconData icon,
+      required String label,
+      required Color color,
+      required VoidCallback onTap}) {
+    return AppCard(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: NC.cardGrad,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.25)),
-          boxShadow: [
-            BoxShadow(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.xs),
+            decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              blurRadius: 14,
-              offset: const Offset(0, 4),
+              borderRadius: AppRadius.radiusSm,
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const Spacer(),
-            Text(label, style: NC.label(14)),
-            const SizedBox(height: 2),
-            Text(sublabel, style: NC.body(11)),
-          ],
-        ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const Spacer(),
+          Text(label, style: AppTextStyles.titleMedium),
+        ],
       ),
     );
   }
-}
-
-// ─── Grid background painter ───────────────────────────────────────
-class _GridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.05)
-      ..strokeWidth = 1;
-    const step = 24.0;
-    for (double x = 0; x < size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    for (double y = 0; y < size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
 }

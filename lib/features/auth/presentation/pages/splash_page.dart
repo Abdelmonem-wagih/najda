@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/route/app_routes.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../../core/theme/design.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_spacing.dart';
 import '../cubit/auth_cubit.dart';
 
 class SplashPage extends StatefulWidget {
@@ -25,7 +26,7 @@ class _SplashPageState extends State<SplashPage>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 0.92, end: 1.0).animate(
+    _pulse = Tween<double>(begin: 0.95, end: 1.05).animate(
       CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
     );
 
@@ -61,25 +62,26 @@ class _SplashPageState extends State<SplashPage>
       },
       child: Scaffold(
         body: Container(
-          decoration: const BoxDecoration(gradient: NajdaColors.navyGradient),
+          decoration: const BoxDecoration(
+            gradient: AppColors.navyGradient,
+          ),
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // ── Logo ──────────────────────────────────────────────────
                 ScaleTransition(
                   scale: _pulse,
                   child: Container(
-                    width: 100,
-                    height: 100,
+                    width: 120,
+                    height: 120,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(32),
                       boxShadow: [
                         BoxShadow(
-                          color: NajdaColors.accent.withOpacity(0.4),
-                          blurRadius: 32,
-                          spreadRadius: 4,
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
                         ),
                       ],
                     ),
@@ -88,35 +90,31 @@ class _SplashPageState extends State<SplashPage>
                     ),
                   ),
                 ),
-                const SizedBox(height: 28),
-                const Text(
+                const SizedBox(height: AppSpacing.xl),
+                Text(
                   'نجدة',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 36,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: 2,
+                  style: AppTextStyles.displayLarge.copyWith(
+                    color: AppColors.white,
+                    fontSize: 48,
+                    letterSpacing: 1.5,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Text(
                   'استجابة الطوارئ الفورية',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 15,
-                    color: Colors.white.withOpacity(0.75),
-                    fontWeight: FontWeight.w400,
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: AppColors.white.withOpacity(0.8),
+                    letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(height: 64),
+                const SizedBox(height: AppSpacing.xxl),
                 SizedBox(
-                  width: 28,
-                  height: 28,
+                  width: 32,
+                  height: 32,
                   child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
+                    strokeWidth: 3,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      Colors.white.withOpacity(0.6),
+                      AppColors.white.withOpacity(0.4),
                     ),
                   ),
                 ),
@@ -129,14 +127,13 @@ class _SplashPageState extends State<SplashPage>
   }
 }
 
-/// ECG heartbeat icon drawn with CustomPainter (no asset needed)
 class _EcgLogo extends StatelessWidget {
   const _EcgLogo();
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      size: const Size(56, 56),
+      size: const Size(64, 64),
       painter: _EcgPainter(),
     );
   }
@@ -146,8 +143,8 @@ class _EcgPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = NC.primary
-      ..strokeWidth = 3
+      ..color = AppColors.primaryBlue
+      ..strokeWidth = 4
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
@@ -155,14 +152,13 @@ class _EcgPainter extends CustomPainter {
     final path = Path();
     final midY = size.height * 0.5;
 
-    // ECG-like waveform
-    path.moveTo(0, midY);
-    path.lineTo(size.width * 0.2, midY);
-    path.lineTo(size.width * 0.3, midY * 0.25);
-    path.lineTo(size.width * 0.4, midY * 1.75);
-    path.lineTo(size.width * 0.5, midY * 0.1);
-    path.lineTo(size.width * 0.6, midY);
-    path.lineTo(size.width, midY);
+    path.moveTo(size.width * 0.1, midY);
+    path.lineTo(size.width * 0.25, midY);
+    path.lineTo(size.width * 0.35, midY * 0.3);
+    path.lineTo(size.width * 0.45, midY * 1.7);
+    path.lineTo(size.width * 0.55, midY * 0.1);
+    path.lineTo(size.width * 0.65, midY);
+    path.lineTo(size.width * 0.9, midY);
 
     canvas.drawPath(path, paint);
   }

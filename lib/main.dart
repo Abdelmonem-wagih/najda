@@ -8,7 +8,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/route/app_routes.dart';
 import 'core/l10n/generated/app_localizations.dart';
-import 'core/theme/design.dart';
+import 'core/theme/app_theme.dart';
+import 'core/theme/app_colors.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
 import 'features/citizen/home/draggable_ai_button.dart';
 
@@ -22,9 +23,9 @@ void main() async {
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: NC.base,
-    systemNavigationBarIconBrightness: Brightness.light,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: Colors.white,
+    systemNavigationBarIconBrightness: Brightness.dark,
   ));
 
   await SystemChrome.setPreferredOrientations([
@@ -52,7 +53,7 @@ class NajdaApp extends StatelessWidget {
         navigatorKey: AppRouter.navigatorKey,
         title: 'نجدة',
         debugShowCheckedModeBanner: false,
-        theme: NajdaTheme.dark,
+        theme: AppTheme.light,
         locale: const Locale('ar'),
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,

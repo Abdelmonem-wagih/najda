@@ -4,7 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/route/app_routes.dart';
-import '../../../../core/theme/design.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/shared/widgets/app_widgets.dart';
 import '../cubit/auth_cubit.dart';
 
 class OtpPage extends StatefulWidget {
@@ -90,65 +94,56 @@ class _OtpPageState extends State<OtpPage> {
         } else if (state is AuthError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content:
-                  Text(state.message, style: TextStyle(fontFamily: NC.font)),
-              backgroundColor: NC.critical,
+              content: Text(state.message),
+              backgroundColor: AppColors.criticalRed,
               behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMd),
             ),
           );
         }
       },
       child: Scaffold(
-        backgroundColor: NC.base,
+        backgroundColor: AppColors.background,
         appBar: AppBar(
-          backgroundColor: NC.surface,
-          elevation: 0,
+          backgroundColor: AppColors.navy,
           leading: IconButton(
-            icon:
-                const Icon(Icons.arrow_back_ios_rounded, color: NC.textHigh, size: 20),
+            icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text('تحقق من الرقم', style: NC.display(16)),
+          title: const Text('تحقق من الرقم'),
         ),
         body: BlocBuilder<AuthCubit, AuthState>(
           builder: (context, state) {
             final isLoading = state is AuthLoading;
 
             return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.xl),
                   Container(
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      gradient: NC.primaryGrad,
-                      borderRadius: BorderRadius.circular(22),
-                      boxShadow: [
-                        BoxShadow(
-                          color: NC.primary.withOpacity(0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
+                      color: AppColors.primaryBlue.withOpacity(0.1),
+                      borderRadius: AppRadius.radiusXl,
                     ),
                     child: const Icon(Icons.sms_outlined,
-                        color: NC.base, size: 36),
+                        color: AppColors.primaryBlue, size: 36),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: AppSpacing.xl),
                   Text(
                     'كود التحقق',
-                    style: NC.display(24),
+                    style: AppTextStyles.displaySmall,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     phone.isNotEmpty ? 'أدخل الرمز المكون من 6 أرقام المرسل إلى $phone' : '',
-                    style: NC.body(14, color: NC.textMid),
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: AppSpacing.xxl),
 
                   // OTP inputs
                   Row(
@@ -160,14 +155,22 @@ class _OtpPageState extends State<OtpPage> {
                         height: 56,
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
-                          color: NC.card,
-                          borderRadius: BorderRadius.circular(12),
+                          color: AppColors.white,
+                          borderRadius: AppRadius.radiusMd,
                           border: Border.all(
                             color: _nodes[i].hasFocus
-                                ? NC.primary
-                                : NC.cardBorder,
-                            width: _nodes[i].hasFocus ? 1.5 : 1,
+                                ? AppColors.primaryBlue
+                                : AppColors.border,
+                            width: _nodes[i].hasFocus ? 2 : 1,
                           ),
+                          boxShadow: [
+                            if (_nodes[i].hasFocus)
+                              BoxShadow(
+                                color: AppColors.primaryBlue.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                          ],
                         ),
                         child: TextFormField(
                           controller: _ctrls[i],
@@ -181,44 +184,39 @@ class _OtpPageState extends State<OtpPage> {
                           decoration: const InputDecoration(
                             counterText: '',
                             border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
                             contentPadding: EdgeInsets.zero,
                             filled: false,
                           ),
-                          style: TextStyle(
-                            fontFamily: NC.font,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: NC.textHigh,
-                          ),
+                          style: AppTextStyles.headlineLarge.copyWith(fontSize: 24),
                           onChanged: (v) => _onChanged(v, i),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 36),
+                  const SizedBox(height: AppSpacing.xxl),
 
                   // Verify button
-                  GradientButton(
+                  AppButton(
                     label: 'تحقق الآن',
-                    onTap: isLoading ? null : _verify,
-                    loading: isLoading,
+                    onPressed: isLoading ? null : _verify,
+                    isLoading: isLoading,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
 
                   // Resend
                   if (_secondsLeft > 0)
                     Text(
                       'يمكنك إعادة الإرسال بعد $_secondsLeft ثانية',
-                      style: NC.body(12, color: NC.textLow),
+                      style: AppTextStyles.bodySmall,
                     )
                   else
                     TextButton(
                       onPressed: () {
-                        // Pop back and let user re-enter phone
                         Navigator.pop(context);
                       },
-                      child: Text('إعادة إرسال الرمز',
-                          style: NC.label(14, color: NC.primary)),
+                      child: const Text('إعادة إرسال الرمز'),
                     ),
                 ],
               ),

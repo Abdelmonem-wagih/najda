@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-import '../../../core/theme/design.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_radius.dart';
+import '../../../core/shared/widgets/app_widgets.dart';
 
-// ─── Real first aid image dataset (Wikimedia Commons / public domain) ─────────
 class FirstAidItem {
   final String id;
   final String title;
   final String subtitle;
-  final String heroImage; // real illustrative image URL
+  final String heroImage;
   final List<FirstAidStep> steps;
-  final String urgencyLevel; // critical | high | medium
+  final String urgencyLevel;
 
   const FirstAidItem({
     required this.id,
@@ -25,7 +28,7 @@ class FirstAidItem {
 class FirstAidStep {
   final int number;
   final String instruction;
-  final String? imageUrl; // per-step illustrative image
+  final String? imageUrl;
 
   const FirstAidStep({
     required this.number,
@@ -34,7 +37,6 @@ class FirstAidStep {
   });
 }
 
-// ─── Dataset with real illustrative images ────────────────────────────────────
 final kFirstAidData = <FirstAidItem>[
   FirstAidItem(
     id: 'cpr',
@@ -263,9 +265,6 @@ final kFirstAidData = <FirstAidItem>[
   ),
 ];
 
-// ═══════════════════════════════════════════════════════════════════
-// LIST PAGE
-// ═══════════════════════════════════════════════════════════════════
 class FirstAidListPage extends StatefulWidget {
   const FirstAidListPage({super.key});
 
@@ -283,34 +282,28 @@ class _FirstAidListPageState extends State<FirstAidListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: NC.base,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: NC.surface,
+        backgroundColor: AppColors.navy,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: NC.textHigh, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('الإسعافات الأولية', style: NC.display(16)),
+        title: const Text('الإسعافات الأولية'),
       ),
       body: Column(
         children: [
-          // Search
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: TextField(
               onChanged: (v) => setState(() => _query = v),
-              style: NC.inputText(),
               decoration: InputDecoration(
-                hintText: 'ابحث عن حالة...',
-                prefixIcon:
-                    const Icon(Icons.search, color: NC.primary, size: 20),
+                hintText: 'ابحث عن حالة إسعافية...',
+                prefixIcon: const Icon(Icons.search),
                 suffixIcon: _query.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.close_rounded,
-                            size: 18, color: NC.textLow),
-                        onPressed: () =>
-                            setState(() => _query = ''),
+                        icon: const Icon(Icons.close),
+                        onPressed: () => setState(() => _query = ''),
                       )
                     : null,
               ),
@@ -318,16 +311,16 @@ class _FirstAidListPageState extends State<FirstAidListPage> {
           ),
           Expanded(
             child: _filtered.isEmpty
-                ? NajdaEmpty(
-                    icon: Icons.search_off_outlined,
-                    title: 'لا نتائج',
-                    subtitle: 'جرّب كلمة بحث مختلفة')
+                ? const AppEmptyState(
+                    icon: Icons.search_off_rounded,
+                    title: 'لا توجد نتائج',
+                    subtitle: 'حاول البحث بكلمات أخرى',
+                  )
                 : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xl),
                     itemCount: _filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (ctx, i) =>
-                        _FirstAidCard(item: _filtered[i]),
+                    separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
+                    itemBuilder: (ctx, i) => _FirstAidCard(item: _filtered[i]),
                   ),
           ),
         ],
@@ -342,100 +335,76 @@ class _FirstAidCard extends StatelessWidget {
 
   Color get _urgencyColor {
     switch (item.urgencyLevel) {
-      case 'critical': return NC.critical;
-      case 'high': return NC.warning;
-      default: return NC.success;
+      case 'critical': return AppColors.criticalRed;
+      case 'high': return AppColors.warning;
+      default: return AppColors.success;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return AppCard(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => FirstAidDetailPage(item: item)),
       ),
-      child: GlassCard(
-        padding: EdgeInsets.zero,
-        radius: 18,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Hero image
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-              child: CachedNetworkImage(
-                imageUrl: item.heroImage,
-                height: 140,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
-                  height: 140,
-                  color: NC.card,
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation(NC.primary),
-                        strokeWidth: 2),
-                  ),
-                ),
-                errorWidget: (_, __, ___) => Container(
-                  height: 140,
-                  color: NC.card,
-                  child: Icon(Icons.medical_services_outlined,
-                      color: NC.textLow, size: 40),
-                ),
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+            child: CachedNetworkImage(
+              imageUrl: item.heroImage,
+              height: 160,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(
+                height: 160,
+                color: AppColors.background,
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+              errorWidget: (_, __, ___) => Container(
+                height: 160,
+                color: AppColors.background,
+                child: const Icon(Icons.medical_services_outlined, size: 48, color: AppColors.textMuted),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(item.title, style: NC.label(15)),
-                        const SizedBox(height: 3),
-                        Text(item.subtitle, style: NC.body(12)),
-                      ],
-                    ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.title, style: AppTextStyles.titleLarge),
+                      Text(item.subtitle, style: AppTextStyles.bodySmall),
+                    ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _urgencyColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.circle, color: _urgencyColor, size: 7),
-                        const SizedBox(width: 5),
-                        Text(
-                          item.urgencyLevel == 'critical'
-                              ? 'حرج'
-                              : item.urgencyLevel == 'high'
-                                  ? 'عاجل'
-                                  : 'عادي',
-                          style: NC.label(10, color: _urgencyColor),
-                        ),
-                      ],
-                    ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _urgencyColor.withOpacity(0.1),
+                    borderRadius: AppRadius.radiusXl,
+                    border: Border.all(color: _urgencyColor.withOpacity(0.3)),
                   ),
-                ],
-              ),
+                  child: Text(
+                    item.urgencyLevel == 'critical' ? 'حرج' : item.urgencyLevel == 'high' ? 'عاجل' : 'عادي',
+                    style: AppTextStyles.labelMedium.copyWith(color: _urgencyColor, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// DETAIL PAGE — step by step with images
-// ═══════════════════════════════════════════════════════════════════
 class FirstAidDetailPage extends StatelessWidget {
   final FirstAidItem item;
   const FirstAidDetailPage({super.key, required this.item});
@@ -443,47 +412,32 @@ class FirstAidDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: NC.base,
+      backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          // Hero
           SliverAppBar(
-            expandedHeight: 220,
+            expandedHeight: 250,
             pinned: true,
-            backgroundColor: NC.surface,
-            leading: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: NC.base.withOpacity(0.7),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.arrow_back_ios_rounded,
-                    color: NC.textHigh, size: 18),
-              ),
+            backgroundColor: AppColors.navy,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_rounded),
+              onPressed: () => Navigator.pop(context),
             ),
             flexibleSpace: FlexibleSpaceBar(
-              title: Text(item.title,
-                  style: NC.label(14)),
+              title: Text(item.title, style: AppTextStyles.headlineMedium.copyWith(color: AppColors.white)),
               background: Stack(
                 fit: StackFit.expand,
                 children: [
                   CachedNetworkImage(
                     imageUrl: item.heroImage,
                     fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) =>
-                        Container(color: NC.surface),
                   ),
-                  Container(
+                  const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          NC.base.withOpacity(0.9),
-                        ],
+                        colors: [Colors.transparent, Colors.black54],
                       ),
                     ),
                   ),
@@ -491,51 +445,43 @@ class FirstAidDetailPage extends StatelessWidget {
               ),
             ),
           ),
-
           SliverPadding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                Text(item.subtitle,
-                    style: NC.body(14, color: NC.textMid)),
-                const SizedBox(height: 6),
-
-                // Urgency
-                Row(children: [
-                  const Icon(Icons.warning_amber_outlined,
-                      color: NC.warning, size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    item.urgencyLevel == 'critical'
-                        ? 'حالة حرجة — اتصل بالإسعاف فوراً'
-                        : 'اتصل بالإسعاف إذا ازدادت الحالة سوءاً',
-                    style: NC.body(12, color: NC.warning),
-                  ),
-                ]),
-                const SizedBox(height: 24),
-
-                Text('الخطوات', style: NC.display(16)),
-                const SizedBox(height: 14),
-
-                ...item.steps.map((step) => _StepCard(step: step)),
-                const SizedBox(height: 20),
-
-                // Disclaimer
-                GlassCard(
-                  borderColor: NC.primary.withOpacity(0.3),
-                  child: Row(children: [
-                    const Icon(Icons.info_outline,
-                        color: NC.primary, size: 18),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'هذه إرشادات أولية. اتصل بالإسعاف 123 في الحالات الطارئة.',
-                        style: NC.body(12),
+                AppCard(
+                  color: AppColors.warning.withOpacity(0.05),
+                  border: BorderSide(color: AppColors.warning.withOpacity(0.2)),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Text(
+                          item.urgencyLevel == 'critical'
+                              ? 'حالة طارئة جداً — ابدأ الإسعافات واتصل بـ 123 فوراً'
+                              : 'اتبع الخطوات بدقة واتصل بالإسعاف إذا لزم الأمر',
+                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warning, fontWeight: FontWeight.w600),
+                        ),
                       ),
-                    ),
-                  ]),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: AppSpacing.xl),
+                Text('خطوات الإسعاف', style: AppTextStyles.headlineLarge),
+                const SizedBox(height: AppSpacing.md),
+                ...item.steps.map((step) => _StepItem(step: step)),
+                const SizedBox(height: AppSpacing.xl),
+                AppCard(
+                  color: AppColors.primaryBlue.withOpacity(0.05),
+                  border: BorderSide(color: AppColors.primaryBlue.withOpacity(0.2)),
+                  child: Text(
+                    'تنبيه: هذه المعلومات للأغراض الإرشادية فقط. نجدة تخلي مسؤوليتها عن سوء استخدام هذه المعلومات.',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.primaryBlue),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxl),
               ]),
             ),
           ),
@@ -545,44 +491,31 @@ class FirstAidDetailPage extends StatelessWidget {
   }
 }
 
-class _StepCard extends StatelessWidget {
+class _StepItem extends StatelessWidget {
   final FirstAidStep step;
-  const _StepCard({required this.step});
+  const _StepItem({required this.step});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: GlassCard(
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+      child: AppCard(
         padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Step image (if available)
             if (step.imageUrl != null)
               ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(18)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
                 child: CachedNetworkImage(
                   imageUrl: step.imageUrl!,
-                  height: 160,
+                  height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                    height: 160,
-                    color: NC.overlay,
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation(NC.primary),
-                          strokeWidth: 2),
-                    ),
-                  ),
-                  errorWidget: (_, __, ___) => const SizedBox.shrink(),
                 ),
               ),
-
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -590,21 +523,23 @@ class _StepCard extends StatelessWidget {
                     width: 32,
                     height: 32,
                     decoration: const BoxDecoration(
-                      gradient: NC.primaryGrad,
+                      color: AppColors.primaryBlue,
                       shape: BoxShape.circle,
                     ),
                     child: Center(
-                      child: Text('${step.number}',
-                          style: NC.label(13, color: NC.base,
-                              weight: FontWeight.w800)),
+                      child: Text(
+                        '${step.number}',
+                        style: AppTextStyles.labelLarge.copyWith(color: AppColors.white),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
-                    child: Text(step.instruction,
-                        style: NC.body(14,
-                            color: NC.textHigh),
-                  )),
+                    child: Text(
+                      step.instruction,
+                      style: AppTextStyles.bodyLarge,
+                    ),
+                  ),
                 ],
               ),
             ),

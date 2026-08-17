@@ -7,10 +7,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
-import '../../../core/theme/app_theme.dart';
-import '../../../core/theme/design.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_radius.dart';
+import '../../../core/shared/widgets/app_widgets.dart';
 import '../../auth/presentation/cubit/auth_cubit.dart';
-
 
 enum AccidentType {
   carAccident('حادث سيارة / تصادم', Icons.directions_car_outlined),
@@ -114,113 +116,119 @@ class _ReportPageState extends State<ReportPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => Dialog(
-        backgroundColor: NC.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: 68,
-              height: 68,
-              decoration: const BoxDecoration(
-                  gradient: NC.successGrad, shape: BoxShape.circle),
-              child: const Icon(Icons.check_rounded,
-                  color: Colors.white, size: 36),
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusXl),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: const BoxDecoration(
+              color: AppColors.success,
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 18),
-            Text('تم إرسال البلاغ!', style: NC.display(18)),
-            const SizedBox(height: 8),
-            Text('الإسعاف في الطريق.',
-                style: NC.body(13), textAlign: TextAlign.center),
-            const SizedBox(height: 22),
-            GradientButton(
-              label: 'عودة للرئيسية',
-              gradient: NC.primaryGrad,
-              height: 48,
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-            ),
-          ]),
-        ),
+            child: const Icon(Icons.check_rounded,
+                color: Colors.white, size: 38),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text('تم إرسال البلاغ!', style: AppTextStyles.headlineLarge),
+          const SizedBox(height: AppSpacing.sm),
+          Text('الإسعاف في الطريق. ابقَ هادئاً.',
+              style: AppTextStyles.bodyMedium, textAlign: TextAlign.center),
+          const SizedBox(height: AppSpacing.lg),
+          AppButton(
+            label: 'عودة للرئيسية',
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context);
+            },
+          ),
+        ]),
       ),
     );
   }
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: NC.body(13, color: Colors.white)),
-      backgroundColor: NC.critical,
+      content: Text(msg),
+      backgroundColor: AppColors.criticalRed,
       behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.radiusMd),
     ));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: NC.base,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: NC.surface,
+        backgroundColor: AppColors.navy,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: NC.textHigh, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
           onPressed: () => _step > 0
               ? setState(() => _step--)
               : Navigator.pop(context),
         ),
-        title: Text('إبلاغ عن حادث', style: NC.display(16)),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(4),
-          child: LinearProgressIndicator(
-            value: (_step + 1) / 3,
-            backgroundColor: NC.cardBorder,
-            valueColor: const AlwaysStoppedAnimation(NC.primary),
-          ),
-        ),
+        title: const Text('إبلاغ عن حادث'),
       ),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: _step == 0
-            ? _StepType(
-                key: const ValueKey(0),
-                selected: _type,
-                onSelect: (t) => setState(() {
-                  _type = t;
-                  _step = 1;
-                }),
-              )
-            : _step == 1
-                ? _StepDetails(
-                    key: const ValueKey(1),
-                    consciousness: _consciousness,
-                    injuryLocation: _injuryLocation,
-                    painLevel: _painLevel,
-                    consciousnessOpts: _consciousnessOpts,
-                    injuryOpts: _injuryOpts,
-                    painOpts: _painOpts,
-                    onConsciousness: (v) =>
-                        setState(() => _consciousness = v),
-                    onInjury: (v) =>
-                        setState(() => _injuryLocation = v),
-                    onPain: (v) => setState(() => _painLevel = v),
-                    onNext: () => setState(() => _step = 2),
-                  )
-                : _StepPhoto(
-                    key: const ValueKey(2),
-                    image: _image,
-                    loading: _loading,
-                    onPickImage: _pickImage,
-                    onRemove: () => setState(() => _image = null),
-                    onSubmit: _submit,
-                  ),
+      body: Column(
+        children: [
+          LinearProgressIndicator(
+            value: (_step + 1) / 3,
+            backgroundColor: AppColors.border,
+            valueColor: const AlwaysStoppedAnimation(AppColors.primaryBlue),
+            minHeight: 6,
+          ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: _buildStepContent(),
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  Widget _buildStepContent() {
+    switch (_step) {
+      case 0:
+        return _StepType(
+          key: const ValueKey(0),
+          selected: _type,
+          onSelect: (t) => setState(() {
+            _type = t;
+            _step = 1;
+          }),
+        );
+      case 1:
+        return _StepDetails(
+          key: const ValueKey(1),
+          consciousness: _consciousness,
+          injuryLocation: _injuryLocation,
+          painLevel: _painLevel,
+          consciousnessOpts: _consciousnessOpts,
+          injuryOpts: _injuryOpts,
+          painOpts: _painOpts,
+          onConsciousness: (v) => setState(() => _consciousness = v),
+          onInjury: (v) => setState(() => _injuryLocation = v),
+          onPain: (v) => setState(() => _painLevel = v),
+          onNext: () => setState(() => _step = 2),
+        );
+      case 2:
+        return _StepPhoto(
+          key: const ValueKey(2),
+          image: _image,
+          loading: _loading,
+          onPickImage: _pickImage,
+          onRemove: () => setState(() => _image = null),
+          onSubmit: _submit,
+        );
+      default:
+        return const SizedBox.shrink();
+    }
+  }
 }
 
-// ─── Step 1: Accident Type ────────────────────────────────────────
 class _StepType extends StatelessWidget {
   final AccidentType? selected;
   final ValueChanged<AccidentType> onSelect;
@@ -230,63 +238,57 @@ class _StepType extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('ما نوع الحادث؟', style: NC.display(20)),
-              const SizedBox(height: 4),
-              Text('اختر النوع الأقرب للحالة',
-                  style: NC.body(13)),
+              Text('ما نوع الحادث؟', style: AppTextStyles.headlineLarge),
+              const SizedBox(height: AppSpacing.xs),
+              Text('اختر التصنيف الأقرب للحالة للمساعدة في الاستجابة',
+                  style: AppTextStyles.bodySmall),
             ],
           ),
         ),
         Expanded(
           child: GridView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
+              mainAxisSpacing: AppSpacing.md,
+              crossAxisSpacing: AppSpacing.md,
               childAspectRatio: 0.9,
             ),
             itemCount: AccidentType.values.length,
             itemBuilder: (ctx, i) {
               final t = AccidentType.values[i];
               final sel = selected == t;
-              return GestureDetector(
+              return AppCard(
                 onTap: () => onSelect(t),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  decoration: BoxDecoration(
-                    gradient: sel ? NC.primaryGrad : null,
-                    color: sel ? null : NC.card,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: sel
-                          ? NC.primary
-                          : NC.cardBorder,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(t.icon,
-                          color: sel ? NC.base : NC.textMid,
-                          size: 26),
-                      const SizedBox(height: 8),
-                      Text(
-                        t.label,
-                        textAlign: TextAlign.center,
-                        style: NC.body(10,
-                            color: sel ? NC.base : NC.textMid),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                padding: EdgeInsets.zero,
+                color: sel ? AppColors.primaryBlue : AppColors.surface,
+                border: BorderSide(color: sel ? AppColors.primaryBlue : AppColors.border),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(t.icon,
+                        color: sel ? AppColors.white : AppColors.primaryBlue,
+                        size: 28),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      t.label,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: sel ? AppColors.white : AppColors.textPrimary,
+                        fontSize: 10,
+                        fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
                       ),
-                    ],
-                  ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               );
             },
@@ -297,7 +299,6 @@ class _StepType extends StatelessWidget {
   }
 }
 
-// ─── Step 2: Medical Details ───────────────────────────────────────
 class _StepDetails extends StatelessWidget {
   final String? consciousness;
   final String? injuryLocation;
@@ -327,38 +328,37 @@ class _StepDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('تفاصيل الحالة', style: NC.display(20)),
-          const SizedBox(height: 4),
-          Text('هذه المعلومات تساعد المسعف', style: NC.body(13)),
-          const SizedBox(height: 24),
+          Text('تفاصيل الإصابة', style: AppTextStyles.headlineLarge),
+          const SizedBox(height: AppSpacing.xs),
+          Text('وصف حالة المصاب يساعد المسعف على الاستعداد', style: AppTextStyles.bodySmall),
+          const SizedBox(height: AppSpacing.xl),
 
-          _chipGroup('مستوى الوعي *', consciousnessOpts, consciousness,
-              onConsciousness, NC.critical),
-          const SizedBox(height: 20),
+          _buildChipGroup('مستوى الوعي *', consciousnessOpts, consciousness,
+              onConsciousness, AppColors.criticalRed),
+          const SizedBox(height: AppSpacing.lg),
 
-          _chipGroup('موضع الإصابة', injuryOpts, injuryLocation,
-              onInjury, NC.primary),
-          const SizedBox(height: 20),
+          _buildChipGroup('موضع الإصابة', injuryOpts, injuryLocation,
+              onInjury, AppColors.primaryBlue),
+          const SizedBox(height: AppSpacing.lg),
 
-          _chipGroup('شدة الألم', painOpts, painLevel, onPain, NC.warning),
-          const SizedBox(height: 32),
+          _buildChipGroup('شدة الألم', painOpts, painLevel, onPain, AppColors.warning),
+          const SizedBox(height: AppSpacing.xxl),
 
-          GradientButton(
+          AppButton(
             label: 'التالي — إضافة صورة',
-            gradient: NC.primaryGrad,
+            onPressed: onNext,
             icon: Icons.arrow_forward_ios_rounded,
-            onTap: onNext,
           ),
         ],
       ),
     );
   }
 
-  Widget _chipGroup(
+  Widget _buildChipGroup(
     String title,
     List<String> opts,
     String? selected,
@@ -368,32 +368,27 @@ class _StepDetails extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: NC.label(14)),
-        const SizedBox(height: 10),
+        Text(title, style: AppTextStyles.titleLarge),
+        const SizedBox(height: AppSpacing.md),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
           children: opts.map((o) {
             final sel = selected == o;
-            return GestureDetector(
-              onTap: () => onChange(sel ? null : o),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: sel ? color.withOpacity(0.2) : NC.card,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                      color: sel ? color : NC.cardBorder),
-                ),
-                child: Text(o,
-                    style: NC.label(13,
-                        color: sel ? color : NC.textMid,
-                        weight: sel
-                            ? FontWeight.w700
-                            : FontWeight.w400)),
+            return ChoiceChip(
+              label: Text(o),
+              selected: sel,
+              onSelected: (val) => onChange(val ? o : null),
+              selectedColor: color.withOpacity(0.2),
+              labelStyle: AppTextStyles.bodyMedium.copyWith(
+                color: sel ? color : AppColors.textPrimary,
+                fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
               ),
+              shape: RoundedRectangleBorder(
+                borderRadius: AppRadius.radiusXl,
+                side: BorderSide(color: sel ? color : AppColors.border),
+              ),
+              showCheckmark: false,
             );
           }).toList(),
         ),
@@ -402,7 +397,6 @@ class _StepDetails extends StatelessWidget {
   }
 }
 
-// ─── Step 3: Photo + Submit ────────────────────────────────────────
 class _StepPhoto extends StatelessWidget {
   final File? image;
   final bool loading;
@@ -422,107 +416,70 @@ class _StepPhoto extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('صورة الحادث', style: NC.display(20)),
-          Text('اختيارية — تساعد في التشخيص',
-              style: NC.body(13)),
-          const SizedBox(height: 24),
+          Text('صورة الحالة', style: AppTextStyles.headlineLarge),
+          const SizedBox(height: AppSpacing.xs),
+          Text('اختياري: التقاط صورة للحادث يساعد فريق الإسعاف على فهم طبيعة الإصابة',
+              style: AppTextStyles.bodySmall),
+          const SizedBox(height: AppSpacing.xl),
 
           Expanded(
-            child: image == null
-                ? GestureDetector(
-                    onTap: onPickImage,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: NC.card,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                            color: NC.primary.withOpacity(0.3),
-                            style: BorderStyle.solid),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(18),
-                            decoration: BoxDecoration(
-                              color: NC.primary.withOpacity(0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.camera_alt_outlined,
-                                color: NC.primary, size: 36),
+            child: AppCard(
+              onTap: image == null ? onPickImage : null,
+              padding: EdgeInsets.zero,
+              child: image == null
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryBlue.withOpacity(0.1),
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(height: 16),
-                          Text('اضغط لالتقاط صورة',
-                              style: NC.label(15, color: NC.primary)),
-                          const SizedBox(height: 4),
-                          Text('اضغط مطولاً للاختيار من المعرض',
-                              style: NC.body(12)),
-                        ],
-                      ),
+                          child: const Icon(Icons.camera_alt_outlined,
+                              color: AppColors.primaryBlue, size: 48),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Text('اضغط هنا لالتقاط صورة',
+                            style: AppTextStyles.labelLarge.copyWith(color: AppColors.primaryBlue)),
+                      ],
+                    )
+                  : Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ClipRRect(
+                          borderRadius: AppRadius.radiusLg,
+                          child: Image.file(image!, fit: BoxFit.cover),
+                        ),
+                        Positioned(
+                          top: AppSpacing.sm,
+                          left: AppSpacing.sm,
+                          child: IconButton.filled(
+                            onPressed: onRemove,
+                            icon: const Icon(Icons.close, size: 20),
+                            style: IconButton.styleFrom(backgroundColor: AppColors.criticalRed),
+                          ),
+                        ),
+                      ],
                     ),
-                  )
-                : Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Image.file(image!, fit: BoxFit.cover),
-                      ),
-                      Positioned(
-                        top: 12,
-                        left: 12,
-                        child: GestureDetector(
-                          onTap: onRemove,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: const BoxDecoration(
-                              color: NC.critical,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.close_rounded,
-                                color: Colors.white, size: 16),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 12,
-                        right: 12,
-                        child: GestureDetector(
-                          onTap: onPickImage,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: NC.base.withOpacity(0.7),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.camera_alt_outlined,
-                                color: NC.textHigh, size: 18),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-          const SizedBox(height: 20),
-
-          GradientButton(
-            label: 'إرسال البلاغ',
-            gradient: NC.criticalGrad,
-            icon: Icons.send_outlined,
-            loading: loading,
-            onTap: onSubmit,
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: TextButton(
-              onPressed: loading ? null : onSubmit,
-              child: Text('إرسال بدون صورة',
-                  style: NC.label(13, color: NC.textMid)),
             ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+
+          AppButton(
+            label: 'إرسال البلاغ',
+            isLoading: loading,
+            onPressed: onSubmit,
+            icon: Icons.send_rounded,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextButton(
+            onPressed: loading ? null : onSubmit,
+            child: const Text('إرسال بدون صورة'),
           ),
         ],
       ),

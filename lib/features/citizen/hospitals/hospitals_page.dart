@@ -5,7 +5,11 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-import '../../../core/theme/design.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_radius.dart';
+import '../../../core/shared/widgets/app_widgets.dart';
 
 class _Hospital {
   final String name;
@@ -55,7 +59,6 @@ class _HospitalsPageState extends State<HospitalsPage> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      // 1. Get location
       var perm = await Geolocator.checkPermission();
       if (perm == LocationPermission.denied) {
         perm = await Geolocator.requestPermission();
@@ -67,7 +70,6 @@ class _HospitalsPageState extends State<HospitalsPage> {
       _pos = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
 
-      // 2. Nearby Search — hospitals within 5km
       final nearbyUrl = Uri.parse(
         'https://maps.googleapis.com/maps/api/place/nearbysearch/json'
         '?location=${_pos!.latitude},${_pos!.longitude}'
@@ -89,7 +91,6 @@ class _HospitalsPageState extends State<HospitalsPage> {
 
       final results = (nearbyData['results'] as List).take(10).toList();
 
-      // 3. Build hospital list (parallel phone fetching)
       final hospitals = await Future.wait(results.map((r) async {
         final loc = r['geometry']['location'];
         final lat = (loc['lat'] as num).toDouble();
@@ -97,7 +98,6 @@ class _HospitalsPageState extends State<HospitalsPage> {
         final dist = Geolocator.distanceBetween(
               _pos!.latitude, _pos!.longitude, lat, lng) / 1000;
 
-        // Fetch phone from Place Details
         String phone = '123';
         try {
           phone = await _getPhone(r['place_id'] as String);
@@ -152,69 +152,64 @@ class _HospitalsPageState extends State<HospitalsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: NC.base,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: NC.surface,
+        backgroundColor: AppColors.navy,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: NC.textHigh, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('مستشفيات قريبة', style: NC.display(16)),
+        title: const Text('مستشفيات قريبة'),
         actions: [
           if (!_loading)
             IconButton(
-              icon: const Icon(Icons.refresh_rounded,
-                  color: NC.primary, size: 22),
+              icon: const Icon(Icons.refresh_rounded),
               onPressed: _load,
             ),
         ],
       ),
       body: _loading
-          ? const NajdaSpinner(label: 'جارٍ البحث عن مستشفيات قريبة...')
+          ? const AppLoader(message: 'جارٍ البحث عن أقرب المستشفيات...')
           : _error != null
               ? _ErrorView(error: _error!, onRetry: _load)
               : Column(
                   children: [
-                    // Location bar
                     if (_pos != null)
                       Container(
-                        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                        width: double.infinity,
+                        margin: const EdgeInsets.all(AppSpacing.lg),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
+                            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
                         decoration: BoxDecoration(
-                          color: NC.primary.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                              color: NC.primary.withOpacity(0.25)),
+                          color: AppColors.primaryBlue.withOpacity(0.08),
+                          borderRadius: AppRadius.radiusMd,
+                          border: Border.all(color: AppColors.primaryBlue.withOpacity(0.2)),
                         ),
                         child: Row(children: [
                           const Icon(Icons.my_location_rounded,
-                              color: NC.primary, size: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            'تعرض ${_hospitals.length} مستشفى في دائرة 5 كم — مرتبة بالقرب',
-                            style: NC.body(12, color: NC.textMid),
+                              color: AppColors.primaryBlue, size: 16),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              'تم العثور على ${_hospitals.length} مستشفيات بالقرب منك',
+                              style: AppTextStyles.bodySmall.copyWith(color: AppColors.primaryBlue),
+                            ),
                           ),
                         ]),
                       ),
-                    const SizedBox(height: 10),
 
                     Expanded(
                       child: _hospitals.isEmpty
-                          ? const NajdaEmpty(
+                          ? const AppEmptyState(
                               icon: Icons.local_hospital_outlined,
-                              title: 'لا توجد مستشفيات قريبة',
-                              subtitle: 'جرب توسيع نطاق البحث',
+                              title: 'لم يتم العثور على مستشفيات',
+                              subtitle: 'تأكد من تفعيل الموقع أو جرب لاحقاً',
                             )
                           : ListView.separated(
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xl),
                               itemCount: _hospitals.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 12),
-                              itemBuilder: (ctx, i) =>
-                                  _HospitalCard(h: _hospitals[i]),
+                              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
+                              itemBuilder: (ctx, i) => _HospitalCard(h: _hospitals[i]),
                             ),
                     ),
                   ],
@@ -223,7 +218,6 @@ class _HospitalsPageState extends State<HospitalsPage> {
   }
 }
 
-// ─── Hospital card ────────────────────────────────────────────────
 class _HospitalCard extends StatelessWidget {
   final _Hospital h;
   const _HospitalCard({required this.h});
@@ -246,116 +240,94 @@ class _HospitalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
-      padding: const EdgeInsets.all(16),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 46,
-                height: 46,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: NC.success.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: NC.success.withOpacity(0.3)),
+                  color: AppColors.success.withOpacity(0.1),
+                  borderRadius: AppRadius.radiusMd,
                 ),
                 child: const Icon(Icons.local_hospital_outlined,
-                    color: NC.success, size: 24),
+                    color: AppColors.success, size: 28),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(h.name,
-                        style: NC.label(14, weight: FontWeight.w700),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 3),
+                    Text(h.name, style: AppTextStyles.titleLarge),
                     Text(h.address,
-                        style: NC.body(11),
-                        maxLines: 1,
+                        style: AppTextStyles.bodySmall,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              // Distance badge
+              const SizedBox(width: AppSpacing.sm),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: NC.primary.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.primaryBlue.withOpacity(0.1),
+                      borderRadius: AppRadius.radiusSm,
                     ),
                     child: Text(
                       '${h.distKm.toStringAsFixed(1)} كم',
-                      style: NC.label(11, color: NC.primary),
+                      style: AppTextStyles.labelMedium.copyWith(color: AppColors.primaryBlue, fontWeight: FontWeight.w700),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(children: [
-                    Icon(Icons.circle,
-                        size: 7,
-                        color: h.isOpen ? NC.success : NC.critical),
-                    const SizedBox(width: 4),
-                    Text(
-                      h.isOpen ? 'مفتوح' : 'مغلق',
-                      style: NC.body(10,
-                          color:
-                              h.isOpen ? NC.success : NC.critical),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    h.isOpen ? 'مفتوح الآن' : 'مغلق',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: h.isOpen ? AppColors.success : AppColors.criticalRed,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ]),
+                  ),
                 ],
               ),
             ],
           ),
 
-          // Rating
           if (h.rating != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Row(children: [
-              const Icon(Icons.star_rounded,
-                  color: NC.warning, size: 14),
-              const SizedBox(width: 4),
+              const Icon(Icons.star_rounded, color: AppColors.warning, size: 16),
+              const SizedBox(width: AppSpacing.xs),
               Text(h.rating!.toStringAsFixed(1),
-                  style: NC.label(12, color: NC.warning)),
+                  style: AppTextStyles.labelMedium.copyWith(color: AppColors.warning)),
             ]),
           ],
 
-          const SizedBox(height: 14),
-          const Divider(color: NC.cardBorder, height: 1),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
+          const Divider(),
+          const SizedBox(height: AppSpacing.md),
 
-          // Action buttons
           Row(children: [
-            _Btn(
-              icon: Icons.local_hospital_rounded,
-              label: 'طوارئ',
-              color: NC.critical,
-              onTap: () => _call('123'),
+            Expanded(
+              child: AppButton(
+                label: 'اتصال',
+                isPrimary: false,
+                onPressed: () => _call(h.phone.isNotEmpty ? h.phone : '123'),
+                icon: Icons.phone_rounded,
+              ),
             ),
-            const SizedBox(width: 8),
-            _Btn(
-              icon: Icons.phone_rounded,
-              label: 'اتصال',
-              color: NC.primary,
-              onTap: () => _call(h.phone.isNotEmpty ? h.phone : '123'),
-            ),
-            const SizedBox(width: 8),
-            _Btn(
-              icon: Icons.navigation_rounded,
-              label: 'اتجاهات',
-              color: NC.success,
-              onTap: _maps,
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: AppButton(
+                label: 'الاتجاهات',
+                onPressed: _maps,
+                icon: Icons.navigation_rounded,
+              ),
             ),
           ]),
         ],
@@ -364,43 +336,6 @@ class _HospitalCard extends StatelessWidget {
   }
 }
 
-class _Btn extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _Btn(
-      {required this.icon,
-      required this.label,
-      required this.color,
-      required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withOpacity(0.3)),
-          ),
-          child: Column(children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(height: 4),
-            Text(label,
-                style: NC.label(11, color: color)),
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Error view ───────────────────────────────────────────────────
 class _ErrorView extends StatelessWidget {
   final String error;
   final VoidCallback onRetry;
@@ -408,36 +343,12 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: NC.critical.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.wifi_off_rounded,
-                color: NC.critical, size: 42),
-          ),
-          const SizedBox(height: 20),
-          Text('فشل تحميل المستشفيات',
-              style: NC.display(16), textAlign: TextAlign.center),
-          const SizedBox(height: 8),
-          Text(error,
-              style: NC.body(12),
-              textAlign: TextAlign.center),
-          const SizedBox(height: 24),
-          GradientButton(
-            label: 'إعادة المحاولة',
-            gradient: NC.primaryGrad,
-            icon: Icons.refresh_rounded,
-            height: 48,
-            onTap: onRetry,
-          ),
-        ]),
-      ),
+    return AppEmptyState(
+      icon: Icons.location_off_rounded,
+      title: 'تعذر الوصول للموقع',
+      subtitle: error,
+      actionLabel: 'إعادة المحاولة',
+      onAction: onRetry,
     );
   }
 }

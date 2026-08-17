@@ -6,9 +6,12 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/l10n/generated/app_localizations.dart';
-import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/shared/widgets/app_widgets.dart';
 import '../../../core/route/app_routes.dart';
-import '../../../core/theme/design.dart';
 import '../../auth/domain/entities/app_user.dart';
 import '../../auth/presentation/cubit/auth_cubit.dart';
 
@@ -33,8 +36,9 @@ class _ParamedicHomePageState extends State<ParamedicHomePage> {
   }
 
   void _startListening() {
-    final user =
-        (context.read<AuthCubit>().state as AuthAuthenticated).user;
+    final authState = context.read<AuthCubit>().state;
+    if (authState is! AuthAuthenticated) return;
+    final user = authState.user;
     final fs = FirebaseFirestore.instance;
 
     _sub1 = fs
@@ -93,466 +97,200 @@ class _ParamedicHomePageState extends State<ParamedicHomePage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    if (l10n == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-    final user =
-        (context.watch<AuthCubit>().state as AuthAuthenticated).user;
-
-    final allReports = [..._emergency, ..._assigned];
-    final hasActive = allReports.isNotEmpty;
+    final authState = context.watch<AuthCubit>().state;
+    if (authState is! AuthAuthenticated) return const AppLoader();
+    final user = authState.user;
 
     return Scaffold(
-      backgroundColor: NC.surface,
-      body: CustomScrollView(
-        slivers: [
-          // ── App bar ────────────────────────────────────────────────────
-          SliverAppBar(
-            expandedHeight: 140,
-            pinned: true,
-            floating: false,
-            automaticallyImplyLeading: false,
-            backgroundColor: NajdaColors.navy,
-            actions: [
-              Stack(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.notifications_outlined,
-                        color: Colors.white),
-                    onPressed: () => Navigator.pushNamed(
-                        context, AppRoutes.paramedicNotifications),
-                  ),
-                  if (_unreadNotifications > 0)
-                    Positioned(
-                      right: 8, top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: NC.critical,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          _unreadNotifications > 9
-                              ? '9+'
-                              : '$_unreadNotifications',
-                          style: const TextStyle(
-                              fontFamily: 'Cairo',
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: Colors.white),
-                onSelected: (v) {
-                  if (v == 'history') {
-                    Navigator.pushNamed(
-                        context, AppRoutes.paramedicHistory);
-                  } else if (v == 'logout') {
-                    _confirmLogout(context, l10n);
-                  }
-                },
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'history',
-                    child: Row(children: [
-                      const Icon(Icons.history_outlined,
-                          color: NC.primary, size: 18),
-                      const SizedBox(width: 10),
-                      Text(l10n.paramedicHistory,
-                          style:
-                              const TextStyle(fontFamily: 'Cairo')),
-                    ]),
-                  ),
-                  const PopupMenuDivider(),
-                  PopupMenuItem(
-                    value: 'logout',
-                    child: Row(children: [
-                      const Icon(Icons.logout_outlined,
-                          color: NC.critical, size: 18),
-                      const SizedBox(width: 10),
-                      Text(l10n.logout,
-                          style: const TextStyle(
-                              fontFamily: 'Cairo',
-                              color: NC.critical)),
-                    ]),
-                  ),
-                ],
-              ),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                    gradient: NajdaColors.navyGradient),
-                padding: const EdgeInsets.fromLTRB(20, 70, 20, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      'مرحباً، ${user.firstName ?? ''}',
-                      style: const TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(children: [
-                      Container(
-                        width: 8, height: 8,
-                        decoration: BoxDecoration(
-                          color: user.isAvailable
-                              ? NajdaColors.success
-                              : NajdaColors.textMuted,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        user.isAvailable ? 'متاح' : 'غير متاح',
-                        style: TextStyle(
-                            fontFamily: 'Cairo',
-                            fontSize: 13,
-                            color: Colors.white.withOpacity(0.8)),
-                      ),
-                    ]),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  // ── Availability toggle ──────────────────────────────
-                  _AvailabilityCard(user: user),
-                  const SizedBox(height: 16),
-
-                  // ── Stats row ────────────────────────────────────────
-                  Row(children: [
-                    _StatChip(
-                      icon: Icons.assignment_outlined,
-                      label: 'بلاغات',
-                      value: _assigned.length.toString(),
-                      color: NC.primary,
-                    ),
-                    const SizedBox(width: 10),
-                    _StatChip(
-                      icon: Icons.emergency_outlined,
-                      label: 'طوارئ',
-                      value: _emergency.length.toString(),
-                      color: NC.critical,
-                    ),
-                  ]),
-                  const SizedBox(height: 20),
-
-                  // ── Tab bar ──────────────────────────────────────────
-                  _ReportsTabs(
-                    selected: _tab,
-                    emergencyCount: _emergency.length,
-                    assignedCount: _assigned.length,
-                    onChanged: (i) => setState(() => _tab = i),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Report cards ─────────────────────────────────────────────
-          if (_isLoading)
-            const SliverFillRemaining(
-                child: NajdaLoader(message: 'جارٍ التحميل...'))
-          else if ((_tab == 0 && _emergency.isEmpty) ||
-              (_tab == 1 && _assigned.isEmpty))
-            SliverFillRemaining(
-              child: NajdaEmptyState(
-                icon: Icons.assignment_turned_in_outlined,
-                title: _tab == 0
-                    ? l10n.noEmergencyReports
-                    : l10n.noAssignedReports,
-                subtitle: 'لا توجد بلاغات حالياً',
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (ctx, i) {
-                    final list = _tab == 0 ? _emergency : _assigned;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _ReportCard(
-                        report: list[i],
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          AppRoutes.paramedicReportDetails,
-                          arguments: {
-                            'reportId': list[i]['_id'],
-                            'reportType': list[i]['_col'],
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                  childCount: _tab == 0
-                      ? _emergency.length
-                      : _assigned.length,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmLogout(BuildContext context, AppLocalizations l10n) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(l10n.logoutConfirm,
-            style: const TextStyle(fontFamily: 'Cairo')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.navy,
+        automaticallyImplyLeading: false,
+        title: Text('مرحباً، ${user.firstName ?? ''}'),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.cancel,
-                  style: const TextStyle(fontFamily: 'Cairo'))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: NC.critical),
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<AuthCubit>().signOut();
-              Navigator.pushNamedAndRemoveUntil(
-                  context, AppRoutes.login, (r) => false);
+          IconButton(
+            icon: Badge(
+              label: Text('$_unreadNotifications'),
+              isLabelVisible: _unreadNotifications > 0,
+              child: const Icon(Icons.notifications_outlined),
+            ),
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.paramedicNotifications),
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (v) {
+              if (v == 'history') {
+                Navigator.pushNamed(context, AppRoutes.paramedicHistory);
+              } else if (v == 'logout') {
+                _confirmLogout(context);
+              }
             },
-            child: Text(l10n.yes,
-                style: const TextStyle(fontFamily: 'Cairo')),
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'history', child: Text('سجل المهام')),
+              const PopupMenuItem(value: 'logout', child: Text('تسجيل الخروج', style: TextStyle(color: AppColors.criticalRed))),
+            ],
           ),
         ],
       ),
-    );
-  }
-}
-
-// ─── Sub-widgets ──────────────────────────────────────────────────────────────
-
-class _AvailabilityCard extends StatelessWidget {
-  final AppUser user;
-  const _AvailabilityCard({required this.user});
-
-  Future<void> _toggle(BuildContext context) async {
-    try {
-      final newVal = !user.isAvailable;
-      await FirebaseFirestore.instance
-          .collection(AppConstants.paramedicCollection)
-          .doc(user.id)
-          .update({
-        'isAvailable': newVal,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('فشل التحديث: $e'),
-        backgroundColor: NC.critical,
-      ));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return NajdaCard(
-      child: Row(
+      body: Column(
         children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: user.isAvailable
-                  ? NC.success
-                  : NajdaColors.textMuted,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 12),
+          _buildHeader(user),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('حالة التوفر',
-                    style: Theme.of(context).textTheme.titleSmall),
-                Text(
-                  user.isAvailable
-                      ? 'متاح للبلاغات الجديدة'
-                      : 'غير متاح — لن تصلك بلاغات',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodySmall
-                      ?.copyWith(color: NajdaColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: user.isAvailable,
-            onChanged: (_) => _toggle(context),
-            activeColor: NC.success,
-            inactiveThumbColor: NajdaColors.textMuted,
+            child: _isLoading
+                ? const AppLoader()
+                : Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Row(
+                          children: [
+                            _buildStatCard('طوارئ', _emergency.length, AppColors.criticalRed, Icons.emergency_rounded),
+                            const SizedBox(width: AppSpacing.md),
+                            _buildStatCard('بلاغات', _assigned.length, AppColors.primaryBlue, Icons.assignment_rounded),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                        child: SegmentedButton<int>(
+                          segments: const [
+                            ButtonSegment(value: 0, label: Text('طوارئ')),
+                            ButtonSegment(value: 1, label: Text('بلاغات')),
+                          ],
+                          selected: {_tab},
+                          onSelectionChanged: (set) => setState(() => _tab = set.first),
+                          showSelectedIcon: false,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Expanded(
+                        child: _buildList(),
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),
     );
   }
-}
 
-class _StatChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  const _StatChip({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(14),
-          border:
-              Border.all(color: color.withOpacity(0.2)),
-        ),
+  Widget _buildHeader(AppUser user) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: const BoxDecoration(
+        color: AppColors.navy,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(AppRadius.xl)),
+      ),
+      child: AppCard(
+        color: AppColors.white.withOpacity(0.1),
+        border: BorderSide.none,
         child: Row(
           children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(value,
-                    style: TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: color)),
-                Text(label,
-                    style: const TextStyle(
-                        fontFamily: 'Cairo',
-                        fontSize: 12,
-                        color: NajdaColors.textSecondary)),
-              ],
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: user.isAvailable ? AppColors.success : AppColors.textMuted,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('حالة التوفر', style: AppTextStyles.titleMedium.copyWith(color: AppColors.white)),
+                  Text(
+                    user.isAvailable ? 'متاح لاستقبال البلاغات' : 'غير متاح حالياً',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.white.withOpacity(0.7)),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: user.isAvailable,
+              onChanged: (val) => _toggleAvailability(val, user.id),
+              activeColor: AppColors.success,
             ),
           ],
         ),
       ),
     );
   }
-}
 
-class _ReportsTabs extends StatelessWidget {
-  final int selected;
-  final int emergencyCount;
-  final int assignedCount;
-  final ValueChanged<int> onChanged;
-
-  const _ReportsTabs({
-    required this.selected,
-    required this.emergencyCount,
-    required this.assignedCount,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: NajdaColors.border,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.all(3),
-      child: Row(
-        children: [
-          _Tab(
-            label: 'طوارئ ($emergencyCount)',
-            selected: selected == 0,
-            onTap: () => onChanged(0),
-            color: NC.critical,
-          ),
-          _Tab(
-            label: 'مُعيَّنة ($assignedCount)',
-            selected: selected == 1,
-            onTap: () => onChanged(1),
-            color: NC.primary,
-          ),
-        ],
+  Widget _buildStatCard(String label, int count, Color color, IconData icon) {
+    return Expanded(
+      child: AppCard(
+        color: color.withOpacity(0.05),
+        border: BorderSide(color: color.withOpacity(0.2)),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: AppSpacing.sm),
+            Text('$count', style: AppTextStyles.displaySmall.copyWith(color: color)),
+            Text(label, style: AppTextStyles.bodySmall),
+          ],
+        ),
       ),
     );
   }
-}
 
-class _Tab extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  final Color color;
-
-  const _Tab(
-      {required this.label,
-      required this.selected,
-      required this.onTap,
-      required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: selected ? NajdaColors.cardBg : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2))
-                  ]
-                : null,
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 13,
-              fontWeight:
-                  selected ? FontWeight.w700 : FontWeight.w400,
-              color: selected ? color : NajdaColors.textMuted,
-            ),
-          ),
+  Widget _buildList() {
+    final list = _tab == 0 ? _emergency : _assigned;
+    if (list.isEmpty) {
+      return AppEmptyState(
+        icon: _tab == 0 ? Icons.emergency_outlined : Icons.assignment_turned_in_outlined,
+        title: _tab == 0 ? 'لا توجد بلاغات طوارئ' : 'لا توجد بلاغات معينة',
+        subtitle: 'سيظهر هنا أي بلاغ يتم تكليفك به',
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      itemCount: list.length,
+      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
+      itemBuilder: (ctx, i) => _ReportCard(
+        report: list[i],
+        onTap: () => Navigator.pushNamed(
+          context,
+          AppRoutes.paramedicReportDetails,
+          arguments: {
+            'reportId': list[i]['_id'],
+            'reportType': list[i]['_col'],
+          },
         ),
+      ),
+    );
+  }
+
+  Future<void> _toggleAvailability(bool val, String uid) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection(AppConstants.paramedicCollection)
+          .doc(uid)
+          .update({'isAvailable': val});
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('فشل التحديث: $e')));
+    }
+  }
+
+  void _confirmLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('تسجيل الخروج'),
+        content: const Text('هل أنت متأكد من رغبتك في الخروج؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.criticalRed),
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<AuthCubit>().signOut();
+              Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (r) => false);
+            },
+            child: const Text('خروج'),
+          ),
+        ],
       ),
     );
   }
@@ -561,104 +299,60 @@ class _Tab extends StatelessWidget {
 class _ReportCard extends StatelessWidget {
   final Map<String, dynamic> report;
   final VoidCallback onTap;
-
   const _ReportCard({required this.report, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final isEmergency = report['_col'] == 'emergency_report';
     final status = report['status'] as String? ?? 'pending';
-    final patientName =
-        report['patientName'] as String? ?? 'مريض';
+    final patientName = report['patientName'] as String? ?? 'مريض';
     final address = report['address'] as String? ?? '';
-    final lat = (report['latitude'] as num?)?.toDouble();
-    final lng = (report['longitude'] as num?)?.toDouble();
 
-    return NajdaCard(
+    return AppCard(
       onTap: onTap,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(9),
+                padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: isEmergency
-                      ? NC.critical.withOpacity(0.1)
-                      : NC.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  color: (isEmergency ? AppColors.criticalRed : AppColors.primaryBlue).withOpacity(0.1),
+                  borderRadius: AppRadius.radiusMd,
                 ),
                 child: Icon(
-                  isEmergency
-                      ? Icons.emergency_outlined
-                      : Icons.assignment_outlined,
-                  color: isEmergency
-                      ? NC.critical
-                      : NC.primary,
-                  size: 20,
+                  isEmergency ? Icons.emergency_rounded : Icons.assignment_rounded,
+                  color: isEmergency ? AppColors.criticalRed : AppColors.primaryBlue,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(patientName,
-                        style:
-                            Theme.of(context).textTheme.titleMedium),
-                    if (address.isNotEmpty)
-                      Text(address,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(
-                                  color: NajdaColors.textSecondary)),
+                    Text(patientName, style: AppTextStyles.titleLarge),
+                    Text(address.isEmpty ? 'الموقع غير محدد' : address,
+                        style: AppTextStyles.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
-              NajdaStatusBadge(status),
+              AppStatusBadge(status: status),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           const Divider(),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
+              Expanded(child: AppButton(label: 'التفاصيل', isPrimary: false, onPressed: onTap, icon: Icons.info_outline)),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onTap,
-                  icon: const Icon(Icons.info_outline, size: 16),
-                  label: const Text('التفاصيل',
-                      style: TextStyle(
-                          fontFamily: 'Cairo', fontSize: 13)),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 38),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
+                child: AppButton(
+                  label: 'ملاحة',
+                  onPressed: () => _navigate(report['latitude'], report['longitude']),
+                  icon: Icons.navigation_rounded,
                 ),
               ),
-              const SizedBox(width: 10),
-              if (lat != null && lng != null)
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _navigate(lat, lng),
-                    icon: const Icon(Icons.navigation_outlined,
-                        size: 16),
-                    label: const Text('ملاحة',
-                        style: TextStyle(
-                            fontFamily: 'Cairo', fontSize: 13)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: NC.success,
-                      minimumSize: const Size(0, 38),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ),
             ],
           ),
         ],
@@ -666,16 +360,13 @@ class _ReportCard extends StatelessWidget {
     );
   }
 
-  Future<void> _navigate(double lat, double lng) async {
-    final url = Uri.parse(
-        'google.navigation:q=$lat,$lng&mode=d');
-    final fallback = Uri.parse(
-        'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving');
+  Future<void> _navigate(double? lat, double? lng) async {
+    if (lat == null || lng == null) return;
+    final url = Uri.parse('google.navigation:q=$lat,$lng&mode=d');
     if (await canLaunchUrl(url)) {
       await launchUrl(url);
     } else {
-      await launchUrl(fallback,
-          mode: LaunchMode.externalApplication);
+      await launchUrl(Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng'));
     }
   }
 }
