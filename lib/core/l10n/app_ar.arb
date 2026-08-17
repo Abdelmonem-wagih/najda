@@ -1,0 +1,209 @@
+{
+  "@@locale": "ar",
+
+  "appName": "نجدة",
+  "appTagline": "استجابة الطوارئ الفورية",
+
+  "loginTitle": "تسجيل الدخول",
+  "loginSubtitle": "أدخل بيانات حسابك للمتابعة",
+  "loginAsCitizen": "مواطن",
+  "loginAsParamedic": "مسعف",
+  "phoneNumber": "رقم الهاتف",
+  "phoneHint": "أدخل رقم هاتفك مع مفتاح الدولة",
+  "email": "البريد الإلكتروني",
+  "password": "كلمة المرور",
+  "sendOtp": "إرسال رمز التحقق",
+  "login": "تسجيل الدخول",
+  "logout": "تسجيل الخروج",
+  "logoutConfirm": "هل تريد تسجيل الخروج؟",
+  "yes": "نعم",
+  "cancel": "إلغاء",
+  "loading": "جارٍ التحميل...",
+  "error": "خطأ",
+  "retry": "إعادة المحاولة",
+  "save": "حفظ",
+  "submit": "إرسال",
+  "next": "التالي",
+  "back": "رجوع",
+  "confirm": "تأكيد",
+  "close": "إغلاق",
+
+  "otpTitle": "التحقق من الرقم",
+  "otpSubtitle": "أدخل الرمز المرسل إلى {phone}",
+  "@otpSubtitle": {
+    "placeholders": {
+      "phone": { "type": "String" }
+    }
+  },
+  "otpCode": "رمز التحقق",
+  "otpHint": "أدخل الرمز المكون من 6 أرقام",
+  "verifyOtp": "تحقق",
+  "resendOtp": "إعادة إرسال الرمز",
+
+  "registrationTitle": "استكمال بيانات الملف",
+  "fullName": "الاسم الكامل",
+  "nationalId": "الرقم القومي",
+  "emergencyContact": "رقم الطوارئ (اختياري)",
+  "chronicDiseases": "الأمراض المزمنة",
+  "allergies": "الحساسية",
+  "currentMedications": "الأدوية الحالية",
+  "additionalInfo": "معلومات إضافية",
+  "completeProfile": "إكمال الملف الشخصي",
+
+  "homeTitle": "الرئيسية",
+  "sos": "طوارئ",
+  "sosDescription": "اضغط في حالة الطوارئ الطبية",
+  "firstAid": "إسعافات أولية",
+  "firstAidDescription": "دليل الإسعافات الأولية",
+  "hospitals": "مستشفيات قريبة",
+  "hospitalsDescription": "ابحث عن مستشفيات قريبة",
+  "emergency": "أرقام الطوارئ",
+  "emergencyDescription": "أرقام الطوارئ الهامة",
+  "history": "سجل البلاغات",
+  "historyDescription": "بلاغاتك السابقة",
+  "aiTriage": "تقييم الأعراض",
+  "aiTriageDescription": "ذكاء اصطناعي للتشخيص",
+  "aiAssistant": "مساعد نجدة",
+  "aiAssistantDescription": "دردشة طبية ذكية",
+  "profile": "الملف الشخصي",
+  "greeting": "مرحباً، {name}",
+  "@greeting": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "reportTitle": "إبلاغ عن حادث",
+  "reportSubtitle": "أدخل تفاصيل الحادث",
+  "accidentType": "نوع الحادث",
+  "selectAccidentType": "اختر نوع الحادث",
+  "consciousnessLevel": "مستوى الوعي",
+  "injuryLocation": "موضع الإصابة",
+  "painLevel": "مستوى الألم",
+  "addPhoto": "إضافة صورة",
+  "removePhoto": "حذف الصورة",
+  "sendReport": "إرسال البلاغ",
+  "reportSent": "تم إرسال البلاغ بنجاح",
+  "reportError": "فشل إرسال البلاغ",
+  "locating": "جارٍ تحديد موقعك...",
+
+  "accidentCarAccident": "حادث سيارة / تصادم",
+  "accidentPedestrianHit": "دهس مشاة",
+  "accidentFallFromHeight": "سقوط من ارتفاع",
+  "accidentFall": "سقوط عادي",
+  "accidentElectricShock": "صدمة كهربائية",
+  "accidentFireBurn": "حريق / حروق",
+  "accidentSuffocation": "اختناق",
+  "accidentDrowning": "غرق",
+  "accidentWorkInjury": "إصابة عمل",
+  "accidentPoisoning": "تسمم",
+  "accidentAssault": "اعتداء / إصابة بعنف",
+  "accidentSportInjury": "إصابة رياضية",
+  "accidentGunshot": "طلق ناري",
+  "accidentStabbing": "طعن / جرح بآلة حادة",
+  "accidentMedicalEmergency": "حالة مرضية طارئة",
+
+  "conscious": "واعٍ تماماً",
+  "semiconscious": "شبه واعٍ",
+  "unconscious": "فاقد الوعي",
+
+  "historyEmpty": "لا يوجد بلاغات سابقة",
+  "reportStatus": "حالة البلاغ",
+  "statusPending": "قيد الانتظار",
+  "statusAssigned": "تم التعيين",
+  "statusInProgress": "جارٍ التنفيذ",
+  "statusCompleted": "مكتمل",
+  "statusCancelled": "ملغى",
+  "reportDate": "تاريخ البلاغ",
+  "reportType": "نوع البلاغ",
+  "emergency_report": "بلاغ طوارئ",
+  "normal_report": "بلاغ عادي",
+
+  "paramedicDashboard": "لوحة المسعف",
+  "assignedReports": "البلاغات المُعيَّنة",
+  "emergencyReports": "بلاغات الطوارئ",
+  "noAssignedReports": "لا توجد بلاغات مُعيَّنة",
+  "noEmergencyReports": "لا توجد بلاغات طوارئ",
+  "patientName": "اسم المريض",
+  "patientPhone": "هاتف المريض",
+  "patientLocation": "موقع المريض",
+  "distance": "المسافة",
+  "estimatedTime": "الوقت المتوقع",
+  "acceptReport": "قبول البلاغ",
+  "viewDetails": "عرض التفاصيل",
+
+  "reportDetails": "تفاصيل البلاغ",
+  "startNavigation": "بدء الملاحة",
+  "openInMaps": "فتح في خرائط جوجل",
+  "markArrived": "تحديد الوصول",
+  "submitMedicalReport": "إرسال التقرير الطبي",
+  "backToAvailable": "العودة للحالة المتاحة",
+  "paramedicOnMission": "في مهمة",
+  "paramedicArrived": "وصل للمريض",
+  "paramedicToHospital": "في طريقه للمستشفى",
+  "paramedicAvailable": "متاح",
+
+  "medicalReport": "التقرير الطبي",
+  "medicalQuestion": "سؤال طبي",
+  "additionalNotes": "ملاحظات إضافية",
+  "submitReport": "إرسال التقرير",
+
+  "availability": "حالة التوفر",
+  "available": "متاح",
+  "unavailable": "غير متاح",
+  "toggleAvailability": "تغيير حالة التوفر",
+
+  "notifications": "الإشعارات",
+  "noNotifications": "لا توجد إشعارات",
+  "newAssignment": "تعيين جديد",
+  "markAllRead": "تحديد الكل كمقروء",
+
+  "paramedicHistory": "سجل المهام",
+  "missionCompleted": "مهمة مكتملة",
+  "missionDate": "تاريخ المهمة",
+  "missionDuration": "مدة المهمة",
+
+  "navigationTitle": "الملاحة",
+  "navigatingTo": "التوجه إلى: {destination}",
+  "@navigatingTo": {
+    "placeholders": {
+      "destination": { "type": "String" }
+    }
+  },
+  "remainingDistance": "المسافة المتبقية: {distance}",
+  "@remainingDistance": {
+    "placeholders": {
+      "distance": { "type": "String" }
+    }
+  },
+  "remainingTime": "الوقت المتبقي: {time}",
+  "@remainingTime": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+
+  "firstAidTitle": "دليل الإسعافات الأولية",
+  "firstAidSearch": "ابحث عن إسعافات أولية...",
+
+  "hospitalsTitle": "مستشفيات قريبة",
+  "hospitalsSearching": "جارٍ البحث عن مستشفيات قريبة...",
+  "callHospital": "اتصال",
+  "getDirections": "الاتجاهات",
+
+  "emergencyNumbersTitle": "أرقام الطوارئ",
+  "call": "اتصال",
+
+  "fieldRequired": "هذا الحقل مطلوب",
+  "invalidPhone": "رقم الهاتف غير صحيح",
+  "invalidEmail": "البريد الإلكتروني غير صحيح",
+  "passwordTooShort": "كلمة المرور قصيرة جداً",
+  "loginFailed": "فشل تسجيل الدخول",
+  "phoneStartsWithPlus": "يجب أن يبدأ الرقم بـ +",
+  "phoneTooShort": "رقم الهاتف قصير جداً",
+
+  "language": "اللغة",
+  "arabic": "العربية",
+  "english": "English",
+  "changeLanguage": "تغيير اللغة"
+}

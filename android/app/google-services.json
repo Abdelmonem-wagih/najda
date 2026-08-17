@@ -1,0 +1,83 @@
+{
+  "project_info": {
+    "project_number": "552712818556",
+    "firebase_url": "https://ultra-bearing-402000-default-rtdb.firebaseio.com",
+    "project_id": "ultra-bearing-402000",
+    "storage_bucket": "ultra-bearing-402000.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:552712818556:android:c1f9d189ea717e09d59ef9",
+        "android_client_info": {
+          "package_name": "com.example.najda"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "552712818556-b5lt4hsn19jci8bar58dlikg0sqbnvur.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBDmHp4H9lkOVOoVwh3-ml6ouflDPextb0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "552712818556-b5lt4hsn19jci8bar58dlikg0sqbnvur.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "552712818556-cf1c9ghd86cg21rdgqc2ouob8f0t6sbn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.shopease"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:552712818556:android:72c22c5e7df4e74cd59ef9",
+        "android_client_info": {
+          "package_name": "com.najda.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "552712818556-b5lt4hsn19jci8bar58dlikg0sqbnvur.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBDmHp4H9lkOVOoVwh3-ml6ouflDPextb0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "552712818556-b5lt4hsn19jci8bar58dlikg0sqbnvur.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "552712818556-cf1c9ghd86cg21rdgqc2ouob8f0t6sbn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.shopease"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

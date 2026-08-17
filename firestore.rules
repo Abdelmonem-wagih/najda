@@ -1,0 +1,412 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Helper Functions
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() &&
+        request.auth.uid == userId;
+    }
+
+    // App Admin
+    // Used by the mobile application/admin collection.
+    function isAppAdmin() {
+      return isAuthenticated() &&
+        exists(
+          /databases/$(database)/documents/admins/$(request.auth.uid)
+        );
+    }
+
+    // Dashboard User
+    function isDashboardUser() {
+      return isAuthenticated() &&
+        exists(
+          /databases/$(database)/documents/dashboard_users/$(request.auth.uid)
+        );
+    }
+
+    // Dashboard Admin
+    function isDashboardAdmin() {
+      return isDashboardUser() &&
+        get(
+          /databases/$(database)/documents/dashboard_users/$(request.auth.uid)
+        ).data.role == "admin";
+    }
+
+    // Either App Admin OR Dashboard Admin
+    function isAdmin() {
+      return isAppAdmin() || isDashboardAdmin();
+    }
+
+    function isCitizen() {
+      return isAuthenticated() &&
+        exists(
+          /databases/$(database)/documents/citizens/$(request.auth.uid)
+        );
+    }
+
+    function isParamedic() {
+      return isAuthenticated() &&
+        exists(
+          /databases/$(database)/documents/paramedics/$(request.auth.uid)
+        );
+    }
+
+    function isReportOwner() {
+      return isAuthenticated() &&
+        resource.data.patientUid == request.auth.uid;
+    }
+
+    function isAssignedParamedic() {
+      return isAuthenticated() &&
+        resource.data.assignedParamedicId == request.auth.uid;
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Citizens
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /citizens/{userId} {
+
+      allow read: if isOwner(userId)
+        || isAppAdmin()
+        || isParamedic()
+        || isDashboardUser();
+
+      allow create: if isOwner(userId);
+
+      allow update: if isOwner(userId)
+        || isAppAdmin()
+        || isDashboardUser();
+
+      allow delete: if isAdmin();
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Reports
+    // Mobile:
+    //   - Authenticated users can create/read.
+    //   - Citizen can update their own non-critical fields.
+    //   - Assigned paramedic can update operational fields.
+    //
+    // Dashboard:
+    //   - Dashboard users can read/create/update/delete.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /reports/{docId} {
+
+      // Mobile + Dashboard
+      allow read: if isAuthenticated();
+
+      // Mobile can create reports
+      // Dashboard can also create reports
+      allow create: if isAuthenticated();
+
+      // Dashboard can fully modify reports
+      allow update: if isDashboardUser();
+
+      // Citizen can update only non-critical fields
+      allow update: if isReportOwner()
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny([
+            'status',
+            'assignedParamedicId',
+            'assignedAt',
+            'arrivedAt',
+            'completedAt'
+          ]);
+
+      // Assigned paramedic can update only operational fields
+      allow update: if isAssignedParamedic()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            'status',
+            'updatedAt',
+            'completedAt',
+            'arrivedAt'
+          ]);
+
+      // App Admin + Dashboard can delete
+      allow delete: if isAdmin() || isDashboardUser();
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Emergency Reports
+    // Same logic as normal reports
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /emergency_reports/{docId} {
+
+      // Mobile + Dashboard
+      allow read: if isAuthenticated();
+
+      // Mobile can create
+      // Dashboard can also create
+      allow create: if isAuthenticated();
+
+      // Dashboard can fully modify
+      allow update: if isDashboardUser();
+
+      // Citizen can update only non-critical fields
+      allow update: if isReportOwner()
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny([
+            'status',
+            'assignedParamedicId',
+            'assignedAt',
+            'arrivedAt',
+            'completedAt'
+          ]);
+
+      // Assigned paramedic can update operational fields
+      allow update: if isAssignedParamedic()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            'status',
+            'updatedAt',
+            'completedAt',
+            'arrivedAt'
+          ]);
+
+      // App Admin + Dashboard can delete
+      allow delete: if isAdmin() || isDashboardUser();
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Paramedics
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /paramedics/{userId} {
+
+      // Dashboard has full access
+      allow read, write: if isDashboardUser();
+
+      // App Admin has full access
+      allow read, write: if isAppAdmin();
+
+      // Paramedic can read their own profile
+      allow read: if isOwner(userId);
+
+      // Paramedic can create their own profile
+      allow create: if isOwner(userId);
+
+      // Paramedic can update only operational fields
+      allow update: if isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            'status',
+            'isAvailable',
+            'isActive',
+            'fcmToken',
+            'latitude',
+            'longitude',
+            'updatedAt',
+            'assignedReportId',
+            'assignedReportType'
+          ]);
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Medical Reports
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /medical_reports/{reportId} {
+
+      // Dashboard full access
+      allow read, write: if isDashboardUser();
+
+      // App Admin full access
+      allow read, write: if isAppAdmin();
+
+      // Only submitting paramedic can create
+      allow create: if isParamedic()
+        && request.resource.data.paramedicId == request.auth.uid;
+
+      // Paramedic can read their own medical reports
+      allow read: if isParamedic()
+        && resource.data.paramedicId == request.auth.uid;
+
+      // For paramedics, reports remain immutable
+      allow update, delete: if false;
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Paramedic History
+    // Written only by Cloud Functions / Admin SDK
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /paramedic_history/{historyId} {
+
+      allow create, update, delete: if false;
+
+      allow read: if (
+        isParamedic() &&
+        resource.data.paramedicId == request.auth.uid
+      ) || isAdmin() || isDashboardUser();
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Notifications
+    // Mobile:
+    //   - Paramedic can read own notifications.
+    //   - Paramedic can only update isRead.
+    //   - Paramedic can delete own notifications.
+    //   - Authenticated users can create.
+    //
+    // Dashboard:
+    //   - Full access.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /notifications/{notificationId} {
+
+      // Dashboard full access
+      allow read, write: if isDashboardUser();
+
+      // App Admin full access
+      allow read, write: if isAppAdmin();
+
+      // Paramedic can read own notifications
+      allow read: if isParamedic()
+        && resource.data.paramedicId == request.auth.uid;
+
+      // Paramedic can mark notification as read only
+      allow update: if isParamedic()
+        && resource.data.paramedicId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['isRead']);
+
+      // Paramedic can delete own notification
+      allow delete: if isParamedic()
+        && resource.data.paramedicId == request.auth.uid;
+
+      // App can create notifications
+      allow create: if isAuthenticated();
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Mission Cancellations
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /mission_cancellations/{docId} {
+
+      allow create: if isParamedic()
+        && request.resource.data.paramedicId == request.auth.uid;
+
+      allow read: if (
+        isParamedic() &&
+        resource.data.paramedicId == request.auth.uid
+      ) || isAdmin() || isDashboardUser();
+
+      allow update, delete: if false;
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Ambulances
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /ambulances/{docId} {
+
+      // Mobile users can read
+      allow read: if isAuthenticated();
+
+      // Dashboard can read/write
+      allow read, write: if isDashboardUser();
+
+      // App Admin can write
+      allow write: if isAppAdmin();
+
+      // Paramedic read is already covered by authenticated read
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Hospitals
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /hospitals/{docId} {
+
+      // Authenticated users can read
+      allow read: if isAuthenticated();
+
+      // Dashboard can write
+      allow write: if isDashboardUser();
+
+      // App Admin can write
+      allow write: if isAppAdmin();
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Patient Profiles
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /patient_profiles/{userId} {
+
+      // Dashboard can read
+      allow read: if isDashboardUser();
+
+      // Owner can write their own profile
+      allow write: if isOwner(userId);
+
+      // Admin can write
+      allow write: if isAdmin();
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Admins
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /admins/{userId} {
+
+      allow read: if isOwner(userId) || isAppAdmin();
+
+      allow write: if isAppAdmin();
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Dashboard Users
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /dashboard_users/{uid} {
+
+      // User can read their own dashboard profile
+      allow read: if isOwner(uid);
+
+      // Dashboard admin can create/update/delete dashboard users
+      allow write: if isDashboardAdmin();
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Default
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /{document=**} {
+
+      // Keep the original application's authenticated-read behavior.
+      allow read: if isAuthenticated();
+
+      // Only App Admin or Dashboard Admin can write unspecified collections.
+      allow write: if isAdmin();
+    }
+  }
+}

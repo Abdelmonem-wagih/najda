@@ -1,0 +1,209 @@
+{
+  "@@locale": "en",
+
+  "appName": "Najda",
+  "appTagline": "Instant Emergency Response",
+
+  "loginTitle": "Sign In",
+  "loginSubtitle": "Enter your credentials to continue",
+  "loginAsCitizen": "Citizen",
+  "loginAsParamedic": "Paramedic",
+  "phoneNumber": "Phone Number",
+  "phoneHint": "Enter your phone with country code",
+  "email": "Email",
+  "password": "Password",
+  "sendOtp": "Send Verification Code",
+  "login": "Sign In",
+  "logout": "Sign Out",
+  "logoutConfirm": "Do you want to sign out?",
+  "yes": "Yes",
+  "cancel": "Cancel",
+  "loading": "Loading...",
+  "error": "Error",
+  "retry": "Retry",
+  "save": "Save",
+  "submit": "Submit",
+  "next": "Next",
+  "back": "Back",
+  "confirm": "Confirm",
+  "close": "Close",
+
+  "otpTitle": "Verify Number",
+  "otpSubtitle": "Enter the code sent to {phone}",
+  "@otpSubtitle": {
+    "placeholders": {
+      "phone": { "type": "String" }
+    }
+  },
+  "otpCode": "Verification Code",
+  "otpHint": "Enter the 6-digit code",
+  "verifyOtp": "Verify",
+  "resendOtp": "Resend Code",
+
+  "registrationTitle": "Complete Your Profile",
+  "fullName": "Full Name",
+  "nationalId": "National ID",
+  "emergencyContact": "Emergency Contact (Optional)",
+  "chronicDiseases": "Chronic Diseases",
+  "allergies": "Allergies",
+  "currentMedications": "Current Medications",
+  "additionalInfo": "Additional Information",
+  "completeProfile": "Complete Profile",
+
+  "homeTitle": "Home",
+  "sos": "Emergency",
+  "sosDescription": "Press in case of medical emergency",
+  "firstAid": "First Aid",
+  "firstAidDescription": "First aid guide",
+  "hospitals": "Nearby Hospitals",
+  "hospitalsDescription": "Find nearby hospitals",
+  "emergency": "Emergency Numbers",
+  "emergencyDescription": "Important emergency numbers",
+  "history": "Reports History",
+  "historyDescription": "Your previous reports",
+  "aiTriage": "AI Triage",
+  "aiTriageDescription": "AI-powered symptom assessment",
+  "aiAssistant": "Najda Assistant",
+  "aiAssistantDescription": "Smart medical chat",
+  "profile": "Profile",
+  "greeting": "Hello, {name}",
+  "@greeting": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+
+  "reportTitle": "Report an Incident",
+  "reportSubtitle": "Enter incident details",
+  "accidentType": "Incident Type",
+  "selectAccidentType": "Select incident type",
+  "consciousnessLevel": "Consciousness Level",
+  "injuryLocation": "Injury Location",
+  "painLevel": "Pain Level",
+  "addPhoto": "Add Photo",
+  "removePhoto": "Remove Photo",
+  "sendReport": "Send Report",
+  "reportSent": "Report sent successfully",
+  "reportError": "Failed to send report",
+  "locating": "Detecting your location...",
+
+  "accidentCarAccident": "Car Accident / Collision",
+  "accidentPedestrianHit": "Pedestrian Hit",
+  "accidentFallFromHeight": "Fall from Height",
+  "accidentFall": "Regular Fall",
+  "accidentElectricShock": "Electric Shock",
+  "accidentFireBurn": "Fire / Burns",
+  "accidentSuffocation": "Suffocation",
+  "accidentDrowning": "Drowning",
+  "accidentWorkInjury": "Work Injury",
+  "accidentPoisoning": "Poisoning",
+  "accidentAssault": "Assault / Violence",
+  "accidentSportInjury": "Sports Injury",
+  "accidentGunshot": "Gunshot",
+  "accidentStabbing": "Stabbing / Sharp Wound",
+  "accidentMedicalEmergency": "Medical Emergency",
+
+  "conscious": "Fully conscious",
+  "semiconscious": "Semi-conscious",
+  "unconscious": "Unconscious",
+
+  "historyEmpty": "No previous reports",
+  "reportStatus": "Report Status",
+  "statusPending": "Pending",
+  "statusAssigned": "Assigned",
+  "statusInProgress": "In Progress",
+  "statusCompleted": "Completed",
+  "statusCancelled": "Cancelled",
+  "reportDate": "Report Date",
+  "reportType": "Report Type",
+  "emergency_report": "Emergency Report",
+  "normal_report": "Normal Report",
+
+  "paramedicDashboard": "Paramedic Dashboard",
+  "assignedReports": "Assigned Reports",
+  "emergencyReports": "Emergency Reports",
+  "noAssignedReports": "No assigned reports",
+  "noEmergencyReports": "No emergency reports",
+  "patientName": "Patient Name",
+  "patientPhone": "Patient Phone",
+  "patientLocation": "Patient Location",
+  "distance": "Distance",
+  "estimatedTime": "Estimated Time",
+  "acceptReport": "Accept Report",
+  "viewDetails": "View Details",
+
+  "reportDetails": "Report Details",
+  "startNavigation": "Start Navigation",
+  "openInMaps": "Open in Google Maps",
+  "markArrived": "Mark as Arrived",
+  "submitMedicalReport": "Submit Medical Report",
+  "backToAvailable": "Return to Available",
+  "paramedicOnMission": "On Mission",
+  "paramedicArrived": "Arrived at Patient",
+  "paramedicToHospital": "En Route to Hospital",
+  "paramedicAvailable": "Available",
+
+  "medicalReport": "Medical Report",
+  "medicalQuestion": "Medical Question",
+  "additionalNotes": "Additional Notes",
+  "submitReport": "Submit Report",
+
+  "availability": "Availability",
+  "available": "Available",
+  "unavailable": "Unavailable",
+  "toggleAvailability": "Toggle Availability",
+
+  "notifications": "Notifications",
+  "noNotifications": "No notifications",
+  "newAssignment": "New Assignment",
+  "markAllRead": "Mark all as read",
+
+  "paramedicHistory": "Mission History",
+  "missionCompleted": "Mission Completed",
+  "missionDate": "Mission Date",
+  "missionDuration": "Mission Duration",
+
+  "navigationTitle": "Navigation",
+  "navigatingTo": "Navigating to: {destination}",
+  "@navigatingTo": {
+    "placeholders": {
+      "destination": { "type": "String" }
+    }
+  },
+  "remainingDistance": "Remaining: {distance}",
+  "@remainingDistance": {
+    "placeholders": {
+      "distance": { "type": "String" }
+    }
+  },
+  "remainingTime": "ETA: {time}",
+  "@remainingTime": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+
+  "firstAidTitle": "First Aid Guide",
+  "firstAidSearch": "Search first aid...",
+
+  "hospitalsTitle": "Nearby Hospitals",
+  "hospitalsSearching": "Searching for nearby hospitals...",
+  "callHospital": "Call",
+  "getDirections": "Directions",
+
+  "emergencyNumbersTitle": "Emergency Numbers",
+  "call": "Call",
+
+  "fieldRequired": "This field is required",
+  "invalidPhone": "Invalid phone number",
+  "invalidEmail": "Invalid email address",
+  "passwordTooShort": "Password is too short",
+  "loginFailed": "Login failed",
+  "phoneStartsWithPlus": "Number must start with +",
+  "phoneTooShort": "Phone number is too short",
+
+  "language": "Language",
+  "arabic": "العربية",
+  "english": "English",
+  "changeLanguage": "Change Language"
+}
