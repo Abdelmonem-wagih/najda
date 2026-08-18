@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 /// ═══════════════════════════════════════════════════════════════════
@@ -7,8 +11,30 @@ class NajdaAIService {
   NajdaAIService._();
   static final instance = NajdaAIService._();
 
-  final _functions = FirebaseFunctions.instance;
+  // Change 'us-central1' to wherever your functions are deployed
+  // Common: 'us-central1', 'europe-west1', 'me-central1' (Middle East)
+  final _functions = FirebaseFunctions.instanceFor(region: 'us-central1');
 
+  static const List<String> _groqModels = [
+    'openai/gpt-oss-120b',
+    'mixtral-8x7b-32768',
+    'whisper-large-v3-turbo',
+    'openai/gpt-oss-20b',
+    'canopylabs/orpheus-v1-english',
+    'meta-llama/llama-prompt-guard-2-22m',
+    'canopylabs/orpheus-arabic-saudi',
+    'allam-2-7b',
+    'openai/gpt-oss-safeguard-20b',
+    'whisper-large-v3',
+    'groq/compound-mini',
+    'meta-llama/llama-prompt-guard-2-86m',
+    'groq/compound',
+    'qwen/qwen3.6-27b',
+    'gemma2-9b-it',
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+  ];
+  
   // ── 1. General AI Assistant (citizen & paramedic) ──────────────────
 
   Future<String> askAssistant({
@@ -31,6 +57,89 @@ class NajdaAIService {
     }
   }
 
+  /// Direct Groq API call — faster than Firebase Functions, no cold start
+  Future<String> askAssistantDirect({
+    required String message,
+    required String role,
+    List<Map<String, String>> history = const [],
+  }) async {
+    final apiKey = dotenv.env['GROQ_API_KEY'] ?? '';
+    if (apiKey.isEmpty) {
+      throw Exception('GROQ_API_KEY not found in .env file');
+    }
+
+    final systemPrompt = role == 'paramedic'
+        ? '''أنت مساعد طبي متخصص لمسعفي الإسعاف في نظام نجدة للطوارئ بمصر.
+تقدم: دعم القرار الإكلينيكي، الجرعات، بروتوكولات الإسعاف الميداني.
+أجب بالعربية بإيجاز ووضوح مناسبَين للعمل الميداني.
+في الحالات الحرجة جداً وجّه المسعف للتواصل مع طبيب.'''
+        : '''أنت مساعد طوارئ طبي للمواطنين في نظام نجدة بمصر.
+تقدم: إرشادات الإسعافات الأولية، تقييم الأعراض، ماذا تفعل قبل وصول الإسعاف.
+لا تشخّص الأمراض. دائماً أوصِ بالاتصال بـ 123 في الحالات الطارئة.
+أجب بالعربية بلغة بسيطة يفهمها المواطن العادي.''';
+
+    final messages = [
+      {'role': 'system', 'content': systemPrompt},
+      ...history,
+      {'role': 'user', 'content': message},
+    ];
+
+    Exception? lastError;
+    for (final model in _groqModels) {
+      try {
+        final response = await http.post(
+          Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+          headers: {
+            'Authorization': 'Bearer $apiKey',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'model': model,
+            'messages': messages,
+
+            'temperature': role == 'paramedic' ? 0.1 : 0.3,
+
+            // GPT-OSS
+            'reasoning_effort': 'low',
+            'include_reasoning': false,
+
+            // Give the model enough room for the final answer
+            'max_completion_tokens': 1200,
+          }),
+        ).timeout(const Duration(seconds: 30));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final messageData = data['choices']?[0]?['message'];
+          final content = messageData?['content'];
+
+          if (content is String && content.trim().isNotEmpty) {
+            return content.trim();
+          }
+
+          throw Exception(
+            'Groq returned empty content for model $model.',
+          );
+        }
+
+        // إن كان 400 أو 404 (model مش متاح) جرّب التالي
+        if (response.statusCode == 400 || response.statusCode == 404) {
+          lastError = Exception('Model $model: ${response.statusCode}');
+          continue;
+        }
+
+        // أي error تاني — ارمي exception
+        throw Exception('Groq API error ${response.statusCode}: ${response.body}');
+
+      } on TimeoutException {
+        lastError = Exception('Timeout on model $model');
+        continue;
+      }
+    }
+
+    throw lastError ?? Exception('All Groq models failed');
+  }
+
   // ── 2. Symptom Triage (citizen) ────────────────────────────────────
 
   Future<TriageResult> triageSymptoms({
@@ -49,6 +158,82 @@ class NajdaAIService {
     } on FirebaseFunctionsException catch (e) {
       throw _mapError(e);
     }
+  }
+
+  /// Direct symptom triage — calls Groq API directly
+  Future<Map<String, dynamic>> triageSymptomsDirect({
+    required String symptoms,
+    int? patientAge,
+    List<String> chronicDiseases = const [],
+  }) async {
+    final apiKey = dotenv.env['GROQ_API_KEY'] ?? '';
+    if (apiKey.isEmpty) throw Exception('GROQ_API_KEY not found in .env');
+
+    final prompt = '''أنت نظام طوارئ طبي ذكي لتقييم الأعراض في مصر.
+
+الأعراض: $symptoms
+العمر: ${patientAge ?? 'غير محدد'}
+أمراض مزمنة: ${chronicDiseases.join('، ').isEmpty ? 'لا يوجد' : chronicDiseases.join('، ')}
+
+أجب بـ JSON فقط بدون أي نص خارجه:
+{
+  "urgencyLevel": "critical | high | medium | low",
+  "urgencyLabel": "حرجة | عاجلة | متوسطة | خفيفة",
+  "callAmbulance": true,
+  "firstAidSteps": ["خطوة 1", "خطوة 2"],
+  "doNotDo": ["لا تفعل 1"],
+  "waitingInstructions": "ما يفعله أثناء انتظار الإسعاف",
+  "possibleConditions": ["احتمال 1"]
+}''';
+
+    Exception? lastError;
+    for (final model in _groqModels) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+              headers: {
+                'Authorization': 'Bearer $apiKey',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({
+                'model': model,
+                'messages': [
+                  {'role': 'user', 'content': prompt}
+                ],
+                'temperature': 0.1,
+                'reasoning_effort': 'low',
+                'include_reasoning': false,
+                'max_completion_tokens': 1200,
+              }),
+            )
+            .timeout(const Duration(seconds: 30));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final content = data['choices']?[0]?['message']?['content'];
+
+          if (content is String && content.trim().isNotEmpty) {
+            final clean = content.replaceAll('```json', '').replaceAll('```', '').trim();
+            return jsonDecode(clean) as Map<String, dynamic>;
+          }
+        }
+
+        if (response.statusCode == 400 || response.statusCode == 404) {
+          lastError = Exception('Model $model unavailable');
+          continue;
+        }
+
+        throw Exception('Groq error ${response.statusCode}: ${response.body}');
+      } on TimeoutException {
+        lastError = Exception('Timeout');
+        continue;
+      } catch (e) {
+        lastError = Exception('Parse error or other: $e');
+        continue;
+      }
+    }
+    throw lastError ?? Exception('All models failed');
   }
 
   // ── 3. AI Hospital Selection (paramedic after medical report) ──────

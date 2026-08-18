@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_radius.dart';
+import '../../../core/theme/design.dart';
 import '../../../core/shared/widgets/app_widgets.dart';
 
 class FirstAidItem {
@@ -38,227 +39,444 @@ class FirstAidStep {
 }
 
 final kFirstAidData = <FirstAidItem>[
+  // ── 1. CPR ─────────────────────────────────────────────────────────
   FirstAidItem(
     id: 'cpr',
     title: 'الإنعاش القلبي الرئوي',
-    subtitle: 'CPR — السكتة القلبية',
+    subtitle: 'CPR — توقف القلب',
     urgencyLevel: 'critical',
     heroImage:
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/CPR_training-01.jpg/800px-CPR_training-01.jpg',
+        'https://commons.wikimedia.org/wiki/Special:Redirect/file/CPR_training-01.jpg',
     steps: [
       FirstAidStep(
         number: 1,
-        instruction: 'تأكد من أمان المكان ثم استجب للمريض بالنداء والنقر على كتفه.',
+        instruction:
+            'تحقق من استجابة المريض: انقر على كتفه وانادِه بصوت عالٍ "هل أنت بخير؟". إن لم يستجب — اتصل بالإسعاف 123 فوراً.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/CPR_training-01.jpg/400px-CPR_training-01.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/CPR_training-01.jpg',
       ),
       FirstAidStep(
         number: 2,
-        instruction: 'اتصل بالإسعاف (123) فوراً أو اطلب من أحد الاتصال بهم.',
-        imageUrl: null,
+        instruction:
+            'أضجع المريض على ظهره على سطح صلب. ضع كعب يدك على منتصف الصدر تماماً (بين الحلمتين).',
+        imageUrl:
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/CPR_training-05.jpg',
       ),
       FirstAidStep(
         number: 3,
-        instruction: 'ضع كعب يدك على منتصف الصدر بين الحلمتين، وضع اليد الأخرى فوقها وشبّك الأصابع.',
+        instruction:
+            'ضع يدك الثانية فوق الأولى وشبّك الأصابع. أبقِ ذراعيك مستقيمتين وكتفيك فوق يديك مباشرة.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/CPR_training-05.jpg/400px-CPR_training-05.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/CPR_training-06.jpg',
       ),
       FirstAidStep(
         number: 4,
-        instruction: 'اضغط بقوة لأسفل 5-6 سم بمعدل 100-120 ضغطة في الدقيقة. اسمح للصدر بالارتداد تماماً.',
+        instruction:
+            'اضغط للأسفل بقوة 5-6 سم بمعدل 100-120 ضغطة في الدقيقة (بنفس إيقاع أغنية "Stayin Alive"). اسمح للصدر بالارتداد تماماً بعد كل ضغطة.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/CPR_training-06.jpg/400px-CPR_training-06.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/CPR_training-06.jpg',
       ),
       FirstAidStep(
         number: 5,
-        instruction: 'بعد كل 30 ضغطة أعطِ نفَسين اصطناعيين: أغلق الأنف ونفخ في الفم حتى يرتفع الصدر.',
+        instruction:
+            'بعد 30 ضغطة، أعطِ نفَسين اصطناعيين: أمسك الأنف، ضع فمك على فمه، انفخ لمدة ثانية كاملة حتى ترى الصدر يرتفع.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/CPR_training-09.jpg/400px-CPR_training-09.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/CPR_training-09.jpg',
       ),
       FirstAidStep(
         number: 6,
-        instruction: 'استمر في دورات 30 ضغطة + 2 نفس حتى وصول الإسعاف أو استعادة التنفس.',
+        instruction:
+            'كرر دورات 30 ضغطة + 2 نفس بلا توقف حتى وصول الإسعاف أو استعادة المريض للتنفس أو ظهور علامات الحياة.',
         imageUrl: null,
       ),
     ],
   ),
+
+  // ── 2. اختناق / Heimlich ────────────────────────────────────────────
   FirstAidItem(
     id: 'choking',
     title: 'الاختناق',
     subtitle: 'انسداد مجرى الهواء',
     urgencyLevel: 'critical',
     heroImage:
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Heimlich_Maneuver.jpg/800px-Heimlich_Maneuver.jpg',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Heimlich_Maneuver.jpg/640px-Heimlich_Maneuver.jpg',
     steps: [
       FirstAidStep(
         number: 1,
-        instruction: 'اسأل: "هل تختنق؟" إن لم يستطع الإجابة أو السعال — تصرّف فوراً.',
+        instruction:
+            'اسأل: "هل تختنق؟". إن لم يستطع الكلام أو السعال أو أشار بيده للحلق — تصرّف فوراً. لا تنتظر.',
         imageUrl: null,
       ),
       FirstAidStep(
         number: 2,
-        instruction: 'انحنِ المريض للأمام واضرب بين لوحَي كتفيه 5 مرات بقوة بكعب يدك.',
+        instruction:
+            'انحنِ المصاب للأمام (رأسه لأسفل أكثر من صدره). اضرب 5 ضربات قوية بكعب يدك بين لوحَي الكتف باتجاه الأسفل.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Back_blow_adult.jpg/400px-Back_blow_adult.jpg',
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Back_blow_adult.jpg/480px-Back_blow_adult.jpg',
       ),
       FirstAidStep(
         number: 3,
-        instruction: 'إن لم تنجح: قف خلفه، ضع قبضتك أسفل القفص الصدري فوق السرة مباشرة.',
+        instruction:
+            'إن لم تنجح الضربات: قف خلفه، ضع قبضة يدك (الجانب الإبهامي) أسفل عظمة القفص الصدري وفوق السرة مباشرة.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Heimlich_Maneuver.jpg/400px-Heimlich_Maneuver.jpg',
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Heimlich_Maneuver.jpg/480px-Heimlich_Maneuver.jpg',
       ),
       FirstAidStep(
         number: 4,
-        instruction: 'اضغط بقوة للداخل وللأعلى 5 مرات بحركة سريعة (مناورة هيمليك).',
-        imageUrl: null,
+        instruction:
+            'اقبض اليد الأخرى على قبضتك. اضغط بسرعة وقوة للداخل وللأعلى 5 مرات (مناورة هيمليك). كل ضغطة يجب أن تكون مستقلة وقوية.',
+        imageUrl:
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Heimlich_Maneuver.jpg/480px-Heimlich_Maneuver.jpg',
       ),
       FirstAidStep(
         number: 5,
-        instruction: 'كرّر 5 ضربات ظهر + 5 ضغطات بطن بالتناوب حتى يخرج الجسم الغريب.',
+        instruction:
+            'كرّر: 5 ضربات ظهر + 5 ضغطات بطن بالتناوب حتى يخرج الجسم الغريب أو يتنفس المصاب. إن فقد الوعي ابدأ CPR.',
         imageUrl: null,
       ),
     ],
   ),
+
+  // ── 3. نزيف شديد ────────────────────────────────────────────────────
   FirstAidItem(
     id: 'bleeding',
     title: 'النزيف الشديد',
     subtitle: 'إيقاف النزيف الخارجي',
     urgencyLevel: 'critical',
     heroImage:
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Direct_pressure_on_wound.jpg/800px-Direct_pressure_on_wound.jpg',
+        'https://commons.wikimedia.org/wiki/Special:Redirect/file/Direct_pressure_on_wound.jpg',
     steps: [
       FirstAidStep(
         number: 1,
-        instruction: 'ارتدِ قفازات طبية إن توفرت. لا تزل أي جسم غريب مغروز في الجرح.',
-        imageUrl: null,
+        instruction:
+            'ارتدِ قفازات طبية إن توفرت لحماية نفسك. اطلب المصاب أن يضغط بيده إن كان واعياً. لا تزل أي جسم غريب مغروز في الجرح.',
+        imageUrl: 'https://commons.wikimedia.org/wiki/Special:Redirect/file/Direct_pressure_on_wound.jpg',
       ),
       FirstAidStep(
         number: 2,
-        instruction: 'اضغط على الجرح مباشرةً بقماش نظيف أو ضمادة معقمة بقوة ثابتة.',
+        instruction:
+            'اضغط مباشرة على الجرح بقطعة قماش نظيفة أو ضمادة معقمة. الضغط يجب أن يكون قوياً وثابتاً دون انقطاع.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Direct_pressure_on_wound.jpg/400px-Direct_pressure_on_wound.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/Tourniquet_TCCC.jp',
       ),
       FirstAidStep(
         number: 3,
-        instruction: 'حافظ على الضغط 10-15 دقيقة متواصلة دون رفع الضمادة.',
+        instruction:
+            'استمر بالضغط 10-15 دقيقة متواصلة بدون رفع الضمادة للتحقق. إن نفذ الدم خلالها — أضف ضمادة أخرى فوقها فقط.',
         imageUrl: null,
       ),
       FirstAidStep(
         number: 4,
-        instruction: 'إن نفذ الدم أضف ضمادة أخرى فوق الأولى دون إزالتها.',
+        instruction:
+            'ارفع الطرف المصاب فوق مستوى القلب إن أمكن (ما لم يكن مكسوراً). هذا يُبطئ تدفق الدم.',
         imageUrl: null,
       ),
       FirstAidStep(
         number: 5,
-        instruction: 'ارفع الطرف المصاب فوق مستوى القلب إن أمكن لإبطاء النزيف.',
-        imageUrl: null,
+        instruction:
+            'إن كان النزيف في ذراع أو ساق وشديداً جداً ولا يتوقف: استخدم رباطاً ضاغطاً (tourniquet) أعلى الجرح بـ 5-7 سم. دوّن وقت التطبيق.',
+        imageUrl:
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Tourniquet_TCCC.jpg/480px-Tourniquet_TCCC.jpg',
       ),
     ],
   ),
+
+  // ── 4. حروق ─────────────────────────────────────────────────────────
   FirstAidItem(
     id: 'burns',
     title: 'الحروق',
     subtitle: 'حروق حرارية وكيميائية',
     urgencyLevel: 'high',
     heroImage:
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Running_water_on_burn.jpg/800px-Running_water_on_burn.jpg',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Running_water_on_burn.jpg/640px-Running_water_on_burn.jpg',
     steps: [
       FirstAidStep(
         number: 1,
-        instruction: 'أبعد المصاب عن مصدر الحرارة فوراً. احمِ نفسك أولاً.',
+        instruction:
+            'أبعد المصاب عن مصدر الحرارة فوراً. إن كانت ملابسه تشتعل: "أوقعه — دحرجه — غطّه" (Stop, Drop, Roll).',
         imageUrl: null,
       ),
       FirstAidStep(
         number: 2,
-        instruction: 'برّد الحرق بماء بارد جاري (ليس مثلجاً) لمدة 10-20 دقيقة.',
+        instruction:
+            'برّد الحرق فوراً بماء بارد جاري لمدة 20 دقيقة كاملة. لا تستخدم الثلج أو الماء المثلج لأنه يُفاقم الضرر.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Running_water_on_burn.jpg/400px-Running_water_on_burn.jpg',
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Running_water_on_burn.jpg/480px-Running_water_on_burn.jpg',
       ),
       FirstAidStep(
         number: 3,
-        instruction: 'لا تزل الملابس الملتصقة بالجلد. لا تفقع الفقاعات.',
+        instruction:
+            'لا تزل الملابس الملتصقة بالجلد. أزل المجوهرات والأحذية بلطف قبل التورم إن لم تكن ملتصقة.',
         imageUrl: null,
       ),
       FirstAidStep(
         number: 4,
-        instruction: 'لا تضع زبدة، معجون أسنان، أو أي مواد منزلية على الحرق.',
+        instruction:
+            'ممنوع تماماً: الزبدة، معجون الأسنان، الزيت، القشدة، أي مواد منزلية — كلها تزيد الضرر وتخاطر بالعدوى.',
         imageUrl: null,
       ),
       FirstAidStep(
         number: 5,
-        instruction: 'غطِّ الحرق بضمادة معقمة أو قماش نظيف جاف واتصل بالإسعاف.',
+        instruction:
+            'غطِّ الحرق بضمادة معقمة لاصقة أو قماش نظيف رطب. اتصل بالإسعاف إن كان الحرق: واسعاً، في الوجه/اليدين/المفاصل، أو عند طفل.',
         imageUrl: null,
       ),
     ],
   ),
+
+  // ── 5. كسور ─────────────────────────────────────────────────────────
   FirstAidItem(
     id: 'fracture',
     title: 'الكسور',
-    subtitle: 'تثبيت الكسور',
+    subtitle: 'تثبيت العظام المكسورة',
     urgencyLevel: 'high',
     heroImage:
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Splint.jpg/800px-Splint.jpg',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Splint.jpg/640px-Splint.jpg',
     steps: [
       FirstAidStep(
         number: 1,
-        instruction: 'لا تحرّك الطرف المكسور ولا تحاول إعادة العظم لمكانه.',
+        instruction:
+            'لا تحرّك الطرف المكسور ولا تحاول تقويمه. إن كان الكسر مفتوحاً (عظم بارز) غطِّه بقماش نظيف ولا تضغط.',
         imageUrl: null,
       ),
       FirstAidStep(
         number: 2,
-        instruction: 'ثبّت الطرف كما هو باستخدام جبيرة (ألواح، مجلات) مع ضمادة ناعمة بينها وبين الجلد.',
+        instruction:
+            'جهّز جبيرة: ألواح خشبية، مجلات، عصا — أي شيء صلب أطول من الطرف. ضع قماشاً ناعماً بين الجبيرة والجلد.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Splint.jpg/400px-Splint.jpg',
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Splint.jpg/480px-Splint.jpg',
       ),
       FirstAidStep(
         number: 3,
-        instruction: 'تأكد أن الجبيرة تثبّت المفصلين فوق وأسفل الكسر.',
+        instruction:
+            'ثبّت الجبيرة بربطات تشمل المفصلين فوق وأسفل الكسر. الربطات لا تكون ضيقة جداً — يجب أن تستطيع إدخال إصبع تحتها.',
         imageUrl: null,
       ),
       FirstAidStep(
         number: 4,
-        instruction: 'راقب اللون والدفء والإحساس في الطرف. الابيضاض أو التنميل خطر.',
+        instruction:
+            'راقب كل 10 دقائق: الألوان (شحوب أو ازرقاق)، الدفء، الإحساس، حركة الأصابع. أي تغيير — أرخِ الربطات فوراً.',
         imageUrl: null,
       ),
       FirstAidStep(
         number: 5,
-        instruction: 'اتصل بالإسعاف خاصة في كسور الورك والعمود الفقري والرقبة والحوض.',
+        instruction:
+            'اتصل بالإسعاف خاصة في: كسور الورك، العمود الفقري، الرقبة، الحوض — هذه لا تُحرَّك أبداً بدون إشراف طبي.',
         imageUrl: null,
       ),
     ],
   ),
+
+  // ── 6. سكتة دماغية ─────────────────────────────────────────────────
   FirstAidItem(
     id: 'stroke',
     title: 'السكتة الدماغية',
-    subtitle: 'التعرف والاستجابة',
+    subtitle: 'اختبار FAST السريع',
     urgencyLevel: 'critical',
     heroImage:
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/FAST_stroke_warning_signs.png/800px-FAST_stroke_warning_signs.png',
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/FAST_stroke_warning_signs.png/640px-FAST_stroke_warning_signs.png',
     steps: [
       FirstAidStep(
         number: 1,
-        instruction: 'اختبر FAST: Face (وجه)، Arms (أذرع)، Speech (كلام)، Time (وقت).',
+        instruction:
+            'F — Face (الوجه): اطلب منه الابتسام. هل أحد جانبَي الفم مائل للأسفل أو متدلٍّ؟ هذا تحذير.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/FAST_stroke_warning_signs.png/400px-FAST_stroke_warning_signs.png',
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/FAST_stroke_warning_signs.png/480px-FAST_stroke_warning_signs.png',
       ),
       FirstAidStep(
         number: 2,
-        instruction: 'اطلب من المريض الابتسام — هل أحد جانبَي الفم مائل؟',
+        instruction:
+            'A — Arms (الذراعان): اطلب رفع كلتا الذراعين للأمام لمدة 10 ثوانٍ. هل إحداهما تنزل وحدها؟',
         imageUrl: null,
       ),
       FirstAidStep(
         number: 3,
-        instruction: 'اطلب رفع الذراعين — هل ذراع تنزل وحدها؟',
+        instruction:
+            'S — Speech (الكلام): اطلب قول جملة بسيطة كـ"السماء زرقاء". هل الكلام مبهم أو متقطع أو غريب؟',
         imageUrl: null,
       ),
       FirstAidStep(
         number: 4,
-        instruction: 'اطلب قول جملة — هل الكلام مبهم أو صعب؟',
+        instruction:
+            'T — Time (الوقت): إن نجح أي من الاختبارات السابقة — اتصل بالإسعاف 123 فوراً. دوّن وقت ظهور الأعراض. لا تنتظر!',
         imageUrl: null,
       ),
       FirstAidStep(
         number: 5,
-        instruction: 'إن نجحت إحدى الاختبارات — اتصل بالإسعاف فوراً. كل دقيقة حرجة!',
+        instruction:
+            'أضجعه بشكل مريح. لا تعطه طعاماً أو ماءً. لا تتركه وحده. إن فقد الوعي وتنفسه طبيعي: ضعه في وضع الإفاقة (على جانبه).',
+        imageUrl:
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Recovery_position.jpg/480px-Recovery_position.jpg',
+      ),
+    ],
+  ),
+
+  // ── 7. غرق / استنقاذ ──────────────────────────────────────────────
+  FirstAidItem(
+    id: 'drowning',
+    title: 'الغرق',
+    subtitle: 'إنقاذ الغريق والإسعاف',
+    urgencyLevel: 'critical',
+    heroImage:
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/AED_training_05.jpg/640px-AED_training_05.jpg',
+    steps: [
+      FirstAidStep(
+        number: 1,
+        instruction:
+            'لا تقفز للنجدة إلا إن كنت مدرّباً على الإنقاذ المائي. ابحث عن حبل، عصا، أو أي شيء تمده له من الشاطئ.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 2,
+        instruction:
+            'بمجرد إخراجه: تحقق من استجابته والتنفس. اتصل بالإسعاف 123 فوراً حتى لو بدا بخير — الغرق الثانوي خطير.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 3,
+        instruction:
+            'إن لم يتنفس: ابدأ CPR فوراً (30 ضغطة + 2 نفس). للغريق يُبدأ بـ 5 أنفاس اصطناعية أولاً قبل الضغطات.',
+        imageUrl:
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/CPR_training-09.jpg/480px-CPR_training-09.jpg',
+      ),
+      FirstAidStep(
+        number: 4,
+        instruction:
+            'لا تحاول إخراج الماء من رئتيه بالضغط على بطنه — هذا خطأ شائع وخطير. ركّز على التنفس الصناعي.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 5,
+        instruction:
+            'إن تنفس وواعٍ: ضعه في وضع الإفاقة (على جانبه). افرد بطانية لتدفئته — الغرق يسبب انخفاض حرارة خطير.',
+        imageUrl:
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Recovery_position.jpg/480px-Recovery_position.jpg',
+      ),
+    ],
+  ),
+
+  // ── 8. تسمم ─────────────────────────────────────────────────────────
+  FirstAidItem(
+    id: 'poisoning',
+    title: 'التسمم',
+    subtitle: 'دواء أو مواد كيميائية',
+    urgencyLevel: 'high',
+    heroImage:
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Activated_Charcoal_Antidote.jpg/640px-Activated_Charcoal_Antidote.jpg',
+    steps: [
+      FirstAidStep(
+        number: 1,
+        instruction:
+            'حدّد المادة المسببة إن أمكن. احتفظ بالعبوة أو عبّئ اسمها — ستحتاجها للطاقم الطبي. اتصل بـ 123 أو مركز السموم.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 2,
+        instruction:
+            'لا تحاول إحداث القيء إلا بتعليمات طبية صريحة — بعض المواد (الأحماض، المنظفات) تسبب حروقاً مزدوجة عند القيء.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 3,
+        instruction:
+            'إن كان التسمم على الجلد: انزع الملابس الملوثة بحذر واغسل المنطقة بماء وفير لمدة 15-20 دقيقة.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 4,
+        instruction:
+            'إن دخل السم في العين: اغسلها بماء دافئ نظيف لمدة 15 دقيقة على الأقل. أبقِ العين مفتوحة أثناء الغسيل.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 5,
+        instruction:
+            'إن كان المريض واعياً: أبقِه في وضع مريح. إن فقد الوعي ويتنفس: ضعه في وضع الإفاقة. إن توقف التنفس: ابدأ CPR.',
+        imageUrl: null,
+      ),
+    ],
+  ),
+
+  // ── 9. نوبة صرع ─────────────────────────────────────────────────────
+  FirstAidItem(
+    id: 'seizure',
+    title: 'نوبة الصرع',
+    subtitle: 'التعامل مع نوبة تشنج',
+    urgencyLevel: 'high',
+    heroImage:
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Recovery_position.jpg/640px-Recovery_position.jpg',
+    steps: [
+      FirstAidStep(
+        number: 1,
+        instruction:
+            'لا تتذعر. أبعد الأثاث والأشياء الصلبة عنه. ضع شيئاً ناعماً (معطف، وسادة) تحت رأسه لحمايته.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 2,
+        instruction:
+            'لا تمسكه ولا تقيّد حركته. لا تضع أي شيء في فمه — هذا خرافة خطيرة. المصاب بالصرع لا يبتلع لسانه.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 3,
+        instruction:
+            'إذا كان على جانبه لا تقلبه على ظهره. إذا كان على ظهره وبدأ يتقيأ — أدِر رأسه بلطف للجانب فقط.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 4,
+        instruction:
+            'راقب الوقت. معظم النوبات تنتهي في 1-3 دقائق. اتصل بـ 123 إن: استمرت أكثر من 5 دقائق، أو كانت الأولى، أو لم يستعد وعيه.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 5,
+        instruction:
+            'بعد النوبة: ضعه في وضع الإفاقة (على جانبه). سيكون مرتبكاً وتعباناً — هذا طبيعي. أبقَ بجانبه وطمئنه بهدوء.',
+        imageUrl:
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Recovery_position.jpg/480px-Recovery_position.jpg',
+      ),
+    ],
+  ),
+
+  // ── 10. صدمة تحسسية شديدة ───────────────────────────────────────────
+  FirstAidItem(
+    id: 'anaphylaxis',
+    title: 'الحساسية الحادة',
+    subtitle: 'صدمة تحسسية — أنافيلاكسيس',
+    urgencyLevel: 'critical',
+    heroImage:
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/AED_training_05.jpg/640px-AED_training_05.jpg',
+    steps: [
+      FirstAidStep(
+        number: 1,
+        instruction:
+            'علامات التحذير: انتفاخ الوجه/الشفتين/اللسان، صفير في التنفس، طفح جلدي مفاجئ، انخفاض ضغط الدم، دوار شديد. اتصل بـ 123 فوراً.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 2,
+        instruction:
+            'إن كان معه قلم إبينفرين (EpiPen): استخدمه فوراً في الجانب الخارجي من الفخذ. يمكن استخدامه فوق الملابس.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 3,
+        instruction:
+            'أضجعه على ظهره مع رفع ساقيه (إلا إن كان يعاني من ضيق تنفس — أجلسه حينئذٍ). لا تتركه يقف أو يمشي.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 4,
+        instruction:
+            'ابعده عن مسبب الحساسية إن عرفته. لا تعطه طعاماً أو ماءً أو أقراصاً فموية — قد لا يستطيع البلع.',
+        imageUrl: null,
+      ),
+      FirstAidStep(
+        number: 5,
+        instruction:
+            'إن فقد الوعي وتوقف التنفس: ابدأ CPR فوراً. حتى بعد تحسن الحالة — يجب نقله للمستشفى لأن الأعراض قد تعود خلال ساعات.',
         imageUrl: null,
       ),
     ],
@@ -356,6 +574,10 @@ class _FirstAidCard extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
             child: CachedNetworkImage(
               imageUrl: item.heroImage,
+              httpHeaders: const {
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36',
+                'Referer': 'https://commons.wikimedia.org/',
+              },
               height: 160,
               width: double.infinity,
               fit: BoxFit.cover,
@@ -430,6 +652,10 @@ class FirstAidDetailPage extends StatelessWidget {
                 children: [
                   CachedNetworkImage(
                     imageUrl: item.heroImage,
+                    httpHeaders: const {
+                      'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36',
+                      'Referer': 'https://commons.wikimedia.org/',
+                    },
                     fit: BoxFit.cover,
                   ),
                   const DecoratedBox(
@@ -472,12 +698,19 @@ class FirstAidDetailPage extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
                 ...item.steps.map((step) => _StepItem(step: step)),
                 const SizedBox(height: AppSpacing.xl),
-                AppCard(
-                  color: AppColors.primaryBlue.withOpacity(0.05),
-                  border: BorderSide(color: AppColors.primaryBlue.withOpacity(0.2)),
+                GlassCard(
+                  borderColor: NC.primary.withOpacity(0.2),
                   child: Text(
                     'تنبيه: هذه المعلومات للأغراض الإرشادية فقط. نجدة تخلي مسؤوليتها عن سوء استخدام هذه المعلومات.',
-                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.primaryBlue),
+                    style: NC.body(12, color: NC.primary),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 32),
+                  child: Text(
+                    '© الصور: Wikimedia Commons — CC-BY-SA 4.0',
+                    style: NC.body(10, color: NC.textLow),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -509,6 +742,10 @@ class _StepItem extends StatelessWidget {
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
                 child: CachedNetworkImage(
                   imageUrl: step.imageUrl!,
+                  httpHeaders: const {
+                    'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36',
+                    'Referer': 'https://commons.wikimedia.org/',
+                  },
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,

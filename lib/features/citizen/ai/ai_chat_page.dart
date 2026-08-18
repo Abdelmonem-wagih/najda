@@ -86,12 +86,13 @@ class _AiChatPageState extends State<AiChatPage> {
 
       String reply;
       if (isTriage) {
-        final r = await NajdaAIService.instance.triageSymptoms(
+        final rawResult = await NajdaAIService.instance.triageSymptomsDirect(
           symptoms: cleanText,
         );
+        final r = TriageResult.fromMap(rawResult);
         reply = _formatTriage(r);
       } else {
-        reply = await NajdaAIService.instance.askAssistant(
+        reply = await NajdaAIService.instance.askAssistantDirect(
           message: cleanText,
           role: _role,
           history: List.from(_history),
@@ -109,10 +110,33 @@ class _AiChatPageState extends State<AiChatPage> {
         _scrollDown();
       }
     } catch (e) {
+      // Print actual error for debugging
+      debugPrint('AI Chat Error: $e');
+      debugPrint('Error type: ${e.runtimeType}');
+
+      String errorMsg;
+      final errStr = e.toString().toLowerCase();
+
+      if (errStr.contains('unauthenticated') || errStr.contains('permission')) {
+        errorMsg = 'خطأ في الصلاحيات. تأكد من تسجيل الدخول.';
+      } else if (errStr.contains('not-found') || errStr.contains('not found')) {
+        errorMsg = 'الخدمة غير متاحة حالياً. تأكد من نشر Firebase Functions.';
+      } else if (errStr.contains('groq') ||
+          errStr.contains('api key') ||
+          errStr.contains('internal')) {
+        errorMsg = 'خطأ في خادم الذكاء الاصطناعي. تحقق من إعداد GROQ_API_KEY في Firebase.';
+      } else if (errStr.contains('timeout') || errStr.contains('deadline')) {
+        errorMsg = 'انتهت مهلة الاتصال. حاول مرة أخرى.';
+      } else if (errStr.contains('network') || errStr.contains('socket')) {
+        errorMsg = 'تحقق من اتصالك بالإنترنت.';
+      } else {
+        errorMsg = 'خطأ: $e'; // Show actual error during development
+      }
+
       if (mounted) {
         setState(() {
           _msgs.add(_Msg(
-            text: 'عذراً، حدث خطأ. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.',
+            text: errorMsg,
             isUser: false,
             isError: true,
           ));
