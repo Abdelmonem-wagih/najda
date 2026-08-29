@@ -30,7 +30,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get phoneNumber => 'رقم الهاتف';
 
   @override
-  String get phoneHint => 'أدخل رقم هاتفك مع مفتاح الدولة';
+  String get phoneHint => '+20 1XX XXXX XXXX';
 
   @override
   String get email => 'البريد الإلكتروني';
@@ -45,10 +45,26 @@ class AppLocalizationsAr extends AppLocalizations {
   String get login => 'تسجيل الدخول';
 
   @override
-  String get logout => 'تسجيل الخروج';
+  String get logoutConfirmMessage =>
+      'هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟';
 
   @override
-  String get logoutConfirm => 'هل تريد تسجيل الخروج؟';
+  String get logoutAction => 'خروج';
+
+  @override
+  String get noInfo => 'لا يوجد';
+
+  @override
+  String get personalData => 'البيانات الشخصية';
+
+  @override
+  String get medicalData => 'البيانات الطبية';
+
+  @override
+  String get identityNumber => 'الرقم القومي';
+
+  @override
+  String get emergencyContactPerson => 'جهة اتصال الطوارئ';
 
   @override
   String get yes => 'نعم';
@@ -84,51 +100,104 @@ class AppLocalizationsAr extends AppLocalizations {
   String get close => 'إغلاق';
 
   @override
+  String get paramedicInfo => 'حسابات المسعفين يُنشئها مشرف النظام فقط';
+
+  @override
+  String get newUserPrompt => 'ليس لديك حساب؟';
+
+  @override
+  String get createAccount => 'إنشاء حساب';
+
+  @override
+  String get sendOtpPrompt =>
+      'لتسجيل حساب جديد: أدخل رقمك واضغط \"إرسال رمز التحقق\"';
+
+  @override
+  String get enterPhoneFirst =>
+      'أدخل رقم هاتفك أولاً ثم اضغط \"إرسال رمز التحقق\"';
+
+  @override
   String get otpTitle => 'التحقق من الرقم';
 
   @override
   String otpSubtitle(String phone) {
-    return 'أدخل الرمز المرسل إلى $phone';
+    return 'أدخل الرمز المكون من 6 أرقام المرسل إلى $phone';
   }
 
   @override
-  String get otpCode => 'رمز التحقق';
+  String get otpCode => 'كود التحقق';
 
   @override
   String get otpHint => 'أدخل الرمز المكون من 6 أرقام';
 
   @override
-  String get verifyOtp => 'تحقق';
+  String get verifyOtp => 'تحقق الآن';
 
   @override
   String get resendOtp => 'إعادة إرسال الرمز';
 
   @override
-  String get registrationTitle => 'استكمال بيانات الملف';
+  String resendAfter(int seconds) {
+    return 'يمكنك إعادة الإرسال بعد $seconds ثانية';
+  }
 
   @override
-  String get fullName => 'الاسم الكامل';
+  String get verifiedNumber => 'رقم تم التحقق منه';
 
   @override
-  String get nationalId => 'الرقم القومي';
+  String get personalInfo => 'البيانات الشخصية';
 
   @override
-  String get emergencyContact => 'رقم الطوارئ (اختياري)';
+  String get medicalInfo => 'البيانات الطبية';
 
   @override
-  String get chronicDiseases => 'الأمراض المزمنة';
+  String get medicalInfoSubtitle =>
+      'تُرسل لطاقم الإسعاف عند البلاغات للمساعدة في التشخيص السريع';
 
   @override
-  String get allergies => 'الحساسية';
+  String get passwordLabel => 'كلمة مرور للحساب';
 
   @override
-  String get currentMedications => 'الأدوية الحالية';
+  String get optional => '(اختياري)';
 
   @override
-  String get additionalInfo => 'معلومات إضافية';
+  String get passwordHint => 'أدخل كلمة مرور لحماية حسابك';
 
   @override
-  String get completeProfile => 'إكمال الملف الشخصي';
+  String get passwordLengthError => 'كلمة المرور 6 أحرف على الأقل';
+
+  @override
+  String get chronicDiseasesHint => 'سكري، ضغط، قلب... (افصل بفاصلة)';
+
+  @override
+  String get allergiesHint => 'بنسيلين، فول سوداني...';
+
+  @override
+  String get medicationsHint => 'ميتفورمين، أسبرين...';
+
+  @override
+  String get createAccountButton => 'إنشاء الحساب';
+
+  @override
+  String get identityError => 'خطأ في التحقق من الهوية. أعد المحاولة.';
+
+  @override
+  String get fullNameLabel => 'الاسم الكامل *';
+
+  @override
+  String get nationalIdLabel => 'الرقم القومي *';
+
+  @override
+  String get emergencyContactLabel => 'رقم جهة الاتصال الطارئة';
+
+  @override
+  String get chronicDiseasesLabel => 'أمراض مزمنة';
+
+  @override
+  String get allergiesLabel => 'حساسية من أدوية أو مواد';
+
+  @override
+  String get medicationsLabel => 'أدوية حالية';
 
   @override
   String get homeTitle => 'الرئيسية';
@@ -170,17 +239,88 @@ class AppLocalizationsAr extends AppLocalizations {
   String get aiTriageDescription => 'ذكاء اصطناعي للتشخيص';
 
   @override
-  String get aiAssistant => 'مساعد نجدة';
+  String get aiThinking => 'جارٍ التفكير...';
 
   @override
-  String get aiAssistantDescription => 'دردشة طبية ذكية';
+  String get aiConnected => 'متصل الآن';
+
+  @override
+  String get aiReplying => 'جارٍ الرد...';
+
+  @override
+  String get typeMessageHint => 'اكتب سؤالك هنا...';
+
+  @override
+  String get paramedicWelcome =>
+      'مرحباً أيها المسعف! 🏥\n\nأنا مساعدك الطبي الميداني. يمكنني مساعدتك في البروتوكولات والجرعات والتفاعلات الدوائية.\n\nاسألني أي سؤال طبي.';
+
+  @override
+  String get citizenWelcome =>
+      'مرحباً! أنا مساعد نجدة الذكي 🤖\n\nيمكنني مساعدتك في تقييم الأعراض وإرشادات الإسعافات الأولية.\n\n⚠️ في الطوارئ اتصل بـ 123 فوراً!';
+
+  @override
+  String get permissionError => 'خطأ في الصلاحيات. تأكد من تسجيل الدخول.';
+
+  @override
+  String get serviceUnavailable =>
+      'الخدمة غير متاحة حالياً. تأكد من نشر Firebase Functions.';
+
+  @override
+  String get serverError =>
+      'خطأ في خادم الذكاء الاصطناعي. تحقق من إعداد GROQ_API_KEY في Firebase.';
+
+  @override
+  String get timeoutError => 'انتهت مهلة الاتصال. حاول مرة أخرى.';
+
+  @override
+  String get networkError => 'تحقق من اتصالك بالإنترنت.';
 
   @override
   String get profile => 'الملف الشخصي';
 
   @override
   String greeting(String name) {
-    return 'مرحباً، $name';
+    return 'مرحباً، $name 👋';
+  }
+
+  @override
+  String get homeSubtitle => 'كيف يمكننا مساعدتك اليوم؟';
+
+  @override
+  String get sosButtonTitle => 'طلب نجدة فورية';
+
+  @override
+  String get sosButtonSubtitle => 'يُرسل موقعك وبياناتك الطبية فوراً';
+
+  @override
+  String get reportIncidentTitle => 'إبلاغ عن حادث';
+
+  @override
+  String get reportIncidentSubtitle => 'شاهدت حادثاً؟ أبلغ عنه لمساعدة الآخرين';
+
+  @override
+  String get sosSentTitle => 'تم إرسال بلاغ الطوارئ!';
+
+  @override
+  String reportNumber(String code) {
+    return 'رقم البلاغ: R-$code';
+  }
+
+  @override
+  String get sosSentSubtitle =>
+      'الإسعاف في الطريق إليك. ابقَ في مكانك وحافظ على هدوئك.';
+
+  @override
+  String get ok => 'حسناً';
+
+  @override
+  String get medicalTip =>
+      'حافظ على تحديث بياناتك الطبية لضمان حصولك على أفضل رعاية في حالات الطوارئ.';
+
+  @override
+  String sosEmergencyAlert(
+      String name, double lat, double lng, String code, String time) {
+    return '🚨 *تنبيه طوارئ نجدة*\n\n$name أرسل بلاغ طوارئ!\n📍 الموقع: https://maps.google.com/?q=$lat,$lng\n🏥 رقم البلاغ: $code\n⏰ الوقت: $time\n\nتم إرسال الإسعاف تلقائياً.';
   }
 
   @override
@@ -218,6 +358,78 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reportError => 'فشل إرسال البلاغ';
+
+  @override
+  String get accidentTypeSubtitle =>
+      'اختر التصنيف الأقرب للحالة للمساعدة في الاستجابة';
+
+  @override
+  String get injuryDetailsTitle => 'تفاصيل الإصابة';
+
+  @override
+  String get injuryDetailsSubtitle =>
+      'وصف حالة المصاب يساعد المسعف على الاستعداد';
+
+  @override
+  String get head => 'الرأس';
+
+  @override
+  String get neck => 'الرقبة';
+
+  @override
+  String get chest => 'الصدر';
+
+  @override
+  String get abdomen => 'البطن';
+
+  @override
+  String get arm => 'الذراع';
+
+  @override
+  String get leg => 'الساق';
+
+  @override
+  String get backBody => 'الظهر';
+
+  @override
+  String get multiple => 'متعدد';
+
+  @override
+  String get unspecified => 'غير محدد';
+
+  @override
+  String get mild => 'خفيف';
+
+  @override
+  String get moderate => 'متوسط';
+
+  @override
+  String get severe => 'شديد';
+
+  @override
+  String get unbearable => 'لا يطاق';
+
+  @override
+  String get nextAddPhoto => 'التالي — إضافة صورة';
+
+  @override
+  String get addPhotoSubtitle =>
+      'اختياري: التقاط صورة للحادث يساعد فريق الإسعاف على فهم طبيعة الإصابة';
+
+  @override
+  String get tapToCapture => 'اضغط هنا لالتقاط صورة';
+
+  @override
+  String get sendWithoutPhoto => 'إرسال بدون صورة';
+
+  @override
+  String get reportSentSuccess => 'تم إرسال البلاغ!';
+
+  @override
+  String get ambulanceOnWay => 'الإسعاف في الطريق. ابقَ هادئاً.';
+
+  @override
+  String get backToHome => 'عودة للرئيسية';
 
   @override
   String get locating => 'جارٍ تحديد موقعك...';
@@ -298,6 +510,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get statusCancelled => 'ملغى';
 
   @override
+  String get statusDuplicate => 'مكرر';
+
+  @override
   String get reportDate => 'تاريخ البلاغ';
 
   @override
@@ -310,7 +525,38 @@ class AppLocalizationsAr extends AppLocalizations {
   String get normal_report => 'بلاغ عادي';
 
   @override
-  String get paramedicDashboard => 'لوحة المسعف';
+  String paramedicGreeting(String name) {
+    return 'مرحباً، $name';
+  }
+
+  @override
+  String get availableForReports => 'متاح لاستقبال البلاغات';
+
+  @override
+  String get notAvailable => 'غير متاح حالياً';
+
+  @override
+  String get reports => 'بلاغات';
+
+  @override
+  String get noAssignedEmergencyReports => 'لا توجد بلاغات طوارئ';
+
+  @override
+  String get noAssignedReportsSubtitle => 'سيظهر هنا أي بلاغ يتم تكليفك به';
+
+  @override
+  String get details => 'التفاصيل';
+
+  @override
+  String get navigation => 'ملاحة';
+
+  @override
+  String get locationNotSpecified => 'الموقع غير محدد';
+
+  @override
+  String updateFailed(String error) {
+    return 'فشل التحديث: $error';
+  }
 
   @override
   String get assignedReports => 'البلاغات المُعيَّنة';
@@ -346,7 +592,40 @@ class AppLocalizationsAr extends AppLocalizations {
   String get viewDetails => 'عرض التفاصيل';
 
   @override
-  String get reportDetails => 'تفاصيل البلاغ';
+  String get statusLabel => 'الحالة:';
+
+  @override
+  String get accidentTypeLabel => 'نوع الحادث';
+
+  @override
+  String get navigationToLocation => 'الملاحة إلى الموقع';
+
+  @override
+  String get confirmArrival => 'تأكيد الوصول للموقع';
+
+  @override
+  String get fillMedicalReport => 'تعبئة التقرير الطبي';
+
+  @override
+  String get endMission => 'إنهاء المهمة / تسليم المريض';
+
+  @override
+  String get fieldMedicalReport => 'التقرير الطبي الميداني';
+
+  @override
+  String get additionalNotesHint => 'اكتب أي ملاحظات أخرى هنا...';
+
+  @override
+  String get submitReportAction => 'إرسال التقرير';
+
+  @override
+  String get statusUpdateSuccess => 'تم تحديث الحالة بنجاح';
+
+  @override
+  String get reportNotFound => 'البلاغ غير موجود';
+
+  @override
+  String get loadingDetails => 'تحميل التفاصيل...';
 
   @override
   String get startNavigation => 'بدء الملاحة';
@@ -406,7 +685,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noNotifications => 'لا توجد إشعارات';
 
   @override
-  String get newAssignment => 'تعيين جديد';
+  String get noMissionHistory => 'لا يوجد سجل للمهام';
+
+  @override
+  String get missionHistorySubtitle =>
+      'سيظهر هنا تاريخ المهام التي قمت بإنجازها';
+
+  @override
+  String get notificationsSubtitle =>
+      'ستصلك هنا إشعارات بالبلاغات الجديدة الموجهة إليك';
+
+  @override
+  String get noNotificationsTitle => 'لا توجد إشعارات حالياً';
 
   @override
   String get markAllRead => 'تحديد الكل كمقروء';
@@ -442,16 +732,75 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get firstAidTitle => 'دليل الإسعافات الأولية';
+  String get searchFirstAidHint => 'ابحث عن حالة إسعافية...';
 
   @override
-  String get firstAidSearch => 'ابحث عن إسعافات أولية...';
+  String get noResults => 'لا توجد نتائج';
 
   @override
-  String get hospitalsTitle => 'مستشفيات قريبة';
+  String get tryDifferentSearch => 'حاول البحث بكلمات أخرى';
 
   @override
-  String get hospitalsSearching => 'جارٍ البحث عن مستشفيات قريبة...';
+  String get criticalUrgency => 'حرج';
+
+  @override
+  String get highUrgency => 'عاجل';
+
+  @override
+  String get normalUrgency => 'عادي';
+
+  @override
+  String get firstAidSteps => 'خطوات الإسعاف';
+
+  @override
+  String get emergencyInstruction =>
+      'حالة طارئة جداً — ابدأ الإسعافات واتصل بـ 123 فوراً';
+
+  @override
+  String get standardInstruction =>
+      'اتبع الخطوات بدقة واتصل بالإسعاف إذا لزم الأمر';
+
+  @override
+  String get firstAidDisclaimer =>
+      'تنبيه: هذه المعلومات للأغراض الإرشادية فقط. نجدة تخلي مسؤوليتها عن سوء استخدام هذه المعلومات.';
+
+  @override
+  String get imageCopyright => '© الصور: Wikimedia Commons — CC-BY-SA 4.0';
+
+  @override
+  String get hospitalsSearching => 'جارٍ البحث عن أقرب المستشفيات...';
+
+  @override
+  String get noHospitalsFound => 'لم يتم العثور على مستشفيات';
+
+  @override
+  String get checkLocationOrRetry => 'تأكد من تفعيل الموقع أو جرب لاحقاً';
+
+  @override
+  String foundHospitalsNearYou(int count) {
+    return 'تم العثور على $count مستشفيات بالقرب منك';
+  }
+
+  @override
+  String get openNow => 'مفتوح الآن';
+
+  @override
+  String get closed => 'مغلق';
+
+  @override
+  String km(String dist) {
+    return '$dist كم';
+  }
+
+  @override
+  String get directions => 'الاتجاهات';
+
+  @override
+  String get locationAccessError => 'تعذر الوصول للموقع';
+
+  @override
+  String get locationPermissionDenied =>
+      'صلاحية الموقع مرفوضة. فعّلها من الإعدادات.';
 
   @override
   String get callHospital => 'اتصال';
@@ -460,10 +809,54 @@ class AppLocalizationsAr extends AppLocalizations {
   String get getDirections => 'الاتجاهات';
 
   @override
-  String get emergencyNumbersTitle => 'أرقام الطوارئ';
+  String get ambulance => 'الإسعاف';
+
+  @override
+  String get police => 'الشرطة';
+
+  @override
+  String get fire => 'المطافي';
+
+  @override
+  String get rescue => 'النجدة';
+
+  @override
+  String get airAmbulance => 'الإسعاف الطائر';
+
+  @override
+  String get childRescue => 'نجدة الطفل';
+
+  @override
+  String get ambulanceSubtitle =>
+      'للحوادث والإصابات والتبليغ عن حالات طبية طارئة';
+
+  @override
+  String get policeSubtitle => 'للجرائم والبلاغات الأمنية والمرور';
+
+  @override
+  String get fireSubtitle => 'للحرائق وحوادث الطرق والإنقاذ';
+
+  @override
+  String get rescueSubtitle => 'للكوارث الطبيعية والإنقاذ المدني';
+
+  @override
+  String get airAmbulanceSubtitle => 'للحالات الحرجة في المناطق البعيدة';
+
+  @override
+  String get childRescueSubtitle => 'لحماية الطفل من العنف والإهمال';
+
+  @override
+  String get otherEmergencyNumbers => 'أرقام الطوارئ الأخرى';
+
+  @override
+  String get emergencyNumbersTip =>
+      'اضغط على أي رقم للاتصال المباشر، أو اضغط مطولاً لنسخ الرقم.';
 
   @override
   String get call => 'اتصال';
+
+  @override
+  String get hospitalsTitle => 'عنوان المستشفيات';
 
   @override
   String get fieldRequired => 'هذا الحقل مطلوب';
@@ -487,6 +880,63 @@ class AppLocalizationsAr extends AppLocalizations {
   String get phoneTooShort => 'رقم الهاتف قصير جداً';
 
   @override
+  String get reportDetails => 'تفاصيل البلاغ';
+
+  @override
+  String get ambulanceAssigned => 'تم تعيين سيارة إسعاف';
+
+  @override
+  String get paramedicName => 'اسم المسعف';
+
+  @override
+  String get plateNumberLabel => 'رقم اللوحة';
+
+  @override
+  String get settings => 'الإعدادات';
+
+  @override
+  String get privacyPolicy => 'سياسة الخصوصية';
+
+  @override
+  String get aboutUs => 'عن التطبيق';
+
+  @override
+  String get rateApp => 'تقييم التطبيق';
+
+  @override
+  String get helpSupport => 'المساعدة والدعم';
+
+  @override
+  String get appVersion => 'إصدار التطبيق';
+
+  @override
+  String get editProfile => 'تعديل الملف الشخصي';
+
+  @override
+  String get updateProfile => 'تحديث البيانات';
+
+  @override
+  String get profileUpdated => 'تم تحديث الملف الشخصي بنجاح';
+
+  @override
+  String get profileUpdateError => 'فشل تحديث البيانات، حاول مرة أخرى';
+
+  @override
+  String get saveChanges => 'حفظ التغييرات';
+
+  @override
+  String get discardChanges => 'تجاهل التغييرات';
+
+  @override
+  String get confirmDiscard => 'هل تريد تجاهل التغييرات غير المحفوظة؟';
+
+  @override
+  String get termsOfService => 'شروط الخدمة';
+
+  @override
+  String get shareApp => 'مشاركة التطبيق';
+
+  @override
   String get language => 'اللغة';
 
   @override
@@ -494,6 +944,170 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get english => 'English';
+
+  @override
+  String get linkCopied => 'تم نسخ الرابط';
+
+  @override
+  String get shareMessage => 'حمل تطبيق نجدة للطوارئ:';
+
+  @override
+  String get smsMessage => 'استخدم تطبيق نجدة للاستجابة الطارئة:';
+
+  @override
+  String get otherWays => 'مشاركة بطرق أخرى';
+
+  @override
+  String get roleCitizen => 'مواطن';
+
+  @override
+  String get roleParamedic => 'مسعف';
+
+  @override
+  String get defaultUserName => 'مستخدم نجدة';
+
+  @override
+  String get settingsPreferences => 'التفضيلات';
+
+  @override
+  String get settingsSupportInfo => 'الدعم والمعلومات';
+
+  @override
+  String get settingsShareFeedback => 'شاركنا رأيك';
+
+  @override
+  String get settingsAccount => 'الحساب';
+
+  @override
+  String get contactUs => 'تواصل معنا';
+
+  @override
+  String get chatWithSupport => 'تواصل مع الدعم';
+
+  @override
+  String get available247 => 'متاح 24/7';
+
+  @override
+  String get emergencyLine => 'خط الطوارئ';
+
+  @override
+  String get faqs => 'الأسئلة الشائعة';
+
+  @override
+  String get faq1Q => 'كيف أرسل بلاغ طارئ؟';
+
+  @override
+  String get faq1A =>
+      'ببساطة اضغط على زر SOS الكبير في الصفحة الرئيسية أو استخدم المساعد الذكي للإبلاغ عن نوع الحادث.';
+
+  @override
+  String get faq2Q => 'هل يمكنني تتبع سيارة الإسعاف؟';
+
+  @override
+  String get faq2A =>
+      'نعم، بمجرد تعيين سيارة إسعاف لبلاغك، ستظهر لك شاشة تتبع مباشرة توضح موقع السيارة والوقت المتوقع للوصول.';
+
+  @override
+  String get faq3Q => 'ما هو نظام الذكاء الاصطناعي في نجدة؟';
+
+  @override
+  String get faq3A =>
+      'يستخدم نجدة تقنيات الذكاء الاصطناعي لتحليل البلاغات وتصنيف خطورتها وتوجيه أقرب سيارة إسعاف واختيار المستشفى الأنسب للحالة.';
+
+  @override
+  String get privacyDataCollection => 'جمع البيانات';
+
+  @override
+  String get privacyDataCollectionDesc =>
+      '• الموقع الجغرافي (GPS): يتم جمعه فقط عند إرسال بلاغ طوارئ لتحديد موقعك بدقة.\\n• الملف الطبي: المعلومات التي تدخلها (فصيلة الدم، الحساسية، الأمراض المزمنة) لمساعدة المسعفين.\\n• رقم الهاتف: للتحقق من الهوية والتواصل معك عند الضرورة.';
+
+  @override
+  String get privacyDataUsage => 'استخدام البيانات';
+
+  @override
+  String get privacyDataUsageDesc =>
+      '• تعيين أقرب سيارة إسعاف لموقع البلاغ.\\n• اختيار المستشفى الأنسب بناءً على الحالة الصحية.\\n• تنبيه جهة اتصال الطوارئ الخاصة بك تلقائياً عند الضرورة.';
+
+  @override
+  String get privacyDataSharing => 'مشاركة البيانات';
+
+  @override
+  String get privacyDataSharingDesc =>
+      '• نحن لا نبيع بياناتك لأي جهات خارجية.\\n• يتم مشاركة بياناتك الطبية وموقعك فقط مع طاقم الإسعاف والمستشفى المعني بالبلاغ.';
+
+  @override
+  String get privacyDataDeletion => 'حذف البيانات';
+
+  @override
+  String get privacyDataDeletionDesc =>
+      '• يمكنك طلب حذف حسابك وبياناتك بالكامل عبر التواصل مع الدعم الفني من داخل التطبيق.';
+
+  @override
+  String lastUpdated(String date) {
+    return 'آخر تحديث: $date';
+  }
+
+  @override
+  String get termsAcceptance => 'القبول بالشروط';
+
+  @override
+  String get termsAcceptanceDesc =>
+      'باستخدامك لتطبيق نجدة، فإنك توافق على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على أي جزء منها، يرجى التوقف عن استخدام التطبيق.';
+
+  @override
+  String get termsServiceUsage => 'استخدام الخدمة';
+
+  @override
+  String get termsServiceUsageDesc =>
+      '• التطبيق مخصص للحالات الطارئة الحقيقية فقط.\\n• يُحظر تماماً إرسال بلاغات وهمية، مما قد يعرضك للمساءلة القانونية.\\n• يجب أن يكون عمر المستخدم 18 عاماً فأكثر، أو استخدامه تحت إشراف ولي الأمر.';
+
+  @override
+  String get termsLiability => 'حدود المسؤولية';
+
+  @override
+  String get termsLiabilityDesc =>
+      'تطبيق نجدة هو وسيط لتسهيل وصول خدمات الإسعاف، ونحن نبذل قصارى جهدنا لضمان دقة النظام ولكننا لا نضمن الاستجابة الفورية في جميع الظروف الخارجة عن إرادتنا.';
+
+  @override
+  String get termsTermination => 'إنهاء الخدمة';
+
+  @override
+  String get termsTerminationDesc =>
+      'نحتفظ بالحق في تعليق أو إنهاء وصولك إلى الخدمة في حالة مخالفة شروط الاستخدام أو إساءة استخدام نظام الطوارئ.';
+
+  @override
+  String get aboutSubtitle => 'نظام الاستجابة الطارئة الذكي';
+
+  @override
+  String get aboutInfrastructure => 'البنية التحتية';
+
+  @override
+  String get aboutRegion => 'المنطقة';
+
+  @override
+  String get egypt => 'جمهورية مصر العربية';
+
+  @override
+  String get aboutDescription =>
+      'نجدة هو نظام متكامل يهدف إلى تقليل وقت الاستجابة في حالات الطوارئ الطبية باستخدام الذكاء الاصطناعي وربط المواطنين مباشرة بأطقم الإسعاف والمستشفيات.';
+
+  @override
+  String get rateTitle => 'رأيك يهمنا';
+
+  @override
+  String get rateSubtitle => 'ساعدنا في تحسين نجدة من خلال تقييم تجربتك';
+
+  @override
+  String get rateSubmit => 'إرسال التقييم';
+
+  @override
+  String get shareTitle => 'شارك عبر';
+
+  @override
+  String get appLink => 'رابط التطبيق';
+
+  @override
+  String get copyLink => 'نسخ رابط';
 
   @override
   String get changeLanguage => 'تغيير اللغة';

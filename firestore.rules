@@ -12,118 +12,117 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-      return isAuthenticated() &&
-        request.auth.uid == userId;
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // App Admin
-    // Used by the mobile application/admin collection.
+    // Mobile app admin (admins/ collection)
     function isAppAdmin() {
       return isAuthenticated() &&
-        exists(
-          /databases/$(database)/documents/admins/$(request.auth.uid)
-        );
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    // Dashboard User
+    // Dashboard user (any role)
     function isDashboardUser() {
       return isAuthenticated() &&
-        exists(
-          /databases/$(database)/documents/dashboard_users/$(request.auth.uid)
-        );
+        exists(/databases/$(database)/documents/dashboard_users/$(request.auth.uid));
     }
 
-    // Dashboard Admin
+    // Dashboard admin specifically
     function isDashboardAdmin() {
       return isDashboardUser() &&
-        get(
-          /databases/$(database)/documents/dashboard_users/$(request.auth.uid)
-        ).data.role == "admin";
+        get(/databases/$(database)/documents/dashboard_users/$(request.auth.uid)).data.role == "admin";
     }
 
-    // Either App Admin OR Dashboard Admin
+    // Either admin type
     function isAdmin() {
       return isAppAdmin() || isDashboardAdmin();
     }
 
+    // Registered citizen
     function isCitizen() {
       return isAuthenticated() &&
-        exists(
-          /databases/$(database)/documents/citizens/$(request.auth.uid)
-        );
+        exists(/databases/$(database)/documents/citizens/$(request.auth.uid));
     }
 
+    // Registered paramedic
     function isParamedic() {
       return isAuthenticated() &&
-        exists(
-          /databases/$(database)/documents/paramedics/$(request.auth.uid)
-        );
+        exists(/databases/$(database)/documents/paramedics/$(request.auth.uid));
     }
 
-    function isReportOwner() {
-      return isAuthenticated() &&
-        resource.data.patientUid == request.auth.uid;
+    // Owner of the incident (unified schema uses reportedBy, not patientUid)
+    function isIncidentOwner() {
+      return isAuthenticated() && resource.data.reportedBy == request.auth.uid;
     }
 
+    // Paramedic assigned to this incident (unified schema: assignment.paramedicId)
     function isAssignedParamedic() {
       return isAuthenticated() &&
-        resource.data.assignedParamedicId == request.auth.uid;
+        resource.data.get('assignment', {}).get('paramedicId', '') == request.auth.uid;
     }
 
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Citizens
+    // Users  (shared profile — both citizen and paramedic have a doc here)
+    // Written at registration by the mobile app
     // ═══════════════════════════════════════════════════════════════════════
 
-    match /citizens/{userId} {
+    match /users/{userId} {
+      // Own read/write
+      allow read, write: if isOwner(userId);
 
-      allow read: if isOwner(userId)
-        || isAppAdmin()
-        || isParamedic()
-        || isDashboardUser();
+      // Dashboard + App Admin can read (for medical profile in SOS)
+      allow read: if isDashboardUser() || isAppAdmin();
 
-      allow create: if isOwner(userId);
+      // Paramedics can read for incident context
+      allow read: if isParamedic();
 
-      allow update: if isOwner(userId)
-        || isAppAdmin()
-        || isDashboardUser();
-
+      // Only admins can delete
       allow delete: if isAdmin();
     }
 
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Reports
-    // Mobile:
-    //   - Authenticated users can create/read.
-    //   - Citizen can update their own non-critical fields.
-    //   - Assigned paramedic can update operational fields.
-    //
-    // Dashboard:
-    //   - Dashboard users can read/create/update/delete.
+    // Citizens  (role-specific collection for exists() checks)
     // ═══════════════════════════════════════════════════════════════════════
 
-    match /reports/{docId} {
+    match /citizens/{userId} {
+      allow read: if isOwner(userId) || isParamedic() || isDashboardUser() || isAppAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin() || isDashboardUser();
+      allow delete: if isAdmin();
+    }
 
-      // Mobile + Dashboard
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Incidents  (unified — replaces reports/ + emergency_reports/)
+    //
+    // Unified schema fields used in rules:
+    //   reportedBy        — who created the incident (citizen uid)
+    //   assignment.paramedicId — assigned paramedic uid
+    //   status, assignment, assignedHospital, timeline, resolvedAt — protected
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /incidents/{incidentId} {
+
+      // Everyone authenticated can read
       allow read: if isAuthenticated();
 
-      // Mobile can create reports
-      // Dashboard can also create reports
-      allow create: if isAuthenticated();
+      // Citizens and paramedics can create (accident report, SOS)
+      allow create: if isCitizen() || isParamedic();
 
-      // Dashboard can fully modify reports
+      // Dashboard has full update authority
       allow update: if isDashboardUser();
 
-      // Citizen can update only non-critical fields
-      allow update: if isReportOwner()
+      // Citizen can update their own incident — but NOT critical operational fields
+      allow update: if isIncidentOwner()
         && !request.resource.data.diff(resource.data).affectedKeys()
           .hasAny([
             'status',
-            'assignedParamedicId',
-            'assignedAt',
-            'arrivedAt',
-            'completedAt'
+            'assignment',
+            'assignedHospital',
+            'resolvedAt',
+            'timeline'
           ]);
 
       // Assigned paramedic can update only operational fields
@@ -132,55 +131,63 @@ service cloud.firestore {
           .hasOnly([
             'status',
             'updatedAt',
-            'completedAt',
-            'arrivedAt'
+            'resolvedAt',
+            'timeline'
           ]);
 
-      // App Admin + Dashboard can delete
       allow delete: if isAdmin() || isDashboardUser();
     }
 
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Emergency Reports
-    // Same logic as normal reports
+    // Tracking  (high-frequency GPS writes — separate from ambulances/)
+    //
+    // Written every 3–5 seconds by the paramedic's device.
+    // Read by Dashboard LiveMap in real time.
+    //
+    // Security note: we allow any authenticated paramedic to write to
+    // tracking/{ambulanceId}. A stricter check (verifying the paramedic
+    // owns this ambulance) would require an extra Firestore read on every
+    // GPS update (every 4s) which is expensive. Instead, Cloud Functions
+    // validate ownership server-side before acting on tracking data.
     // ═══════════════════════════════════════════════════════════════════════
 
-    match /emergency_reports/{docId} {
+    match /tracking/{ambulanceId} {
 
-      // Mobile + Dashboard
+      // Paramedics write their own location
+      allow write: if isParamedic();
+
+      // Dashboard + paramedics + admins can read
+      allow read: if isDashboardUser() || isParamedic() || isAppAdmin();
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Ambulances
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /ambulances/{ambulanceId} {
+
+      // All authenticated users can read (citizen may need ETA info)
       allow read: if isAuthenticated();
 
-      // Mobile can create
-      // Dashboard can also create
-      allow create: if isAuthenticated();
+      // Dashboard full access
+      allow read, write: if isDashboardUser();
 
-      // Dashboard can fully modify
-      allow update: if isDashboardUser();
+      // App Admin full access
+      allow write: if isAppAdmin();
 
-      // Citizen can update only non-critical fields
-      allow update: if isReportOwner()
-        && !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny([
-            'status',
-            'assignedParamedicId',
-            'assignedAt',
-            'arrivedAt',
-            'completedAt'
-          ]);
-
-      // Assigned paramedic can update operational fields
-      allow update: if isAssignedParamedic()
+      // Paramedic can update only their own ambulance's location + status
+      // (currentLocation is aggregated from tracking/ by Cloud Function,
+      //  but paramedic may also update status directly)
+      allow update: if isParamedic()
+        && resource.data.get('paramedicId', '') == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly([
             'status',
-            'updatedAt',
-            'completedAt',
-            'arrivedAt'
+            'lastActiveAt',
+            'updatedAt'
           ]);
-
-      // App Admin + Dashboard can delete
-      allow delete: if isAdmin() || isDashboardUser();
     }
 
 
@@ -190,19 +197,16 @@ service cloud.firestore {
 
     match /paramedics/{userId} {
 
-      // Dashboard has full access
-      allow read, write: if isDashboardUser();
+      // Dashboard + App Admin full access
+      allow read, write: if isDashboardUser() || isAppAdmin();
 
-      // App Admin has full access
-      allow read, write: if isAppAdmin();
-
-      // Paramedic can read their own profile
+      // Paramedic reads their own profile
       allow read: if isOwner(userId);
 
-      // Paramedic can create their own profile
+      // Paramedic creates their own profile at registration
       allow create: if isOwner(userId);
 
-      // Paramedic can update only operational fields
+      // Paramedic updates only operational fields
       allow update: if isOwner(userId)
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly([
@@ -210,174 +214,162 @@ service cloud.firestore {
             'isAvailable',
             'isActive',
             'fcmToken',
-            'latitude',
-            'longitude',
-            'updatedAt',
-            'assignedReportId',
-            'assignedReportType'
+            'currentAmbulanceId',
+            'updatedAt'
           ]);
     }
 
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Medical Reports
+    // Assignments  (audit log — written only by Cloud Functions via Admin SDK)
+    //
+    // No client write allowed. Cloud Functions use Admin SDK which bypasses rules.
     // ═══════════════════════════════════════════════════════════════════════
 
-    match /medical_reports/{reportId} {
+    match /assignments/{assignmentId} {
+      allow create, update, delete: if false;
 
-      // Dashboard full access
-      allow read, write: if isDashboardUser();
-
-      // App Admin full access
-      allow read, write: if isAppAdmin();
-
-      // Only submitting paramedic can create
-      allow create: if isParamedic()
-        && request.resource.data.paramedicId == request.auth.uid;
-
-      // Paramedic can read their own medical reports
-      allow read: if isParamedic()
-        && resource.data.paramedicId == request.auth.uid;
-
-      // For paramedics, reports remain immutable
-      allow update, delete: if false;
+      allow read: if isAdmin()
+        || isDashboardUser()
+        || (isParamedic() && resource.data.paramedicId == request.auth.uid);
     }
 
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Paramedic History
-    // Written only by Cloud Functions / Admin SDK
+    // Hospitals  (cached from Google Places — updated by admin/functions)
     // ═══════════════════════════════════════════════════════════════════════
 
-    match /paramedic_history/{historyId} {
-
-      allow create, update, delete: if false;
-
-      allow read: if (
-        isParamedic() &&
-        resource.data.paramedicId == request.auth.uid
-      ) || isAdmin() || isDashboardUser();
+    match /hospitals/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isDashboardUser() || isAppAdmin();
     }
 
 
     // ═══════════════════════════════════════════════════════════════════════
     // Notifications
-    // Mobile:
-    //   - Paramedic can read own notifications.
-    //   - Paramedic can only update isRead.
-    //   - Paramedic can delete own notifications.
-    //   - Authenticated users can create.
     //
-    // Dashboard:
-    //   - Full access.
+    // Unified schema fields:
+    //   targetType  — "ambulance" | "paramedic" | "admin" | "citizen"
+    //   targetId    — uid or "all" for broadcasts
+    //   read        — Boolean (was "isRead" in old schema — now unified to "read")
     // ═══════════════════════════════════════════════════════════════════════
 
     match /notifications/{notificationId} {
 
-      // Dashboard full access
-      allow read, write: if isDashboardUser();
+      // Dashboard + App Admin full access
+      allow read, write: if isDashboardUser() || isAppAdmin();
 
-      // App Admin full access
-      allow read, write: if isAppAdmin();
+      // Paramedic reads own or broadcast notifications
+      allow read: if isParamedic() && (
+        resource.data.targetId == request.auth.uid ||
+        resource.data.targetId == 'all'
+      );
 
-      // Paramedic can read own notifications
-      allow read: if isParamedic()
-        && resource.data.paramedicId == request.auth.uid;
-
-      // Paramedic can mark notification as read only
+      // Paramedic marks own notification as read only (field is now "read" not "isRead")
       allow update: if isParamedic()
-        && resource.data.paramedicId == request.auth.uid
+        && resource.data.targetId == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['isRead']);
+          .hasOnly(['read']);
 
-      // Paramedic can delete own notification
+      // Paramedic deletes own notification
       allow delete: if isParamedic()
-        && resource.data.paramedicId == request.auth.uid;
+        && resource.data.targetId == request.auth.uid;
 
-      // App can create notifications
+      // Citizen reads own notifications (e.g. incident status updates)
+      allow read: if isCitizen() && (
+        resource.data.targetId == request.auth.uid ||
+        resource.data.targetId == 'all'
+      );
+
+      // Citizen marks own as read
+      allow update: if isCitizen()
+        && resource.data.targetId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['read']);
+
+      // Mobile app creates notifications (SOS alert to dashboard, etc.)
       allow create: if isAuthenticated();
     }
 
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Mission Cancellations
+    // Medical Reports  (paramedic field reports — immutable after creation)
     // ═══════════════════════════════════════════════════════════════════════
 
-    match /mission_cancellations/{docId} {
+    match /medical_reports/{reportId} {
+      allow read, write: if isDashboardUser() || isAppAdmin();
 
       allow create: if isParamedic()
         && request.resource.data.paramedicId == request.auth.uid;
 
-      allow read: if (
-        isParamedic() &&
-        resource.data.paramedicId == request.auth.uid
-      ) || isAdmin() || isDashboardUser();
+      allow read: if isParamedic()
+        && resource.data.paramedicId == request.auth.uid;
+
+      // Immutable — no updates or deletes from client
+      allow update, delete: if false;
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Paramedic History  (written only by Cloud Functions)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /paramedic_history/{historyId} {
+      allow create, update, delete: if false;
+
+      allow read: if isAdmin()
+        || isDashboardUser()
+        || (isParamedic() && resource.data.paramedicId == request.auth.uid);
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Mission Cancellations  (immutable after creation)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /mission_cancellations/{docId} {
+      allow create: if isParamedic()
+        && request.resource.data.paramedicId == request.auth.uid;
+
+      allow read: if isAdmin()
+        || isDashboardUser()
+        || (isParamedic() && resource.data.paramedicId == request.auth.uid);
 
       allow update, delete: if false;
     }
 
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Ambulances
+    // Join Requests  (public form submission)
     // ═══════════════════════════════════════════════════════════════════════
 
-    match /ambulances/{docId} {
+    match /join_requests/{requestId} {
+      // Anyone can submit (public form, no auth required)
+      allow create: if true;
 
-      // Mobile users can read
-      allow read: if isAuthenticated();
-
-      // Dashboard can read/write
-      allow read, write: if isDashboardUser();
-
-      // App Admin can write
-      allow write: if isAppAdmin();
-
-      // Paramedic read is already covered by authenticated read
+      // Only dashboard/admin can read and process
+      allow read, update: if isAdmin() || isDashboardUser();
+      allow delete: if isAdmin();
     }
 
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Hospitals
-    // ═══════════════════════════════════════════════════════════════════════
-
-    match /hospitals/{docId} {
-
-      // Authenticated users can read
-      allow read: if isAuthenticated();
-
-      // Dashboard can write
-      allow write: if isDashboardUser();
-
-      // App Admin can write
-      allow write: if isAppAdmin();
-    }
-
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // Patient Profiles
+    // Patient Profiles  (legacy — kept for backward compat)
+    // New data should go to users/{uid}.medicalProfile
     // ═══════════════════════════════════════════════════════════════════════
 
     match /patient_profiles/{userId} {
-
-      // Dashboard can read
-      allow read: if isDashboardUser();
-
-      // Owner can write their own profile
-      allow write: if isOwner(userId);
-
-      // Admin can write
-      allow write: if isAdmin();
+      allow read: if isDashboardUser() || isParamedic();
+      allow write: if isOwner(userId) || isAdmin();
     }
 
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Admins
+    // Admins  (mobile app admin collection)
     // ═══════════════════════════════════════════════════════════════════════
 
     match /admins/{userId} {
-
       allow read: if isOwner(userId) || isAppAdmin();
-
       allow write: if isAppAdmin();
     }
 
@@ -387,25 +379,17 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════════════════
 
     match /dashboard_users/{uid} {
-
-      // User can read their own dashboard profile
-      allow read: if isOwner(uid);
-
-      // Dashboard admin can create/update/delete dashboard users
+      allow read: if isOwner(uid) || isDashboardUser();
       allow write: if isDashboardAdmin();
     }
 
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Default
+    // Default — authenticated read / admin write only
     // ═══════════════════════════════════════════════════════════════════════
 
     match /{document=**} {
-
-      // Keep the original application's authenticated-read behavior.
       allow read: if isAuthenticated();
-
-      // Only App Admin or Dashboard Admin can write unspecified collections.
       allow write: if isAdmin();
     }
   }

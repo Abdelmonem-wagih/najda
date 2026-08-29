@@ -3,9 +3,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/route/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
 
-final ValueNotifier<String?> currentRouteNotifier = ValueNotifier<String?>(null);
+final ValueNotifier<String?> currentRouteNotifier =
+    ValueNotifier<String?>(null);
 
 class NajdaRouteObserver extends NavigatorObserver {
   void _update(Route? route) {
@@ -62,6 +62,7 @@ class _DraggableAiButtonState extends State<DraggableAiButton>
     return ValueListenableBuilder<String?>(
       valueListenable: currentRouteNotifier,
       builder: (_, route, child) {
+        // Hide button when AI Chat is open
         if (route == AppRoutes.aiChat) return const SizedBox.shrink();
         return child!;
       },
@@ -93,11 +94,12 @@ class _DraggableAiButtonState extends State<DraggableAiButton>
                     offset: const Offset(0, 5),
                   ),
                 ],
-                border: Border.all(color: AppColors.primaryBlue.withOpacity(0.1), width: 2),
+                border: Border.all(
+                    color: AppColors.primaryBlue, width: 2),
               ),
               padding: const EdgeInsets.all(12),
-              child: SvgPicture.asset(
-                'assets/svg/chatBot.svg',
+              child: Image.asset(
+                'assets/svg/bot.png',
                 fit: BoxFit.contain,
               ),
             ),

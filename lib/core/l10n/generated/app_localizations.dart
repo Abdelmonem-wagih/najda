@@ -143,7 +143,7 @@ abstract class AppLocalizations {
   /// No description provided for @phoneHint.
   ///
   /// In ar, this message translates to:
-  /// **'أدخل رقم هاتفك مع مفتاح الدولة'**
+  /// **'+20 1XX XXXX XXXX'**
   String get phoneHint;
 
   /// No description provided for @email.
@@ -170,17 +170,47 @@ abstract class AppLocalizations {
   /// **'تسجيل الدخول'**
   String get login;
 
-  /// No description provided for @logout.
+  /// No description provided for @logoutConfirmMessage.
   ///
   /// In ar, this message translates to:
-  /// **'تسجيل الخروج'**
-  String get logout;
+  /// **'هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟'**
+  String get logoutConfirmMessage;
 
-  /// No description provided for @logoutConfirm.
+  /// No description provided for @logoutAction.
   ///
   /// In ar, this message translates to:
-  /// **'هل تريد تسجيل الخروج؟'**
-  String get logoutConfirm;
+  /// **'خروج'**
+  String get logoutAction;
+
+  /// No description provided for @noInfo.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد'**
+  String get noInfo;
+
+  /// No description provided for @personalData.
+  ///
+  /// In ar, this message translates to:
+  /// **'البيانات الشخصية'**
+  String get personalData;
+
+  /// No description provided for @medicalData.
+  ///
+  /// In ar, this message translates to:
+  /// **'البيانات الطبية'**
+  String get medicalData;
+
+  /// No description provided for @identityNumber.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرقم القومي'**
+  String get identityNumber;
+
+  /// No description provided for @emergencyContactPerson.
+  ///
+  /// In ar, this message translates to:
+  /// **'جهة اتصال الطوارئ'**
+  String get emergencyContactPerson;
 
   /// No description provided for @yes.
   ///
@@ -248,6 +278,36 @@ abstract class AppLocalizations {
   /// **'إغلاق'**
   String get close;
 
+  /// No description provided for @paramedicInfo.
+  ///
+  /// In ar, this message translates to:
+  /// **'حسابات المسعفين يُنشئها مشرف النظام فقط'**
+  String get paramedicInfo;
+
+  /// No description provided for @newUserPrompt.
+  ///
+  /// In ar, this message translates to:
+  /// **'ليس لديك حساب؟'**
+  String get newUserPrompt;
+
+  /// No description provided for @createAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنشاء حساب'**
+  String get createAccount;
+
+  /// No description provided for @sendOtpPrompt.
+  ///
+  /// In ar, this message translates to:
+  /// **'لتسجيل حساب جديد: أدخل رقمك واضغط \"إرسال رمز التحقق\"'**
+  String get sendOtpPrompt;
+
+  /// No description provided for @enterPhoneFirst.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل رقم هاتفك أولاً ثم اضغط \"إرسال رمز التحقق\"'**
+  String get enterPhoneFirst;
+
   /// No description provided for @otpTitle.
   ///
   /// In ar, this message translates to:
@@ -257,13 +317,13 @@ abstract class AppLocalizations {
   /// No description provided for @otpSubtitle.
   ///
   /// In ar, this message translates to:
-  /// **'أدخل الرمز المرسل إلى {phone}'**
+  /// **'أدخل الرمز المكون من 6 أرقام المرسل إلى {phone}'**
   String otpSubtitle(String phone);
 
   /// No description provided for @otpCode.
   ///
   /// In ar, this message translates to:
-  /// **'رمز التحقق'**
+  /// **'كود التحقق'**
   String get otpCode;
 
   /// No description provided for @otpHint.
@@ -275,7 +335,7 @@ abstract class AppLocalizations {
   /// No description provided for @verifyOtp.
   ///
   /// In ar, this message translates to:
-  /// **'تحقق'**
+  /// **'تحقق الآن'**
   String get verifyOtp;
 
   /// No description provided for @resendOtp.
@@ -284,59 +344,125 @@ abstract class AppLocalizations {
   /// **'إعادة إرسال الرمز'**
   String get resendOtp;
 
-  /// No description provided for @registrationTitle.
+  /// No description provided for @resendAfter.
   ///
   /// In ar, this message translates to:
-  /// **'استكمال بيانات الملف'**
-  String get registrationTitle;
+  /// **'يمكنك إعادة الإرسال بعد {seconds} ثانية'**
+  String resendAfter(int seconds);
 
-  /// No description provided for @fullName.
+  /// No description provided for @verifiedNumber.
   ///
   /// In ar, this message translates to:
-  /// **'الاسم الكامل'**
-  String get fullName;
+  /// **'رقم تم التحقق منه'**
+  String get verifiedNumber;
 
-  /// No description provided for @nationalId.
+  /// No description provided for @personalInfo.
   ///
   /// In ar, this message translates to:
-  /// **'الرقم القومي'**
-  String get nationalId;
+  /// **'البيانات الشخصية'**
+  String get personalInfo;
 
-  /// No description provided for @emergencyContact.
+  /// No description provided for @medicalInfo.
   ///
   /// In ar, this message translates to:
-  /// **'رقم الطوارئ (اختياري)'**
-  String get emergencyContact;
+  /// **'البيانات الطبية'**
+  String get medicalInfo;
 
-  /// No description provided for @chronicDiseases.
+  /// No description provided for @medicalInfoSubtitle.
   ///
   /// In ar, this message translates to:
-  /// **'الأمراض المزمنة'**
-  String get chronicDiseases;
+  /// **'تُرسل لطاقم الإسعاف عند البلاغات للمساعدة في التشخيص السريع'**
+  String get medicalInfoSubtitle;
 
-  /// No description provided for @allergies.
+  /// No description provided for @passwordLabel.
   ///
   /// In ar, this message translates to:
-  /// **'الحساسية'**
-  String get allergies;
+  /// **'كلمة مرور للحساب'**
+  String get passwordLabel;
 
-  /// No description provided for @currentMedications.
+  /// No description provided for @optional.
   ///
   /// In ar, this message translates to:
-  /// **'الأدوية الحالية'**
-  String get currentMedications;
+  /// **'(اختياري)'**
+  String get optional;
 
-  /// No description provided for @additionalInfo.
+  /// No description provided for @passwordHint.
   ///
   /// In ar, this message translates to:
-  /// **'معلومات إضافية'**
-  String get additionalInfo;
+  /// **'أدخل كلمة مرور لحماية حسابك'**
+  String get passwordHint;
 
-  /// No description provided for @completeProfile.
+  /// No description provided for @passwordLengthError.
   ///
   /// In ar, this message translates to:
-  /// **'إكمال الملف الشخصي'**
-  String get completeProfile;
+  /// **'كلمة المرور 6 أحرف على الأقل'**
+  String get passwordLengthError;
+
+  /// No description provided for @chronicDiseasesHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'سكري، ضغط، قلب... (افصل بفاصلة)'**
+  String get chronicDiseasesHint;
+
+  /// No description provided for @allergiesHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'بنسيلين، فول سوداني...'**
+  String get allergiesHint;
+
+  /// No description provided for @medicationsHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'ميتفورمين، أسبرين...'**
+  String get medicationsHint;
+
+  /// No description provided for @createAccountButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنشاء الحساب'**
+  String get createAccountButton;
+
+  /// No description provided for @identityError.
+  ///
+  /// In ar, this message translates to:
+  /// **'خطأ في التحقق من الهوية. أعد المحاولة.'**
+  String get identityError;
+
+  /// No description provided for @fullNameLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاسم الكامل *'**
+  String get fullNameLabel;
+
+  /// No description provided for @nationalIdLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرقم القومي *'**
+  String get nationalIdLabel;
+
+  /// No description provided for @emergencyContactLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم جهة الاتصال الطارئة'**
+  String get emergencyContactLabel;
+
+  /// No description provided for @chronicDiseasesLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'أمراض مزمنة'**
+  String get chronicDiseasesLabel;
+
+  /// No description provided for @allergiesLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'حساسية من أدوية أو مواد'**
+  String get allergiesLabel;
+
+  /// No description provided for @medicationsLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدوية حالية'**
+  String get medicationsLabel;
 
   /// No description provided for @homeTitle.
   ///
@@ -416,17 +542,71 @@ abstract class AppLocalizations {
   /// **'ذكاء اصطناعي للتشخيص'**
   String get aiTriageDescription;
 
-  /// No description provided for @aiAssistant.
+  /// No description provided for @aiThinking.
   ///
   /// In ar, this message translates to:
-  /// **'مساعد نجدة'**
-  String get aiAssistant;
+  /// **'جارٍ التفكير...'**
+  String get aiThinking;
 
-  /// No description provided for @aiAssistantDescription.
+  /// No description provided for @aiConnected.
   ///
   /// In ar, this message translates to:
-  /// **'دردشة طبية ذكية'**
-  String get aiAssistantDescription;
+  /// **'متصل الآن'**
+  String get aiConnected;
+
+  /// No description provided for @aiReplying.
+  ///
+  /// In ar, this message translates to:
+  /// **'جارٍ الرد...'**
+  String get aiReplying;
+
+  /// No description provided for @typeMessageHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب سؤالك هنا...'**
+  String get typeMessageHint;
+
+  /// No description provided for @paramedicWelcome.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرحباً أيها المسعف! 🏥\n\nأنا مساعدك الطبي الميداني. يمكنني مساعدتك في البروتوكولات والجرعات والتفاعلات الدوائية.\n\nاسألني أي سؤال طبي.'**
+  String get paramedicWelcome;
+
+  /// No description provided for @citizenWelcome.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرحباً! أنا مساعد نجدة الذكي 🤖\n\nيمكنني مساعدتك في تقييم الأعراض وإرشادات الإسعافات الأولية.\n\n⚠️ في الطوارئ اتصل بـ 123 فوراً!'**
+  String get citizenWelcome;
+
+  /// No description provided for @permissionError.
+  ///
+  /// In ar, this message translates to:
+  /// **'خطأ في الصلاحيات. تأكد من تسجيل الدخول.'**
+  String get permissionError;
+
+  /// No description provided for @serviceUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'الخدمة غير متاحة حالياً. تأكد من نشر Firebase Functions.'**
+  String get serviceUnavailable;
+
+  /// No description provided for @serverError.
+  ///
+  /// In ar, this message translates to:
+  /// **'خطأ في خادم الذكاء الاصطناعي. تحقق من إعداد GROQ_API_KEY في Firebase.'**
+  String get serverError;
+
+  /// No description provided for @timeoutError.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت مهلة الاتصال. حاول مرة أخرى.'**
+  String get timeoutError;
+
+  /// No description provided for @networkError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحقق من اتصالك بالإنترنت.'**
+  String get networkError;
 
   /// No description provided for @profile.
   ///
@@ -437,8 +617,75 @@ abstract class AppLocalizations {
   /// No description provided for @greeting.
   ///
   /// In ar, this message translates to:
-  /// **'مرحباً، {name}'**
+  /// **'مرحباً، {name} 👋'**
   String greeting(String name);
+
+  /// No description provided for @homeSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'كيف يمكننا مساعدتك اليوم؟'**
+  String get homeSubtitle;
+
+  /// No description provided for @sosButtonTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب نجدة فورية'**
+  String get sosButtonTitle;
+
+  /// No description provided for @sosButtonSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'يُرسل موقعك وبياناتك الطبية فوراً'**
+  String get sosButtonSubtitle;
+
+  /// No description provided for @reportIncidentTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إبلاغ عن حادث'**
+  String get reportIncidentTitle;
+
+  /// No description provided for @reportIncidentSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'شاهدت حادثاً؟ أبلغ عنه لمساعدة الآخرين'**
+  String get reportIncidentSubtitle;
+
+  /// No description provided for @sosSentTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إرسال بلاغ الطوارئ!'**
+  String get sosSentTitle;
+
+  /// No description provided for @reportNumber.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم البلاغ: R-{code}'**
+  String reportNumber(String code);
+
+  /// No description provided for @sosSentSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإسعاف في الطريق إليك. ابقَ في مكانك وحافظ على هدوئك.'**
+  String get sosSentSubtitle;
+
+  /// No description provided for @ok.
+  ///
+  /// In ar, this message translates to:
+  /// **'حسناً'**
+  String get ok;
+
+  /// No description provided for @medicalTip.
+  ///
+  /// In ar, this message translates to:
+  /// **'حافظ على تحديث بياناتك الطبية لضمان حصولك على أفضل رعاية في حالات الطوارئ.'**
+  String get medicalTip;
+
+  /// No description provided for @sosEmergencyAlert.
+  ///
+  /// In ar, this message translates to:
+  /// **'🚨 *تنبيه طوارئ نجدة*\n\n{name} أرسل بلاغ طوارئ!\n📍 الموقع: https://maps.google.com/?q={lat},{lng}\n🏥 رقم البلاغ: {code}\n⏰ الوقت: {time}\n\nتم إرسال الإسعاف تلقائياً.'**
+  String sosEmergencyAlert(
+      String name, double lat, double lng, String code, String time);
 
   /// No description provided for @reportTitle.
   ///
@@ -511,6 +758,144 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'فشل إرسال البلاغ'**
   String get reportError;
+
+  /// No description provided for @accidentTypeSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختر التصنيف الأقرب للحالة للمساعدة في الاستجابة'**
+  String get accidentTypeSubtitle;
+
+  /// No description provided for @injuryDetailsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفاصيل الإصابة'**
+  String get injuryDetailsTitle;
+
+  /// No description provided for @injuryDetailsSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'وصف حالة المصاب يساعد المسعف على الاستعداد'**
+  String get injuryDetailsSubtitle;
+
+  /// No description provided for @head.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرأس'**
+  String get head;
+
+  /// No description provided for @neck.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرقبة'**
+  String get neck;
+
+  /// No description provided for @chest.
+  ///
+  /// In ar, this message translates to:
+  /// **'الصدر'**
+  String get chest;
+
+  /// No description provided for @abdomen.
+  ///
+  /// In ar, this message translates to:
+  /// **'البطن'**
+  String get abdomen;
+
+  /// No description provided for @arm.
+  ///
+  /// In ar, this message translates to:
+  /// **'الذراع'**
+  String get arm;
+
+  /// No description provided for @leg.
+  ///
+  /// In ar, this message translates to:
+  /// **'الساق'**
+  String get leg;
+
+  /// No description provided for @backBody.
+  ///
+  /// In ar, this message translates to:
+  /// **'الظهر'**
+  String get backBody;
+
+  /// No description provided for @multiple.
+  ///
+  /// In ar, this message translates to:
+  /// **'متعدد'**
+  String get multiple;
+
+  /// No description provided for @unspecified.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير محدد'**
+  String get unspecified;
+
+  /// No description provided for @mild.
+  ///
+  /// In ar, this message translates to:
+  /// **'خفيف'**
+  String get mild;
+
+  /// No description provided for @moderate.
+  ///
+  /// In ar, this message translates to:
+  /// **'متوسط'**
+  String get moderate;
+
+  /// No description provided for @severe.
+  ///
+  /// In ar, this message translates to:
+  /// **'شديد'**
+  String get severe;
+
+  /// No description provided for @unbearable.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يطاق'**
+  String get unbearable;
+
+  /// No description provided for @nextAddPhoto.
+  ///
+  /// In ar, this message translates to:
+  /// **'التالي — إضافة صورة'**
+  String get nextAddPhoto;
+
+  /// No description provided for @addPhotoSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اختياري: التقاط صورة للحادث يساعد فريق الإسعاف على فهم طبيعة الإصابة'**
+  String get addPhotoSubtitle;
+
+  /// No description provided for @tapToCapture.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط هنا لالتقاط صورة'**
+  String get tapToCapture;
+
+  /// No description provided for @sendWithoutPhoto.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال بدون صورة'**
+  String get sendWithoutPhoto;
+
+  /// No description provided for @reportSentSuccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إرسال البلاغ!'**
+  String get reportSentSuccess;
+
+  /// No description provided for @ambulanceOnWay.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإسعاف في الطريق. ابقَ هادئاً.'**
+  String get ambulanceOnWay;
+
+  /// No description provided for @backToHome.
+  ///
+  /// In ar, this message translates to:
+  /// **'عودة للرئيسية'**
+  String get backToHome;
 
   /// No description provided for @locating.
   ///
@@ -668,6 +1053,12 @@ abstract class AppLocalizations {
   /// **'ملغى'**
   String get statusCancelled;
 
+  /// No description provided for @statusDuplicate.
+  ///
+  /// In ar, this message translates to:
+  /// **'مكرر'**
+  String get statusDuplicate;
+
   /// No description provided for @reportDate.
   ///
   /// In ar, this message translates to:
@@ -692,11 +1083,65 @@ abstract class AppLocalizations {
   /// **'بلاغ عادي'**
   String get normal_report;
 
-  /// No description provided for @paramedicDashboard.
+  /// No description provided for @paramedicGreeting.
   ///
   /// In ar, this message translates to:
-  /// **'لوحة المسعف'**
-  String get paramedicDashboard;
+  /// **'مرحباً، {name}'**
+  String paramedicGreeting(String name);
+
+  /// No description provided for @availableForReports.
+  ///
+  /// In ar, this message translates to:
+  /// **'متاح لاستقبال البلاغات'**
+  String get availableForReports;
+
+  /// No description provided for @notAvailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'غير متاح حالياً'**
+  String get notAvailable;
+
+  /// No description provided for @reports.
+  ///
+  /// In ar, this message translates to:
+  /// **'بلاغات'**
+  String get reports;
+
+  /// No description provided for @noAssignedEmergencyReports.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد بلاغات طوارئ'**
+  String get noAssignedEmergencyReports;
+
+  /// No description provided for @noAssignedReportsSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيظهر هنا أي بلاغ يتم تكليفك به'**
+  String get noAssignedReportsSubtitle;
+
+  /// No description provided for @details.
+  ///
+  /// In ar, this message translates to:
+  /// **'التفاصيل'**
+  String get details;
+
+  /// No description provided for @navigation.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملاحة'**
+  String get navigation;
+
+  /// No description provided for @locationNotSpecified.
+  ///
+  /// In ar, this message translates to:
+  /// **'الموقع غير محدد'**
+  String get locationNotSpecified;
+
+  /// No description provided for @updateFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشل التحديث: {error}'**
+  String updateFailed(String error);
 
   /// No description provided for @assignedReports.
   ///
@@ -764,11 +1209,77 @@ abstract class AppLocalizations {
   /// **'عرض التفاصيل'**
   String get viewDetails;
 
-  /// No description provided for @reportDetails.
+  /// No description provided for @statusLabel.
   ///
   /// In ar, this message translates to:
-  /// **'تفاصيل البلاغ'**
-  String get reportDetails;
+  /// **'الحالة:'**
+  String get statusLabel;
+
+  /// No description provided for @accidentTypeLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'نوع الحادث'**
+  String get accidentTypeLabel;
+
+  /// No description provided for @navigationToLocation.
+  ///
+  /// In ar, this message translates to:
+  /// **'الملاحة إلى الموقع'**
+  String get navigationToLocation;
+
+  /// No description provided for @confirmArrival.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد الوصول للموقع'**
+  String get confirmArrival;
+
+  /// No description provided for @fillMedicalReport.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعبئة التقرير الطبي'**
+  String get fillMedicalReport;
+
+  /// No description provided for @endMission.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنهاء المهمة / تسليم المريض'**
+  String get endMission;
+
+  /// No description provided for @fieldMedicalReport.
+  ///
+  /// In ar, this message translates to:
+  /// **'التقرير الطبي الميداني'**
+  String get fieldMedicalReport;
+
+  /// No description provided for @additionalNotesHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'اكتب أي ملاحظات أخرى هنا...'**
+  String get additionalNotesHint;
+
+  /// No description provided for @submitReportAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال التقرير'**
+  String get submitReportAction;
+
+  /// No description provided for @statusUpdateSuccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تحديث الحالة بنجاح'**
+  String get statusUpdateSuccess;
+
+  /// No description provided for @reportNotFound.
+  ///
+  /// In ar, this message translates to:
+  /// **'البلاغ غير موجود'**
+  String get reportNotFound;
+
+  /// No description provided for @loadingDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحميل التفاصيل...'**
+  String get loadingDetails;
 
   /// No description provided for @startNavigation.
   ///
@@ -884,11 +1395,29 @@ abstract class AppLocalizations {
   /// **'لا توجد إشعارات'**
   String get noNotifications;
 
-  /// No description provided for @newAssignment.
+  /// No description provided for @noMissionHistory.
   ///
   /// In ar, this message translates to:
-  /// **'تعيين جديد'**
-  String get newAssignment;
+  /// **'لا يوجد سجل للمهام'**
+  String get noMissionHistory;
+
+  /// No description provided for @missionHistorySubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'سيظهر هنا تاريخ المهام التي قمت بإنجازها'**
+  String get missionHistorySubtitle;
+
+  /// No description provided for @notificationsSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'ستصلك هنا إشعارات بالبلاغات الجديدة الموجهة إليك'**
+  String get notificationsSubtitle;
+
+  /// No description provided for @noNotificationsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد إشعارات حالياً'**
+  String get noNotificationsTitle;
 
   /// No description provided for @markAllRead.
   ///
@@ -944,29 +1473,131 @@ abstract class AppLocalizations {
   /// **'الوقت المتبقي: {time}'**
   String remainingTime(String time);
 
-  /// No description provided for @firstAidTitle.
+  /// No description provided for @searchFirstAidHint.
   ///
   /// In ar, this message translates to:
-  /// **'دليل الإسعافات الأولية'**
-  String get firstAidTitle;
+  /// **'ابحث عن حالة إسعافية...'**
+  String get searchFirstAidHint;
 
-  /// No description provided for @firstAidSearch.
+  /// No description provided for @noResults.
   ///
   /// In ar, this message translates to:
-  /// **'ابحث عن إسعافات أولية...'**
-  String get firstAidSearch;
+  /// **'لا توجد نتائج'**
+  String get noResults;
 
-  /// No description provided for @hospitalsTitle.
+  /// No description provided for @tryDifferentSearch.
   ///
   /// In ar, this message translates to:
-  /// **'مستشفيات قريبة'**
-  String get hospitalsTitle;
+  /// **'حاول البحث بكلمات أخرى'**
+  String get tryDifferentSearch;
+
+  /// No description provided for @criticalUrgency.
+  ///
+  /// In ar, this message translates to:
+  /// **'حرج'**
+  String get criticalUrgency;
+
+  /// No description provided for @highUrgency.
+  ///
+  /// In ar, this message translates to:
+  /// **'عاجل'**
+  String get highUrgency;
+
+  /// No description provided for @normalUrgency.
+  ///
+  /// In ar, this message translates to:
+  /// **'عادي'**
+  String get normalUrgency;
+
+  /// No description provided for @firstAidSteps.
+  ///
+  /// In ar, this message translates to:
+  /// **'خطوات الإسعاف'**
+  String get firstAidSteps;
+
+  /// No description provided for @emergencyInstruction.
+  ///
+  /// In ar, this message translates to:
+  /// **'حالة طارئة جداً — ابدأ الإسعافات واتصل بـ 123 فوراً'**
+  String get emergencyInstruction;
+
+  /// No description provided for @standardInstruction.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتبع الخطوات بدقة واتصل بالإسعاف إذا لزم الأمر'**
+  String get standardInstruction;
+
+  /// No description provided for @firstAidDisclaimer.
+  ///
+  /// In ar, this message translates to:
+  /// **'تنبيه: هذه المعلومات للأغراض الإرشادية فقط. نجدة تخلي مسؤوليتها عن سوء استخدام هذه المعلومات.'**
+  String get firstAidDisclaimer;
+
+  /// No description provided for @imageCopyright.
+  ///
+  /// In ar, this message translates to:
+  /// **'© الصور: Wikimedia Commons — CC-BY-SA 4.0'**
+  String get imageCopyright;
 
   /// No description provided for @hospitalsSearching.
   ///
   /// In ar, this message translates to:
-  /// **'جارٍ البحث عن مستشفيات قريبة...'**
+  /// **'جارٍ البحث عن أقرب المستشفيات...'**
   String get hospitalsSearching;
+
+  /// No description provided for @noHospitalsFound.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يتم العثور على مستشفيات'**
+  String get noHospitalsFound;
+
+  /// No description provided for @checkLocationOrRetry.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكد من تفعيل الموقع أو جرب لاحقاً'**
+  String get checkLocationOrRetry;
+
+  /// No description provided for @foundHospitalsNearYou.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم العثور على {count} مستشفيات بالقرب منك'**
+  String foundHospitalsNearYou(int count);
+
+  /// No description provided for @openNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'مفتوح الآن'**
+  String get openNow;
+
+  /// No description provided for @closed.
+  ///
+  /// In ar, this message translates to:
+  /// **'مغلق'**
+  String get closed;
+
+  /// No description provided for @km.
+  ///
+  /// In ar, this message translates to:
+  /// **'{dist} كم'**
+  String km(String dist);
+
+  /// No description provided for @directions.
+  ///
+  /// In ar, this message translates to:
+  /// **'الاتجاهات'**
+  String get directions;
+
+  /// No description provided for @locationAccessError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر الوصول للموقع'**
+  String get locationAccessError;
+
+  /// No description provided for @locationPermissionDenied.
+  ///
+  /// In ar, this message translates to:
+  /// **'صلاحية الموقع مرفوضة. فعّلها من الإعدادات.'**
+  String get locationPermissionDenied;
 
   /// No description provided for @callHospital.
   ///
@@ -980,17 +1611,101 @@ abstract class AppLocalizations {
   /// **'الاتجاهات'**
   String get getDirections;
 
-  /// No description provided for @emergencyNumbersTitle.
+  /// No description provided for @ambulance.
   ///
   /// In ar, this message translates to:
-  /// **'أرقام الطوارئ'**
-  String get emergencyNumbersTitle;
+  /// **'الإسعاف'**
+  String get ambulance;
+
+  /// No description provided for @police.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشرطة'**
+  String get police;
+
+  /// No description provided for @fire.
+  ///
+  /// In ar, this message translates to:
+  /// **'المطافي'**
+  String get fire;
+
+  /// No description provided for @rescue.
+  ///
+  /// In ar, this message translates to:
+  /// **'النجدة'**
+  String get rescue;
+
+  /// No description provided for @airAmbulance.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإسعاف الطائر'**
+  String get airAmbulance;
+
+  /// No description provided for @childRescue.
+  ///
+  /// In ar, this message translates to:
+  /// **'نجدة الطفل'**
+  String get childRescue;
+
+  /// No description provided for @ambulanceSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'للحوادث والإصابات والتبليغ عن حالات طبية طارئة'**
+  String get ambulanceSubtitle;
+
+  /// No description provided for @policeSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'للجرائم والبلاغات الأمنية والمرور'**
+  String get policeSubtitle;
+
+  /// No description provided for @fireSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'للحرائق وحوادث الطرق والإنقاذ'**
+  String get fireSubtitle;
+
+  /// No description provided for @rescueSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'للكوارث الطبيعية والإنقاذ المدني'**
+  String get rescueSubtitle;
+
+  /// No description provided for @airAmbulanceSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'للحالات الحرجة في المناطق البعيدة'**
+  String get airAmbulanceSubtitle;
+
+  /// No description provided for @childRescueSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لحماية الطفل من العنف والإهمال'**
+  String get childRescueSubtitle;
+
+  /// No description provided for @otherEmergencyNumbers.
+  ///
+  /// In ar, this message translates to:
+  /// **'أرقام الطوارئ الأخرى'**
+  String get otherEmergencyNumbers;
+
+  /// No description provided for @emergencyNumbersTip.
+  ///
+  /// In ar, this message translates to:
+  /// **'اضغط على أي رقم للاتصال المباشر، أو اضغط مطولاً لنسخ الرقم.'**
+  String get emergencyNumbersTip;
 
   /// No description provided for @call.
   ///
   /// In ar, this message translates to:
   /// **'اتصال'**
   String get call;
+
+  /// No description provided for @hospitalsTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'عنوان المستشفيات'**
+  String get hospitalsTitle;
 
   /// No description provided for @fieldRequired.
   ///
@@ -1034,6 +1749,120 @@ abstract class AppLocalizations {
   /// **'رقم الهاتف قصير جداً'**
   String get phoneTooShort;
 
+  /// No description provided for @reportDetails.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفاصيل البلاغ'**
+  String get reportDetails;
+
+  /// No description provided for @ambulanceAssigned.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تعيين سيارة إسعاف'**
+  String get ambulanceAssigned;
+
+  /// No description provided for @paramedicName.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم المسعف'**
+  String get paramedicName;
+
+  /// No description provided for @plateNumberLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم اللوحة'**
+  String get plateNumberLabel;
+
+  /// No description provided for @settings.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإعدادات'**
+  String get settings;
+
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In ar, this message translates to:
+  /// **'سياسة الخصوصية'**
+  String get privacyPolicy;
+
+  /// No description provided for @aboutUs.
+  ///
+  /// In ar, this message translates to:
+  /// **'عن التطبيق'**
+  String get aboutUs;
+
+  /// No description provided for @rateApp.
+  ///
+  /// In ar, this message translates to:
+  /// **'تقييم التطبيق'**
+  String get rateApp;
+
+  /// No description provided for @helpSupport.
+  ///
+  /// In ar, this message translates to:
+  /// **'المساعدة والدعم'**
+  String get helpSupport;
+
+  /// No description provided for @appVersion.
+  ///
+  /// In ar, this message translates to:
+  /// **'إصدار التطبيق'**
+  String get appVersion;
+
+  /// No description provided for @editProfile.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل الملف الشخصي'**
+  String get editProfile;
+
+  /// No description provided for @updateProfile.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديث البيانات'**
+  String get updateProfile;
+
+  /// No description provided for @profileUpdated.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تحديث الملف الشخصي بنجاح'**
+  String get profileUpdated;
+
+  /// No description provided for @profileUpdateError.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشل تحديث البيانات، حاول مرة أخرى'**
+  String get profileUpdateError;
+
+  /// No description provided for @saveChanges.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ التغييرات'**
+  String get saveChanges;
+
+  /// No description provided for @discardChanges.
+  ///
+  /// In ar, this message translates to:
+  /// **'تجاهل التغييرات'**
+  String get discardChanges;
+
+  /// No description provided for @confirmDiscard.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل تريد تجاهل التغييرات غير المحفوظة؟'**
+  String get confirmDiscard;
+
+  /// No description provided for @termsOfService.
+  ///
+  /// In ar, this message translates to:
+  /// **'شروط الخدمة'**
+  String get termsOfService;
+
+  /// No description provided for @shareApp.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشاركة التطبيق'**
+  String get shareApp;
+
   /// No description provided for @language.
   ///
   /// In ar, this message translates to:
@@ -1051,6 +1880,306 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'English'**
   String get english;
+
+  /// No description provided for @linkCopied.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم نسخ الرابط'**
+  String get linkCopied;
+
+  /// No description provided for @shareMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'حمل تطبيق نجدة للطوارئ:'**
+  String get shareMessage;
+
+  /// No description provided for @smsMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'استخدم تطبيق نجدة للاستجابة الطارئة:'**
+  String get smsMessage;
+
+  /// No description provided for @otherWays.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشاركة بطرق أخرى'**
+  String get otherWays;
+
+  /// No description provided for @roleCitizen.
+  ///
+  /// In ar, this message translates to:
+  /// **'مواطن'**
+  String get roleCitizen;
+
+  /// No description provided for @roleParamedic.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسعف'**
+  String get roleParamedic;
+
+  /// No description provided for @defaultUserName.
+  ///
+  /// In ar, this message translates to:
+  /// **'مستخدم نجدة'**
+  String get defaultUserName;
+
+  /// No description provided for @settingsPreferences.
+  ///
+  /// In ar, this message translates to:
+  /// **'التفضيلات'**
+  String get settingsPreferences;
+
+  /// No description provided for @settingsSupportInfo.
+  ///
+  /// In ar, this message translates to:
+  /// **'الدعم والمعلومات'**
+  String get settingsSupportInfo;
+
+  /// No description provided for @settingsShareFeedback.
+  ///
+  /// In ar, this message translates to:
+  /// **'شاركنا رأيك'**
+  String get settingsShareFeedback;
+
+  /// No description provided for @settingsAccount.
+  ///
+  /// In ar, this message translates to:
+  /// **'الحساب'**
+  String get settingsAccount;
+
+  /// No description provided for @contactUs.
+  ///
+  /// In ar, this message translates to:
+  /// **'تواصل معنا'**
+  String get contactUs;
+
+  /// No description provided for @chatWithSupport.
+  ///
+  /// In ar, this message translates to:
+  /// **'تواصل مع الدعم'**
+  String get chatWithSupport;
+
+  /// No description provided for @available247.
+  ///
+  /// In ar, this message translates to:
+  /// **'متاح 24/7'**
+  String get available247;
+
+  /// No description provided for @emergencyLine.
+  ///
+  /// In ar, this message translates to:
+  /// **'خط الطوارئ'**
+  String get emergencyLine;
+
+  /// No description provided for @faqs.
+  ///
+  /// In ar, this message translates to:
+  /// **'الأسئلة الشائعة'**
+  String get faqs;
+
+  /// No description provided for @faq1Q.
+  ///
+  /// In ar, this message translates to:
+  /// **'كيف أرسل بلاغ طارئ؟'**
+  String get faq1Q;
+
+  /// No description provided for @faq1A.
+  ///
+  /// In ar, this message translates to:
+  /// **'ببساطة اضغط على زر SOS الكبير في الصفحة الرئيسية أو استخدم المساعد الذكي للإبلاغ عن نوع الحادث.'**
+  String get faq1A;
+
+  /// No description provided for @faq2Q.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل يمكنني تتبع سيارة الإسعاف؟'**
+  String get faq2Q;
+
+  /// No description provided for @faq2A.
+  ///
+  /// In ar, this message translates to:
+  /// **'نعم، بمجرد تعيين سيارة إسعاف لبلاغك، ستظهر لك شاشة تتبع مباشرة توضح موقع السيارة والوقت المتوقع للوصول.'**
+  String get faq2A;
+
+  /// No description provided for @faq3Q.
+  ///
+  /// In ar, this message translates to:
+  /// **'ما هو نظام الذكاء الاصطناعي في نجدة؟'**
+  String get faq3Q;
+
+  /// No description provided for @faq3A.
+  ///
+  /// In ar, this message translates to:
+  /// **'يستخدم نجدة تقنيات الذكاء الاصطناعي لتحليل البلاغات وتصنيف خطورتها وتوجيه أقرب سيارة إسعاف واختيار المستشفى الأنسب للحالة.'**
+  String get faq3A;
+
+  /// No description provided for @privacyDataCollection.
+  ///
+  /// In ar, this message translates to:
+  /// **'جمع البيانات'**
+  String get privacyDataCollection;
+
+  /// No description provided for @privacyDataCollectionDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'• الموقع الجغرافي (GPS): يتم جمعه فقط عند إرسال بلاغ طوارئ لتحديد موقعك بدقة.\\n• الملف الطبي: المعلومات التي تدخلها (فصيلة الدم، الحساسية، الأمراض المزمنة) لمساعدة المسعفين.\\n• رقم الهاتف: للتحقق من الهوية والتواصل معك عند الضرورة.'**
+  String get privacyDataCollectionDesc;
+
+  /// No description provided for @privacyDataUsage.
+  ///
+  /// In ar, this message translates to:
+  /// **'استخدام البيانات'**
+  String get privacyDataUsage;
+
+  /// No description provided for @privacyDataUsageDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'• تعيين أقرب سيارة إسعاف لموقع البلاغ.\\n• اختيار المستشفى الأنسب بناءً على الحالة الصحية.\\n• تنبيه جهة اتصال الطوارئ الخاصة بك تلقائياً عند الضرورة.'**
+  String get privacyDataUsageDesc;
+
+  /// No description provided for @privacyDataSharing.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشاركة البيانات'**
+  String get privacyDataSharing;
+
+  /// No description provided for @privacyDataSharingDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'• نحن لا نبيع بياناتك لأي جهات خارجية.\\n• يتم مشاركة بياناتك الطبية وموقعك فقط مع طاقم الإسعاف والمستشفى المعني بالبلاغ.'**
+  String get privacyDataSharingDesc;
+
+  /// No description provided for @privacyDataDeletion.
+  ///
+  /// In ar, this message translates to:
+  /// **'حذف البيانات'**
+  String get privacyDataDeletion;
+
+  /// No description provided for @privacyDataDeletionDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'• يمكنك طلب حذف حسابك وبياناتك بالكامل عبر التواصل مع الدعم الفني من داخل التطبيق.'**
+  String get privacyDataDeletionDesc;
+
+  /// No description provided for @lastUpdated.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر تحديث: {date}'**
+  String lastUpdated(String date);
+
+  /// No description provided for @termsAcceptance.
+  ///
+  /// In ar, this message translates to:
+  /// **'القبول بالشروط'**
+  String get termsAcceptance;
+
+  /// No description provided for @termsAcceptanceDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'باستخدامك لتطبيق نجدة، فإنك توافق على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على أي جزء منها، يرجى التوقف عن استخدام التطبيق.'**
+  String get termsAcceptanceDesc;
+
+  /// No description provided for @termsServiceUsage.
+  ///
+  /// In ar, this message translates to:
+  /// **'استخدام الخدمة'**
+  String get termsServiceUsage;
+
+  /// No description provided for @termsServiceUsageDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'• التطبيق مخصص للحالات الطارئة الحقيقية فقط.\\n• يُحظر تماماً إرسال بلاغات وهمية، مما قد يعرضك للمساءلة القانونية.\\n• يجب أن يكون عمر المستخدم 18 عاماً فأكثر، أو استخدامه تحت إشراف ولي الأمر.'**
+  String get termsServiceUsageDesc;
+
+  /// No description provided for @termsLiability.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدود المسؤولية'**
+  String get termsLiability;
+
+  /// No description provided for @termsLiabilityDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'تطبيق نجدة هو وسيط لتسهيل وصول خدمات الإسعاف، ونحن نبذل قصارى جهدنا لضمان دقة النظام ولكننا لا نضمن الاستجابة الفورية في جميع الظروف الخارجة عن إرادتنا.'**
+  String get termsLiabilityDesc;
+
+  /// No description provided for @termsTermination.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنهاء الخدمة'**
+  String get termsTermination;
+
+  /// No description provided for @termsTerminationDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'نحتفظ بالحق في تعليق أو إنهاء وصولك إلى الخدمة في حالة مخالفة شروط الاستخدام أو إساءة استخدام نظام الطوارئ.'**
+  String get termsTerminationDesc;
+
+  /// No description provided for @aboutSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'نظام الاستجابة الطارئة الذكي'**
+  String get aboutSubtitle;
+
+  /// No description provided for @aboutInfrastructure.
+  ///
+  /// In ar, this message translates to:
+  /// **'البنية التحتية'**
+  String get aboutInfrastructure;
+
+  /// No description provided for @aboutRegion.
+  ///
+  /// In ar, this message translates to:
+  /// **'المنطقة'**
+  String get aboutRegion;
+
+  /// No description provided for @egypt.
+  ///
+  /// In ar, this message translates to:
+  /// **'جمهورية مصر العربية'**
+  String get egypt;
+
+  /// No description provided for @aboutDescription.
+  ///
+  /// In ar, this message translates to:
+  /// **'نجدة هو نظام متكامل يهدف إلى تقليل وقت الاستجابة في حالات الطوارئ الطبية باستخدام الذكاء الاصطناعي وربط المواطنين مباشرة بأطقم الإسعاف والمستشفيات.'**
+  String get aboutDescription;
+
+  /// No description provided for @rateTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'رأيك يهمنا'**
+  String get rateTitle;
+
+  /// No description provided for @rateSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'ساعدنا في تحسين نجدة من خلال تقييم تجربتك'**
+  String get rateSubtitle;
+
+  /// No description provided for @rateSubmit.
+  ///
+  /// In ar, this message translates to:
+  /// **'إرسال التقييم'**
+  String get rateSubmit;
+
+  /// No description provided for @shareTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'شارك عبر'**
+  String get shareTitle;
+
+  /// No description provided for @appLink.
+  ///
+  /// In ar, this message translates to:
+  /// **'رابط التطبيق'**
+  String get appLink;
+
+  /// No description provided for @copyLink.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسخ رابط'**
+  String get copyLink;
 
   /// No description provided for @changeLanguage.
   ///

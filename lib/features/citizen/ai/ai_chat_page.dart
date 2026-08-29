@@ -89,7 +89,7 @@ class _AiChatPageState extends State<AiChatPage> {
         final rawResult = await NajdaAIService.instance.triageSymptomsDirect(
           symptoms: cleanText,
         );
-        final r = TriageResult.fromMap(rawResult);
+        final r = TriageResult.fromMap( rawResult);
         reply = _formatTriage(r);
       } else {
         reply = await NajdaAIService.instance.askAssistantDirect(
@@ -189,7 +189,10 @@ class _AiChatPageState extends State<AiChatPage> {
               height: 36,
               padding: const EdgeInsets.all(6),
               decoration: const BoxDecoration(color: AppColors.white, shape: BoxShape.circle),
-              child: SvgPicture.asset('assets/svg/chatBot.svg'),
+              child:  Image.asset(
+                'assets/svg/bot.png',
+                fit: BoxFit.contain,
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
             Column(

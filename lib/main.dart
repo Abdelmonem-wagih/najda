@@ -11,6 +11,10 @@ import 'core/l10n/generated/app_localizations.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_colors.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
+import 'features/settings/presentation/cubit/settings_cubit.dart';
+import 'features/settings/presentation/cubit/settings_state.dart';
+import 'features/settings/data/repositories/settings_repository_impl.dart';
+import 'features/settings/data/datasources/settings_local_datasource.dart';
 import 'features/citizen/home/draggable_ai_button.dart';
 
 // Global route observer — tracks current route for DraggableAiButton
@@ -48,35 +52,48 @@ class NajdaApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => AuthCubit()),
-      ],
-      child: MaterialApp(
-        navigatorKey: AppRouter.navigatorKey,
-        title: 'نجدة',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
-        locale: const Locale('ar'),
-        supportedLocales: AppLocalizations.supportedLocales,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        builder: (context, child) => Directionality(
-          textDirection: TextDirection.rtl,
-          child: Stack(
-            children: [
-              child!,
-              // Draggable AI button — visible for both citizen and paramedic
-              BlocBuilder<AuthCubit, AuthState>(
-                builder: (ctx, state) {
-                  if (state is AuthAuthenticated) {
-                    return const DraggableAiButton();
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-            ],
-          ),
+        BlocProvider(
+          create: (_) => SettingsCubit(
+            repository: SettingsRepositoryImpl(
+              localDataSource: SettingsLocalDataSourceImpl(),
+            ),
+          )..loadSettings(),
         ),
-        navigatorObservers: [_routeObserver],
-        initialRoute: AppRoutes.splash,
-        onGenerateRoute: AppRouter.onGenerateRoute,
+      ],
+      child: BlocBuilder<SettingsCubit, SettingsState>(
+        builder: (context, state) {
+          return MaterialApp(
+            navigatorKey: AppRouter.navigatorKey,
+            title: 'نجدة',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light,
+            locale: state.locale,
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            builder: (context, child) => Directionality(
+              textDirection: state.locale.languageCode == 'ar'
+                  ? TextDirection.rtl
+                  : TextDirection.ltr,
+              child: Stack(
+                children: [
+                  child!,
+                  // Draggable AI button — visible for both citizen and paramedic
+                  BlocBuilder<AuthCubit, AuthState>(
+                    builder: (ctx, state) {
+                      if (state is AuthAuthenticated) {
+                        return const DraggableAiButton();
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ],
+              ),
+            ),
+            navigatorObservers: [_routeObserver],
+            initialRoute: AppRoutes.splash,
+            onGenerateRoute: AppRouter.onGenerateRoute,
+          );
+        },
       ),
     );
   }

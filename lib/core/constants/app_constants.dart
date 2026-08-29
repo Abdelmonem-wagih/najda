@@ -2,35 +2,41 @@ class AppConstants {
   AppConstants._();
 
   // ─── Firebase Collections ────────────────────────────────────────────────
-  static const String paramedicCollection        = 'paramedics';
-  static const String citizensCollection         = 'citizens';
-  static const String reportsCollection          = 'reports';
-  static const String emergencyReportsCollection = 'emergency_reports';
-  static const String medicalReportsCollection   = 'medical_reports';
+  static const String usersCollection            = 'users';
+  static const String incidentsCollection        = 'incidents';
   static const String ambulancesCollection       = 'ambulances';
+  static const String paramedicsCollection       = 'paramedics';
+  static const String trackingCollection         = 'tracking';
+  static const String hospitalsCollection        = 'hospitals';
+  static const String assignmentsCollection       = 'assignments';
   static const String notificationsCollection    = 'notifications';
-  static const String paramedicHistoryCollection = 'paramedic_history';
-  static const String missionCancellationsCollection = 'mission_cancellations';
+  static const String joinRequestsCollection     = 'join_requests';
 
-  // ─── User Roles (stored in Firestore doc & SharedPrefs) ─────────────────
+  // ─── User Roles ──────────────────────────────────────────────────────────
   static const String roleCitizen   = 'citizen';
   static const String roleParamedic = 'paramedic';
+  static const String roleAdmin     = 'admin';
 
-  // ─── Report Status ───────────────────────────────────────────────────────
-  static const String statusPending           = 'pending';
-  static const String statusPendingAssignment = 'pending_assignment';
-  static const String statusAssigned          = 'assigned';
-  static const String statusInProgress        = 'in_progress';
-  static const String statusArrived           = 'arrived';
-  static const String statusCompleted         = 'completed';
-  static const String statusDuplicate         = 'duplicate';
-  static const String statusCancelled         = 'cancelled';
+  // ─── Incident Status ─────────────────────────────────────────────────────
+  static const String statusReported    = 'reported';
+  static const String statusAiAssigning = 'ai_assigning';
+  static const String statusAssigned    = 'assigned';
+  static const String statusEnRoute     = 'en_route';
+  static const String statusArrived     = 'arrived';
+  static const String statusResolved    = 'resolved';
+  static const String statusUnassigned  = 'unassigned';
+  static const String statusReassigned  = 'reassigned';
 
-  // ─── Paramedic Status Workflow ───────────────────────────────────────────
-  static const String paramedicAvailable         = 'available';
-  static const String paramedicOnMission         = 'OnMission';
-  static const String paramedicArrived           = 'arrived';
-  static const String paramedicOnWayToHospital   = 'onTheWayToHospital';
+  // ─── Ambulance Status ────────────────────────────────────────────────────
+  static const String ambulanceAvailable    = 'available';
+  static const String ambulanceDispatched   = 'dispatched';
+  static const String ambulanceEnRoute      = 'en_route_to_incident';
+  static const String ambulanceOnScene       = 'on_scene';
+  static const String ambulanceToHospital   = 'to_hospital';
+  static const String ambulanceAtHospital   = 'at_hospital';
+  static const String ambulanceOffline      = 'offline';
+  static const String ambulanceMaintenance  = 'maintenance';
+
 
   // ─── Shared Preferences Keys ─────────────────────────────────────────────
   static const String keyIsLoggedIn  = 'is_logged_in';

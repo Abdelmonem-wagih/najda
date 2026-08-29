@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 // Auth
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -10,13 +11,28 @@ import '../../features/citizen/emergency/emergency_numbers_page.dart';
 import '../../features/citizen/first_aid/first_aid_pages.dart';
 import '../../features/citizen/history/citizen_history_page.dart';
 import '../../features/citizen/home/citizen_home_page.dart';
+import '../../features/citizen/home/presentation/cubit/sos_cubit.dart';
+import '../../features/citizen/home/data/repositories/sos_repository_impl.dart';
+import '../../features/citizen/home/data/datasources/sos_remote_datasource.dart';
+import '../../features/citizen/home/presentation/pages/sos_tracking_screen.dart';
 import '../../features/citizen/hospitals/hospitals_page.dart';
-import '../../features/citizen/profile/citizen_profile_page.dart';
-import '../../features/citizen/report/report_page.dart';
+import '../../features/citizen/profile/presentation/pages/citizen_profile_page.dart';
+import '../../features/citizen/profile/presentation/pages/edit_profile_page.dart';
+import '../../features/citizen/report/presentation/pages/report_page.dart';
+import '../../features/citizen/report/presentation/cubit/report_cubit.dart';
+import '../../features/citizen/report/data/repositories/report_repository_impl.dart';
+import '../../features/citizen/report/data/datasources/report_remote_datasource.dart';
 import '../../features/paramedic/home/paramedic_home_page.dart';
 import '../../features/paramedic/notifications/notifications_history_page.dart';
 import '../../features/paramedic/reports/report_details_page.dart';
-
+import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../features/settings/presentation/pages/language_page.dart';
+import '../../features/settings/presentation/pages/help_support_page.dart';
+import '../../features/settings/presentation/pages/privacy_policy_page.dart';
+import '../../features/settings/presentation/pages/terms_page.dart';
+import '../../features/settings/presentation/pages/about_page.dart';
+import '../../features/settings/presentation/pages/rate_page.dart';
+import '../../features/settings/presentation/pages/share_page.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -35,6 +51,19 @@ class AppRoutes {
   static const String citizenHospitals = '/citizen/hospitals';
   static const String citizenEmergency = '/citizen/emergency';
   static const String citizenProfile   = '/citizen/profile';
+  static const String editProfile      = '/citizen/edit-profile';
+  static const String citizenTracking  = '/citizen/tracking';
+  
+  // Settings
+  static const String settings         = '/settings';
+  static const String settingsLanguage = '/settings/language';
+  static const String settingsHelp     = '/settings/help';
+  static const String settingsPrivacy  = '/settings/privacy';
+  static const String settingsTerms    = '/settings/terms';
+  static const String settingsAbout    = '/settings/about';
+  static const String settingsRate     = '/settings/rate';
+  static const String settingsShare    = '/settings/share';
+
   static const String aiChat           = '/ai/chat';
 
   // Paramedic
@@ -62,9 +91,29 @@ class AppRouter {
 
       // Citizen
       case AppRoutes.citizenHome:
-        return _fade(const CitizenHomePage(), s);
+        return _fade(
+          BlocProvider(
+            create: (context) => SOSCubit(
+              repository: SOSRepositoryImpl(
+                remoteDataSource: SOSRemoteDataSourceImpl(),
+              ),
+            ),
+            child: const CitizenHomePage(),
+          ),
+          s,
+        );
       case AppRoutes.citizenReport:
-        return _slide(const ReportPage(), s);
+        return _slide(
+          BlocProvider(
+            create: (context) => ReportCubit(
+              repository: ReportRepositoryImpl(
+                remoteDataSource: ReportRemoteDataSourceImpl(),
+              ),
+            ),
+            child: const ReportPage(),
+          ),
+          s,
+        );
       case AppRoutes.citizenHistory:
         return _slide(const CitizenHistoryPage(), s);
       case AppRoutes.citizenFirstAid:
@@ -73,8 +122,31 @@ class AppRouter {
         return _slide(const HospitalsPage(), s);
       case AppRoutes.citizenEmergency:
         return _slide(const EmergencyNumbersPage(), s);
+      case AppRoutes.citizenTracking:
+        return _slide(SosTrackingScreen(reportId: s.arguments as String), s);
       case AppRoutes.citizenProfile:
         return _slide(const CitizenProfilePage(), s);
+      case AppRoutes.editProfile:
+        return _slide(const EditProfilePage(), s);
+        
+      // Settings
+      case AppRoutes.settings:
+        return _slide(const SettingsPage(), s);
+      case AppRoutes.settingsLanguage:
+        return _slide(const LanguagePage(), s);
+      case AppRoutes.settingsHelp:
+        return _slide(const HelpSupportPage(), s);
+      case AppRoutes.settingsPrivacy:
+        return _slide(const PrivacyPolicyPage(), s);
+      case AppRoutes.settingsTerms:
+        return _slide(const TermsPage(), s);
+      case AppRoutes.settingsAbout:
+        return _slide(const AboutPage(), s);
+      case AppRoutes.settingsRate:
+        return _slide(const RatePage(), s);
+      case AppRoutes.settingsShare:
+        return _slide(const SharePage(), s);
+
       case AppRoutes.aiChat:
         return _modal(const AiChatPage(), s);
 

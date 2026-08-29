@@ -23,7 +23,12 @@ class AppColors {
   static const Color warning = Color(0xFFF59E0B);
   static const Color info = Color(0xFF378ADD);
 
-  // Gradients
+  // Dark Theme / Settings Design System
+  static const Color darkBackground = Color(0xFF050F1A);
+  static const Color primaryCyan = Color(0xFF00C2FF);
+  static const Color settingsCriticalRed = Color(0xFFFF3B55);
+  static const Color glassSurface = Color(0x1AFFFFFF); // 10% white for glass effect
+  static const Color glassBorder = Color(0x33FFFFFF); // 20% white
   static const LinearGradient navyGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,

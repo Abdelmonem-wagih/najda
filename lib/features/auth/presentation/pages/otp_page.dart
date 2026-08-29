@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/route/app_routes.dart';
@@ -9,7 +8,9 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/shared/widgets/app_widgets.dart';
+import '../../../../core/l10n/generated/app_localizations.dart';
 import '../cubit/auth_cubit.dart';
+import '../widgets/otp_input_field.dart';
 
 class OtpPage extends StatefulWidget {
   final String verificationId;
@@ -74,6 +75,7 @@ class _OtpPageState extends State<OtpPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final phone = (context.watch<AuthCubit>().state is OtpSent)
         ? (context.watch<AuthCubit>().state as OtpSent).phoneNumber
         : '';
@@ -110,7 +112,7 @@ class _OtpPageState extends State<OtpPage> {
             icon: const Icon(Icons.arrow_back_ios_rounded, size: 20),
             onPressed: () => Navigator.pop(context),
           ),
-          title: const Text('تحقق من الرقم'),
+          title: Text(l10n.otpTitle),
         ),
         body: BlocBuilder<AuthCubit, AuthState>(
           builder: (context, state) {
@@ -134,12 +136,12 @@ class _OtpPageState extends State<OtpPage> {
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   Text(
-                    'كود التحقق',
+                    l10n.otpCode,
                     style: AppTextStyles.displaySmall,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    phone.isNotEmpty ? 'أدخل الرمز المكون من 6 أرقام المرسل إلى $phone' : '',
+                    phone.isNotEmpty ? l10n.otpSubtitle(phone) : '',
                     style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                     textAlign: TextAlign.center,
                   ),
@@ -150,48 +152,10 @@ class _OtpPageState extends State<OtpPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
                       6,
-                      (i) => Container(
-                        width: 48,
-                        height: 56,
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          borderRadius: AppRadius.radiusMd,
-                          border: Border.all(
-                            color: _nodes[i].hasFocus
-                                ? AppColors.primaryBlue
-                                : AppColors.border,
-                            width: _nodes[i].hasFocus ? 2 : 1,
-                          ),
-                          boxShadow: [
-                            if (_nodes[i].hasFocus)
-                              BoxShadow(
-                                color: AppColors.primaryBlue.withOpacity(0.1),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                          ],
-                        ),
-                        child: TextFormField(
-                          controller: _ctrls[i],
-                          focusNode: _nodes[i],
-                          textAlign: TextAlign.center,
-                          keyboardType: TextInputType.number,
-                          maxLength: 1,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly
-                          ],
-                          decoration: const InputDecoration(
-                            counterText: '',
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                            filled: false,
-                          ),
-                          style: AppTextStyles.headlineLarge.copyWith(fontSize: 24),
-                          onChanged: (v) => _onChanged(v, i),
-                        ),
+                      (i) => OtpInputField(
+                        controller: _ctrls[i],
+                        focusNode: _nodes[i],
+                        onChanged: (v) => _onChanged(v, i),
                       ),
                     ),
                   ),
@@ -199,7 +163,7 @@ class _OtpPageState extends State<OtpPage> {
 
                   // Verify button
                   AppButton(
-                    label: 'تحقق الآن',
+                    label: l10n.verifyOtp,
                     onPressed: isLoading ? null : _verify,
                     isLoading: isLoading,
                   ),
@@ -208,7 +172,7 @@ class _OtpPageState extends State<OtpPage> {
                   // Resend
                   if (_secondsLeft > 0)
                     Text(
-                      'يمكنك إعادة الإرسال بعد $_secondsLeft ثانية',
+                      l10n.resendAfter(_secondsLeft),
                       style: AppTextStyles.bodySmall,
                     )
                   else
@@ -216,7 +180,7 @@ class _OtpPageState extends State<OtpPage> {
                       onPressed: () {
                         Navigator.pop(context);
                       },
-                      child: const Text('إعادة إرسال الرمز'),
+                      child: Text(l10n.resendOtp),
                     ),
                 ],
               ),

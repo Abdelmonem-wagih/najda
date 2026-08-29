@@ -22,13 +22,13 @@ class AppTheme {
         onSurface: AppColors.textPrimary,
       ),
       scaffoldBackgroundColor: AppColors.background,
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: AppColors.navy,
         foregroundColor: AppColors.white,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: AppTextStyles.headlineMedium,
-        iconTheme: IconThemeData(color: AppColors.white),
+        titleTextStyle: AppTextStyles.headlineMedium.copyWith(color: AppColors.white),
+        iconTheme: const IconThemeData(color: AppColors.white),
       ),
       cardTheme: CardThemeData(
         color: AppColors.surface,

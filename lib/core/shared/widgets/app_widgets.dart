@@ -3,6 +3,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../theme/app_radius.dart';
 import '../../theme/app_spacing.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 class AppStatusBadge extends StatelessWidget {
   final String status;
@@ -10,7 +11,7 @@ class AppStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (color, label) = _resolve(status);
+    final (color, label) = _resolve(context, status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -28,23 +29,34 @@ class AppStatusBadge extends StatelessWidget {
     );
   }
 
-  (Color, String) _resolve(String s) {
+  (Color, String) _resolve(BuildContext context, String s) {
+    final l10n = AppLocalizations.of(context)!;
     switch (s) {
-      case 'pending':           return (AppColors.warning, 'قيد الانتظار');
-      case 'pending_assignment':return (AppColors.warning, 'قيد التعيين');
-      case 'assigned':          return (AppColors.info, 'مُعيَّن');
-      case 'in_progress':       return (AppColors.primaryBlue, 'جارٍ');
-      case 'OnMission':         return (AppColors.primaryBlue, 'في مهمة');
-      case 'arrived':           return (AppColors.accentBlue, 'وصل');
-      case 'onTheWayToHospital':return (const Color(0xFF9C27B0), 'للمستشفى');
-      case 'completed':         return (AppColors.success, 'مكتمل');
-      case 'available':         return (AppColors.success, 'متاح');
-      case 'unavailable':       return (AppColors.textMuted, 'غير متاح');
-      case 'cancelled':         return (AppColors.criticalRed, 'ملغى');
-      case 'duplicate':         return (AppColors.textMuted, 'مكرر');
-      default:                  return (AppColors.textMuted, s);
+      case 'reported':
+        return (AppColors.warning, 'Reported');
+      case 'ai_assigning':
+        return (AppColors.warning, 'AI Assigning');
+      case 'assigned':
+        return (AppColors.info, l10n.statusAssigned);
+      case 'en_route':
+        return (AppColors.primaryBlue, 'En Route');
+      case 'arrived':
+        return (AppColors.accentBlue, l10n.paramedicArrived);
+      case 'resolved':
+        return (AppColors.success, 'Resolved');
+      case 'unassigned':
+        return (AppColors.criticalRed, 'Unassigned');
+      case 'reassigned':
+        return (AppColors.info, 'Reassigned');
+      case 'available':
+        return (AppColors.success, l10n.available);
+      case 'dispatched':
+        return (AppColors.info, 'Dispatched');
+      default:
+        return (AppColors.textMuted, s);
     }
   }
+
 }
 
 class AppCard extends StatelessWidget {
