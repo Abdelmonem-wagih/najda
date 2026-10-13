@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -45,7 +46,10 @@ class AboutPage extends StatelessWidget {
                   _buildDivider(),
                   _buildInfoRow(l10n.reportDate, 'يناير 2025'), // Reuse key or add new
                   _buildDivider(),
-                  _buildInfoRow(l10n.aboutInfrastructure, 'Firebase + Groq AI'),
+                  _buildInfoRow(
+                    l10n.aboutInfrastructure,
+                    AppConstants.aiEnabled ? 'Firebase + Groq AI' : 'Firebase',
+                  ),
                   _buildDivider(),
                   _buildInfoRow(l10n.aboutRegion, l10n.egypt),
                 ],

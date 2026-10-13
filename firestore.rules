@@ -99,7 +99,7 @@ service cloud.firestore {
           isAssignedAmbulance(resource.data.get("assignedAmbulanceId", null))
           && legalAmbulanceTransition(resource.data.status, request.resource.data.status)
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(["status", "updatedAt", "arrivedAt", "toHospitalAt", "completedAt", "enRouteAt", "suggestedHospitalName", "hospitalId", "medicalReportSubmitted"])
+               .hasOnly(["status", "updatedAt", "arrivedAt", "toHospitalAt", "completedAt", "enRouteAt", "suggestedHospitalName", "hospitalId", "medicalReportSubmitted", "medicalAssessment", "medicalNotes"])
         ) || (
           isOwner(resource.data.patientUid)
           && legalCitizenCancel(resource.data.status, request.resource.data.status)
@@ -123,7 +123,7 @@ service cloud.firestore {
           isAssignedAmbulance(resource.data.get("assignedAmbulanceId", null))
           && legalAmbulanceTransition(resource.data.status, request.resource.data.status)
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(["status", "updatedAt", "arrivedAt", "toHospitalAt", "completedAt", "enRouteAt", "suggestedHospitalName", "hospitalId", "medicalReportSubmitted"])
+               .hasOnly(["status", "updatedAt", "arrivedAt", "toHospitalAt", "completedAt", "enRouteAt", "suggestedHospitalName", "hospitalId", "medicalReportSubmitted", "medicalAssessment", "medicalNotes"])
         ) || (
           isOwner(resource.data.patientUid)
           && legalCitizenCancel(resource.data.status, request.resource.data.status)

@@ -5,28 +5,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/constants/app_constants.dart';
+import '../../../core/constants/firestore_contract.dart';
 import '../../../core/theme/design.dart';
 import '../../auth/presentation/cubit/auth_cubit.dart';
 
-// Incident status (stored in incidents/criticals collection)
-class _IS {
-  static const pending          = 'pending';
-  static const assigned         = 'assigned';
-  static const onMission        = 'on_mission';    // en route to patient
-  static const arrived          = 'arrived';       // at patient
-  static const toHospital       = 'to_hospital';   // patient on board
-  static const completed        = 'completed';
-}
-
-// Ambulance availability status (stored in ambulances collection)
-class _AS {
-  static const available        = 'available';
-  static const assigned         = 'assigned';
-  static const onMission        = 'on_mission';
-  static const arrived          = 'arrived';
-  static const toHospital       = 'to_hospital';
-}
 
 class ReportDetailsPage extends StatefulWidget {
   final String reportId;
@@ -112,16 +94,21 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> with TickerProvid
     final ambId = user.currentAmbulanceId;
     if (ambId == null || ambId.isEmpty) return;
 
+    // Position lives in tracking/{ambId} now, not on the ambulance doc
+    // itself (which no longer carries lat/lng/heading — see
+    // firebase/CONTRACT.md). This was previously reading dead fields:
+    // `heading` was never written anywhere (the GPS writer uses `bearing`),
+    // so this marker's rotation was always 0.
     _ambulanceSub = FirebaseFirestore.instance
-        .collection(AppConstants.ambulancesCollection)
+        .collection(FirestoreCollections.tracking)
         .doc(ambId)
         .snapshots()
         .listen((doc) {
       if (doc.exists) {
         final d = doc.data()!;
-        final lat = (d['lat'] as num?)?.toDouble();
-        final lng = (d['lng'] as num?)?.toDouble();
-        final heading = (d['heading'] as num?)?.toDouble() ?? 0.0;
+        final lat = (d['latitude'] as num?)?.toDouble();
+        final lng = (d['longitude'] as num?)?.toDouble();
+        final heading = (d['bearing'] as num?)?.toDouble() ?? 0.0;
 
         if (lat != null && lng != null) {
           final newPos = LatLng(lat, lng);
@@ -144,11 +131,7 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> with TickerProvid
   }
 
   // ─── Collection name ──────────────────────────────────────────
-  // CRITICAL: use correct collection names
-  String get _collection =>
-      widget.reportType == 'critical'
-          ? 'criticals'    // ← NOT 'emergency_reports'
-          : 'incidents';   // ← NOT 'reports'
+  String get _collection => incidentCollectionFor(incidentKindFor(widget.reportType));
 
   // ─── Load ────────────────────────────────────────────────────
   Future<void> _loadReport() async {
@@ -166,16 +149,17 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> with TickerProvid
     }
   }
 
+  // Moves the incident's status forward by exactly one legal step. Ambulance
+  // status sync and ambulance_history are handled server-side (the Phase 2
+  // status-machine Cloud Function trigger) — firestore.rules no longer lets
+  // the client write ambulances.status or ambulance_history directly, so
+  // this only ever touches the incident doc now.
   Future<void> _updateStatus(
-    String incidentStatus,
-    String ambulanceStatus, {
+    String incidentStatus, {
     Map<String, dynamic> extra = const {},
   }) async {
     setState(() => _updating = true);
-    final user = (context.read<AuthCubit>().state as AuthAuthenticated).user;
-
     try {
-      // 1. Update the incident document
       await FirebaseFirestore.instance
           .collection(_collection)
           .doc(widget.reportId)
@@ -184,87 +168,32 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> with TickerProvid
         'updatedAt': FieldValue.serverTimestamp(),
         ...extra,
       });
-
-      final isComplete = incidentStatus == _IS.completed;
-      final isAvail = ambulanceStatus == _AS.available;
-
-      await FirebaseFirestore.instance
-          .collection(AppConstants.ambulancesCollection)
-          .doc(user.id)
-          .update({
-        'status': ambulanceStatus,
-        // Clear assignment if becoming available
-        if (isAvail) 'currentIncidentId':   null,
-        if (isAvail) 'currentIncidentType': null,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // 3. Add to history if completed
-      if (isComplete) {
-        await FirebaseFirestore.instance.collection('ambulance_history').add({
-          'ambulanceId': user.ambulanceId ?? user.id,
-          'patientName': _report!['patientName'] ?? 'مريض',
-          'address':     _report!['address'] ?? '',
-          'incidentId':   widget.reportId,
-          'incidentType': widget.reportType,
-          'completedAt': FieldValue.serverTimestamp(),
-          'status':      'completed',
-        });
-      }
-
       await _loadReport();
       _showSnack('تم التحديث ✓', NC.success);
     } catch (e) {
-      _showSnack('فشل: $e', NC.critical);
+      _showSnack('فشل التحديث: $e', NC.critical);
     } finally {
       if (mounted) setState(() => _updating = false);
     }
   }
 
   // ─── Submit medical form ──────────────────────────────────────
+  // Hospital selection in v1 is manual (a dashboard operator picks from the
+  // hospitals collection) — no AI call here. The on-scene assessment used
+  // to be written to the `medical_reports` collection, which nothing ever
+  // read (write-only dead data, per the audit); folded into the incident
+  // doc instead so the clinical data isn't just discarded.
   Future<void> _submitMedicalForm() async {
-    setState(() => _updating = true);
-    final user = (context.read<AuthCubit>().state as AuthAuthenticated).user;
-    try {
-      // Write medical report
-      await FirebaseFirestore.instance
-          .collection(AppConstants.medicalReportsCollection)
-          .add({
-        'reportId':    widget.reportId,
-        'reportType':  widget.reportType,
-        'ambulanceId': user.id,
-        'driverName':  user.fullName,
-        'vehicleId':   user.currentAmbulanceId ?? '',
-        'medicalAnswers': _medAnswers,
-        'additionalNotes': _notesCtrl.text.trim(),
-        'submittedAt': FieldValue.serverTimestamp(),
-      });
-
-      // Determine hospital via AI (best effort)
-      final hospitalName = await _selectHospital();
-
-      // Update statuses
-      await _updateStatus(
-        _IS.toHospital,
-        _AS.toHospital,
-        extra: {
-          'medicalReportSubmitted': true,
-          if (hospitalName != null) 'suggestedHospitalName': hospitalName,
-          'enRouteHospitalAt': FieldValue.serverTimestamp(),
-        },
-      );
-
-      setState(() => _showMedForm = false);
-    } catch (e) {
-      _showSnack('فشل إرسال التقرير: $e', NC.critical);
-      setState(() => _updating = false);
-    }
-  }
-
-  Future<String?> _selectHospital() async {
-    // Simple logic: nearest hospital to patient
-    // In production: call Groq AI function
-    return 'أقرب مستشفى من موقعك';
+    await _updateStatus(
+      IncidentStatus.toHospital,
+      extra: {
+        'medicalReportSubmitted': true,
+        'medicalAssessment': _medAnswers,
+        'medicalNotes': _notesCtrl.text.trim(),
+        'enRouteAt': FieldValue.serverTimestamp(),
+      },
+    );
+    if (mounted) setState(() => _showMedForm = false);
   }
 
   // ─── Navigate to patient ──────────────────────────────────────
@@ -476,7 +405,7 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> with TickerProvid
 
                         // ── Hospital (if assigned) ────────────
                         if (hospital != null &&
-                            status == _IS.toHospital) ...[
+                            status == IncidentStatus.toHospital) ...[
                           GlassCard(
                             borderColor: NC.success.withOpacity(0.4),
                             child: Row(children: [
@@ -524,16 +453,15 @@ class _ReportDetailsPageState extends State<ReportDetailsPage> with TickerProvid
                           onNavigate: lat != null
                               ? () => _navigate(lat, lng!)
                               : null,
+                          onStartMission: () => _updateStatus(IncidentStatus.onMission),
                           onArrived: () => _updateStatus(
-                            _IS.arrived,
-                            _AS.arrived,
+                            IncidentStatus.arrived,
                             extra: {'arrivedAt': FieldValue.serverTimestamp()},
                           ),
                           onMedForm: () =>
                               setState(() => _showMedForm = true),
                           onComplete: () => _updateStatus(
-                            _IS.completed,
-                            _AS.available,
+                            IncidentStatus.completed,
                             extra: {'completedAt': FieldValue.serverTimestamp()},
                           ),
                         ),
@@ -588,6 +516,7 @@ class _ActionButtons extends StatelessWidget {
   final double? lng;
   final bool updating;
   final VoidCallback? onNavigate;
+  final VoidCallback onStartMission;
   final VoidCallback onArrived;
   final VoidCallback onMedForm;
   final VoidCallback onComplete;
@@ -598,6 +527,7 @@ class _ActionButtons extends StatelessWidget {
     this.lng,
     required this.updating,
     this.onNavigate,
+    required this.onStartMission,
     required this.onArrived,
     required this.onMedForm,
     required this.onComplete,
@@ -608,7 +538,7 @@ class _ActionButtons extends StatelessWidget {
     return Column(
       children: [
         // Always show navigation button if en-route to patient
-        if (onNavigate != null && (status == _IS.assigned || status == _IS.onMission))
+        if (onNavigate != null && (status == IncidentStatus.assigned || status == IncidentStatus.onMission))
           GradientButton(
             label: 'فتح الملاحة',
             icon: Icons.navigation_rounded,
@@ -616,11 +546,21 @@ class _ActionButtons extends StatelessWidget {
             height: 50,
             onTap: onNavigate,
           ),
-        if (status == _IS.assigned || status == _IS.onMission)
+        if (status == IncidentStatus.assigned || status == IncidentStatus.onMission)
           const SizedBox(height: 10),
 
         // Status-specific buttons
-        if (status == _IS.assigned || status == _IS.onMission)
+        if (status == IncidentStatus.assigned)
+          GradientButton(
+            label: updating ? 'جارٍ التحديث...' : 'بدء المهمة',
+            icon: Icons.play_circle_outline_rounded,
+            gradient: NC.primaryGrad,
+            height: 50,
+            loading: updating,
+            onTap: onStartMission,
+          ),
+
+        if (status == IncidentStatus.onMission)
           GradientButton(
             label: updating ? 'جارٍ التحديث...' : 'وصلت للمريض ✓',
             icon: Icons.check_circle_outline_rounded,
@@ -630,7 +570,7 @@ class _ActionButtons extends StatelessWidget {
             onTap: onArrived,
           ),
 
-        if (status == _IS.arrived) ...[
+        if (status == IncidentStatus.arrived) ...[
           GradientButton(
             label: 'إرسال التقرير الطبي',
             icon: Icons.assignment_outlined,
@@ -641,7 +581,7 @@ class _ActionButtons extends StatelessWidget {
           ),
         ],
 
-        if (status == _IS.toHospital)
+        if (status == IncidentStatus.toHospital)
           GradientButton(
             label: updating ? 'جارٍ التحديث...' : 'وصلت المستشفى — إنهاء ✓',
             icon: Icons.local_hospital_outlined,

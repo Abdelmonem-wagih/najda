@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../constants/app_constants.dart';
+
 // Auth
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
@@ -160,6 +162,9 @@ class AppRouter {
         return _slide(const SharePage(), s);
 
       case AppRoutes.aiChat:
+        // AI is cancelled for v1 (AppConstants.aiEnabled) — guarded here so
+        // the route is unreachable even via a direct pushNamed() call.
+        if (!AppConstants.aiEnabled) return _fade(const SplashPage(), s);
         return _modal(const AiChatPage(), s);
 
       // Ambulance

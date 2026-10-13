@@ -2,18 +2,26 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+
+import '../constants/app_constants.dart';
 
 /// ═══════════════════════════════════════════════════════════════════
-/// NajdaAIService — wraps all Groq-powered Firebase Callable Functions
+/// NajdaAIService — direct Groq calls, gated behind AppConstants.aiEnabled
+/// (AI is cancelled for v1; this code stays in the repo, fully disabled).
+///
+/// Previously this class also wrapped 5 Firebase Callable Functions
+/// (askAssistant, triageSymptoms, selectHospital, createAmbulanceAccount,
+/// releaseAmbulance). All five were dead code — never called from anywhere
+/// in the app — and three of them (najdaAIAssistant, triageSymptoms,
+/// selectHospitalWithAI) called Cloud Functions that were never actually
+/// defined on the backend to begin with. Removed rather than ported:
+/// createAmbulanceAccount/releaseAmbulance were also architecturally
+/// misplaced here (fleet management is a dashboard-only admin action, not
+/// something the citizen/paramedic app does).
 /// ═══════════════════════════════════════════════════════════════════
 class NajdaAIService {
   NajdaAIService._();
   static final instance = NajdaAIService._();
-
-  // Change 'us-central1' to wherever your functions are deployed
-  // Common: 'us-central1', 'europe-west1', 'me-central1' (Middle East)
-  final _functions = FirebaseFunctions.instanceFor(region: 'us-central1');
 
   static const List<String> _groqModels = [
     'openai/gpt-oss-120b',
@@ -37,32 +45,18 @@ class NajdaAIService {
   
   // ── 1. General AI Assistant (citizen & paramedic) ──────────────────
 
-  Future<String> askAssistant({
-    required String message,
-    required String role, // 'citizen' | 'ambulances'
-    List<Map<String, String>> history = const [],
-    String? context,
-  }) async {
-    try {
-      final result = await _functions.httpsCallable('najdaAIAssistant').call({
-        'message': message,
-        'role': role,
-        'history': history,
-        if (context != null) 'context': context,
-      });
-      return (result.data['reply'] as String?) ??
-          'عذراً، لم يتمكن المساعد من الرد. حاول مرة أخرى.';
-    } on FirebaseFunctionsException catch (e) {
-      throw _mapError(e);
-    }
-  }
-
-  /// Direct Groq API call — faster than Firebase Functions, no cold start
+  /// Direct Groq API call. Guarded by [AppConstants.aiEnabled] — AI is
+  /// cancelled for v1, so this throws immediately instead of making any
+  /// network call when the flag is off (defense-in-depth on top of the UI
+  /// entry points already being gated in app_routes.dart/main.dart).
   Future<String> askAssistantDirect({
     required String message,
     required String role,
     List<Map<String, String>> history = const [],
   }) async {
+    if (!AppConstants.aiEnabled) {
+      throw Exception('AI is disabled for v1');
+    }
     final apiKey = dotenv.env['GROQ_API_KEY'] ?? '';
     if (apiKey.isEmpty) {
       throw Exception('GROQ_API_KEY not found in .env file');
@@ -142,30 +136,15 @@ class NajdaAIService {
 
   // ── 2. Symptom Triage (citizen) ────────────────────────────────────
 
-  Future<TriageResult> triageSymptoms({
-    required String symptoms,
-    int? patientAge,
-    List<String> chronicDiseases = const [],
-  }) async {
-    try {
-      final result = await _functions.httpsCallable('triageSymptoms').call({
-        'symptoms': symptoms,
-        if (patientAge != null) 'patientAge': patientAge,
-        'chronicDiseases': chronicDiseases,
-      });
-      return TriageResult.fromMap(
-          Map<String, dynamic>.from(result.data['triage']));
-    } on FirebaseFunctionsException catch (e) {
-      throw _mapError(e);
-    }
-  }
-
-  /// Direct symptom triage — calls Groq API directly
+  /// Direct symptom triage via Groq. Guarded by [AppConstants.aiEnabled].
   Future<Map<String, dynamic>> triageSymptomsDirect({
     required String symptoms,
     int? patientAge,
     List<String> chronicDiseases = const [],
   }) async {
+    if (!AppConstants.aiEnabled) {
+      throw Exception('AI is disabled for v1');
+    }
     final apiKey = dotenv.env['GROQ_API_KEY'] ?? '';
     if (apiKey.isEmpty) throw Exception('GROQ_API_KEY not found in .env');
 
@@ -236,95 +215,6 @@ class NajdaAIService {
     throw lastError ?? Exception('All models failed');
   }
 
-  // ── 3. AI Hospital Selection (paramedic after medical report) ──────
-
-  Future<HospitalSuggestion> selectHospital({
-    required String reportId,
-    required String reportType,
-    required double patientLat,
-    required double patientLng,
-    required Map<String, String> medicalAnswers,
-    String? additionalNotes,
-    List<String> chronicDiseases = const [],
-    List<String> allergies = const [],
-    List<String> currentMedications = const [],
-    String? incidentType,
-  }) async {
-    try {
-      final result = await _functions.httpsCallable('selectHospitalWithAI').call({
-        'reportId': reportId,
-        'reportType': reportType,
-        'patientLat': patientLat,
-        'patientLng': patientLng,
-        'medicalAnswers': medicalAnswers,
-        if (additionalNotes != null) 'additionalNotes': additionalNotes,
-        'chronicDiseases': chronicDiseases,
-        'allergies': allergies,
-        'currentMedications': currentMedications,
-        if (incidentType != null) 'incidentType': incidentType,
-      });
-      return HospitalSuggestion.fromMap(
-          Map<String, dynamic>.from(result.data['hospital']));
-    } on FirebaseFunctionsException catch (e) {
-      throw _mapError(e);
-    }
-  }
-
-  // ── 4. Create Ambulance Account (admin/dashboard) ──────────────────
-
-  Future<Map<String, dynamic>> createAmbulanceAccount({
-    required String ambulancesId,
-    required String email,
-    required String password,
-    required String driverName,
-    required String phone,
-    required String area,
-    required Map<String, double> baseLocation,
-  }) async {
-    try {
-      final result = await _functions.httpsCallable('createAmbulancesAccount').call({
-        'ambulancesId': ambulancesId,
-        'email': email,
-        'password': password,
-        'driverName': driverName,
-        'phone': phone,
-        'area': area,
-        'baseLocation': baseLocation,
-      });
-      return Map<String, dynamic>.from(result.data as Map);
-    } on FirebaseFunctionsException catch (e) {
-      throw _mapError(e);
-    }
-  }
-
-  // ── 5. Release Ambulance (admin) ───────────────────────────────────
-
-  Future<void> releaseAmbulance(String ambulanceId) async {
-    try {
-      await _functions.httpsCallable('releaseAmbulance').call({
-        'ambulanceId': ambulanceId,
-      });
-    } on FirebaseFunctionsException catch (e) {
-      throw _mapError(e);
-    }
-  }
-
-  // ── Error mapping ──────────────────────────────────────────────────
-
-  Exception _mapError(FirebaseFunctionsException e) {
-    switch (e.code) {
-      case 'unauthenticated':
-        return Exception('يجب تسجيل الدخول أولاً');
-      case 'permission-denied':
-        return Exception('ليس لديك صلاحية لهذا الإجراء');
-      case 'invalid-argument':
-        return Exception('بيانات غير صحيحة: ${e.message}');
-      case 'internal':
-        return Exception('خطأ في الخادم. حاول مرة أخرى.');
-      default:
-        return Exception(e.message ?? 'خطأ غير متوقع');
-    }
-  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -364,39 +254,4 @@ class TriageResult {
 
   bool get isCritical => urgencyLevel == 'critical';
   bool get isHigh => urgencyLevel == 'high';
-}
-
-class HospitalSuggestion {
-  final String name;
-  final String address;
-  final String distance;
-  final String reason;
-  final List<String> specialties;
-  final String estimatedArrival;
-  final String? urgencyLevel;
-  final String? notes;
-
-  const HospitalSuggestion({
-    required this.name,
-    required this.address,
-    required this.distance,
-    required this.reason,
-    required this.specialties,
-    required this.estimatedArrival,
-    this.urgencyLevel,
-    this.notes,
-  });
-
-  factory HospitalSuggestion.fromMap(Map<String, dynamic> m) {
-    return HospitalSuggestion(
-      name: m['name'] ?? 'مستشفى قريب',
-      address: m['address'] ?? '',
-      distance: m['distance'] ?? 'غير محدد',
-      reason: m['reason'] ?? '',
-      specialties: List<String>.from(m['specialties'] ?? []),
-      estimatedArrival: m['estimatedArrival'] ?? 'غير محدد',
-      urgencyLevel: m['urgencyLevel'],
-      notes: m['notes'],
-    );
-  }
 }

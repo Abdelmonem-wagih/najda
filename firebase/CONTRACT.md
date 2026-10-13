@@ -57,6 +57,8 @@ Pre-existing collections found in `firestore.rules` that are **outside** this ca
 | `dedupeKey` | string | server-owned |
 | `suggestedHospitalName`, `hospitalId` | string? | set by dashboard operator in v1 (manual, not AI) |
 | `medicalReportSubmitted` | bool | |
+| `medicalAssessment` | map? | consciousness/breathing/pulse/bleeding/pupils/skin answers from the paramedic's on-scene assessment form (added in Phase 4.7 — this used to be written to the write-only, never-read `medical_reports` collection; folded into the incident doc instead of just dropping real clinical data) |
+| `medicalNotes` | string? | free-text notes from the same form |
 | `enRouteAt`, `arrivedAt`, `toHospitalAt`, `completedAt` | Timestamp? | |
 | `createdAt`, `updatedAt` | Timestamp | `createdAt` is the ONLY creation timestamp name (retiring `reportedAt`) |
 

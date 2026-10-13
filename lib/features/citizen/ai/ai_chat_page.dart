@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/services/groq_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_radius.dart';
-import '../../../core/shared/widgets/app_widgets.dart';
 import '../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../core/constants/app_constants.dart';
 

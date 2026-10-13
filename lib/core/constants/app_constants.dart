@@ -1,6 +1,13 @@
 class AppConstants {
   AppConstants._();
 
+  // ─── Feature flags ───────────────────────────────────────────────────────
+  // AI (chatbot, AI FAB, Groq calls, AI hospital selection) is CANCELLED for
+  // v1 per product decision — code stays in the repo, fully gated behind
+  // this single flag. Every AI entry point must check this before doing
+  // anything network-visible or UI-visible. Flip back to true to restore.
+  static const bool aiEnabled = false;
+
   // ─── Firebase Collections ────────────────────────────────────────────────
   static const String citizensCollection         = 'citizens';
   static const String ambulancesCollection       = 'ambulances';

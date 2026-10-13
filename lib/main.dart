@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 
+import 'core/constants/app_constants.dart';
 import 'core/theme/design.dart';
 import 'firebase_options.dart';
 import 'core/route/app_routes.dart';
@@ -45,12 +46,15 @@ void main() async {
   // Initialize Notifications
   await NotificationService.instance.init(AppRouter.navigatorKey);
 
-  if (kDebugMode) {
-    await FirebaseAppCheck.instance.activate(
-      androidProvider: AndroidProvider.debug,
-      appleProvider: AppleProvider.debug,
-    );
-  }
+  // Always activate App Check — debug provider in debug builds, the real
+  // attestation providers in release (previously this was only inside
+  // `if (kDebugMode)`, so release builds shipped with zero App Check
+  // enforcement at all; see firebase/CONTRACT.md "App Check" for the
+  // console-side enforcement sequencing this requires).
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+    appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
+  );
 
   runApp(const NajdaApp());
 }
@@ -88,15 +92,16 @@ class NajdaApp extends StatelessWidget {
               child: Stack(
                 children: [
                   child!,
-                  // Draggable AI button — visible for both citizen and ambulance
-                  BlocBuilder<AuthCubit, AuthState>(
-                    builder: (ctx, state) {
-                      if (state is AuthAuthenticated) {
-                        return const DraggableAiButton();
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
+                  // Draggable AI button — AI is cancelled for v1 (AppConstants.aiEnabled).
+                  if (AppConstants.aiEnabled)
+                    BlocBuilder<AuthCubit, AuthState>(
+                      builder: (ctx, state) {
+                        if (state is AuthAuthenticated) {
+                          return const DraggableAiButton();
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
                 ],
               ),
             ),

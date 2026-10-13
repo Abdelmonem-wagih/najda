@@ -115,6 +115,8 @@ class IncidentFields {
   static const suggestedHospitalName = 'suggestedHospitalName';
   static const hospitalId = 'hospitalId';
   static const medicalReportSubmitted = 'medicalReportSubmitted';
+  static const medicalAssessment = 'medicalAssessment';
+  static const medicalNotes = 'medicalNotes';
   static const enRouteAt = 'enRouteAt';
   static const arrivedAt = 'arrivedAt';
   static const toHospitalAt = 'toHospitalAt';
