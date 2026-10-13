@@ -58,7 +58,49 @@ Branches created from:
 
 ---
 
-## Phase 2 — Backend (najda_functions) — NOT STARTED
+## Phase 2 — Backend (najda_functions) — ✅ COMPLETE, VERIFIED
+
+Read `index.ts` in full before changing anything (confirmed the exact lines the brief pointed at: `applyAssignment` ~91-124, dedupe ~199-231, `retryPending` ~377-406, `manualAssign` ~412-463, account functions ~485-566). Split the rewrite into focused modules instead of one file: `lib/geo.ts`, `lib/assignment.ts`, `lib/autoAssign.ts`, `lib/notify.ts`, `triggers/statusMachine.ts`, re-wired from `index.ts`.
+
+### 2.1 applyAssignment — flat fields only
+**Fixed.** Writes `assignedAmbulanceId/Name/DriverName/VehicleId` (from `plateNumber`), `assignedAt`, `assignedBy` (`'auto'` or the caller's uid). Never writes `assignedFcmToken` — confirmed by grep, zero matches anywhere in `src/`. Token is read from `ambulance_private/{id}` separately, after the transaction commits, by `notifyAmbulanceOfAssignment`.
+
+### 2.2 Nearest-ambulance selection
+**Fixed.** `findNearestEligibleAmbulance` (geo.ts): candidates = `ambulances` where `isOnline==true && status=='available'`, filtered to those with no `currentIncidentId`, position read from `tracking/{id}` (not the ambulance doc), stale (>5min) or missing tracking excluded, Haversine distance, deterministic tie-break by ambulance doc id. Runs entirely inside the caller's transaction (all `tx.get()` calls, no writes) so Firestore's optimistic-concurrency conflict detection prevents two simultaneous SOS reports from grabbing the same ambulance — confirmed this is exactly what Phase 6.1's "two criticals at once get two different ambulances" test needs to prove. `isAmbulanceEligible` extracted as the one predicate shared by this search, `retryPending`, and `manualAssign`'s eligibility check.
+
+### 2.3 Dedupe + idempotency
+**Fixed.** `tryAutoAssign` (autoAssign.ts) re-reads the incident fresh inside the transaction and bails immediately if it's no longer `'pending'` — this is the idempotency guard (handles at-least-once trigger redelivery and overlapping `retryPending` runs without re-processing an already-assigned doc). The dedupe query now excludes the document's own id from the duplicate check (old code could flag a redelivered CREATE event as a duplicate of itself and downgrade a valid dispatch to `'duplicate'`). Every trigger body wrapped in try/catch with `console.error`/`console.warn` logging.
+
+### 2.4 retryPending cap + alert
+**Fixed.** Increments `retryCount` on each failed cycle; at 5 attempts, stops retrying (the doc stays `'pending'` for manual assignment) and writes an admin-broadcast notification (`notifyAdminsNoAmbulanceAvailable`) instead of silently retrying forever.
+
+### 2.5 manualAssign
+**Fixed.** The dashboard's one callable for both assign and reassign. Verifies the caller is an *active* `dashboard_users` doc with role `admin`/`operator` (old version only checked `request.auth` existed — any authenticated user, not necessarily a dashboard user, could call it). Reads the target ambulance with `tx.get()` **inside** the transaction (old version read it outside — a TOCTOU gap: the ambulance could change state between the read and the transaction). Requires eligibility via the same `isAmbulanceEligible` predicate unless `force:true` **and** caller role is `admin`. Releases the previous ambulance in the same transaction on reassignment. Records `assignedBy` as the caller's uid (was previously always `undefined`/not tracked).
+
+### 2.6 Status-machine trigger
+**Fixed — this is the biggest correctness fix in the whole backend.** `onCriticalStatusChanged`/`onIncidentStatusChanged` (`onDocumentUpdated` on both collections) validate every status transition against `contract.ts`'s `STATUS_TRANSITIONS` table and revert illegal ones. A `pendingRevert` sentinel field breaks what would otherwise be an infinite trigger loop (reverting an illegal `A→B` back to `A` would itself look like a `B→A` transition to the next trigger invocation, which is *also* not a legal forward hop — the sentinel makes that second invocation a no-op clear instead of another revert attempt; verified the logic on paper, flagged for the Phase 6 emulator test to confirm at runtime). On `completed`: releases the ambulance **and writes `ambulance_history` server-side** — this directly fixes the original audit's PARA8 finding (the client write to `ambulance_history` was always rejected by `firestore.rules`, so the paramedic history tab was effectively always empty; the server-side write here is the actual fix, not just a rules change in Phase 3). On `cancelled`: releases the ambulance. On `on_mission`/`arrived`/`to_hospital`: mirrors the status onto the ambulance doc. Every accepted transition (except `assigned`, which `applyAssignment` already handles atomically) notifies the citizen.
+
+### 2.7 Citizen push notifications
+**Fixed (backend half).** `notifyCitizenOfStatus` reads `citizens/{uid}.fcmToken` and sends FCM + writes a canonical `notifications` doc on `assigned/on_mission/arrived/to_hospital/completed`. This closes CC10 from the backend side — the Flutter app still needs to actually *save* a citizen's FCM token at OTP login (Phase 4.8) for this to have anything to send to; noted as a cross-phase dependency, not forgotten.
+
+### 2.8 Account management callables
+**Fixed.** `createAmbulanceAccount` (renamed from `createAmbulancesAccount`): now requires an active dashboard `admin` (old version had **no check at all** — any authenticated caller could create ambulance accounts) and requires `baseLocation` as an argument, throwing `invalid-argument` if missing — no more hardcoded Cairo fallback point. New `deleteAmbulanceAccount` (admin only): disables the Firebase Auth user, then deletes `ambulances/{id}`, `ambulance_private/{id}`, `tracking/{id}` — old flow (neither repo had a delete at all) never touched Auth. New `createDashboardUser`/`setDashboardUserActive` (admin only). `releaseAmbulance` now requires an active dashboard admin/operator (was: any authenticated caller). `markNotificationRead` now checks the caller actually owns the notification, or is an active dashboard user for admin-targeted ones (old version: any authenticated caller could mark any notification read).
+
+**Decision (RECOMMENDED, noted since no explicit instruction gave an unambiguous answer): no `joinRequest` callable.** `join_requests` is created directly from the client via a public Firestore `create` rule with field validation (Phase 3.2) — there's nothing for a callable to do that the rule doesn't already need to validate anyway. The legacy dashboard `functions/index.js` had one; it was deleted in step 1.2.
+
+### 2.9 Non-existent functions
+**Confirmed (again), fixed nothing new here.** `aiSelectHospital`, `reassignAmbulance`, `najdaAIAssistant`, `triageSymptoms`, `selectHospitalWithAI` are not defined anywhere in `najda_functions`. Removing the *client-side* calls to them is Phase 4 (Flutter's `groq_service.dart`) and Phase 5 (dashboard's `functions.js`).
+
+### 2.10 Migration script
+**Fixed.** `najda_functions/scripts/migrate-v1.ts`, dry-run by default. Type-checks cleanly standalone (`tsc --noEmit`). Smoke-tested via `npx tsx scripts/migrate-v1.ts`: starts, prints `DRY RUN`, and fails only at the Firestore auth step — confirming the script's logic runs correctly up to the point where it needs real project credentials, which this machine doesn't have for `ultra-bearing-402000` (same limitation as Phase 1.4). **Not run with `--apply`** — per the brief, that's the user's call after reviewing a dry run against the real project, from a machine/account with access.
+
+### Verification
+`npm run build` (tsc): 0 errors, confirmed after every module addition. Grepped the compiled output (`grep "^exports\." lib/index.js`) to confirm all 12 functions export: `autoAssignCritical`, `autoAssignIncident`, `onCriticalStatusChanged`, `onIncidentStatusChanged`, `retryPending`, `manualAssign`, `releaseAmbulance`, `createAmbulanceAccount`, `deleteAmbulanceAccount`, `createDashboardUser`, `setDashboardUserActive`, `markNotificationRead`. Grepped `src/` to confirm `createAmbulancesAccount`, `assignedFcmToken`, and `ambulancesId` are gone everywhere. Re-ran `flutter analyze` (226 issues, unchanged — confirms this backend-only phase caused zero Flutter regressions, as expected).
+
+### What Phase 6's emulator suite still needs to prove (can't verify without a live/emulated Firestore)
+- The `pendingRevert` loop-breaker actually terminates in 3 invocations against a real trigger, not just on paper.
+- Two simultaneous SOS creates genuinely resolve to two different ambulances (the transaction-conflict-retry behavior).
+- The dedupe-exclude-self fix actually prevents a simulated redelivery from downgrading a valid assignment.
 
 ## Phase 3 — Rules (firestore.rules + storage.rules) — NOT STARTED (storage.rules has a Phase 1 baseline only)
 
