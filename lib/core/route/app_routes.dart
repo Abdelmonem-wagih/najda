@@ -131,12 +131,16 @@ class AppRouter {
         return _slide(SosTrackingScreen(reportId: s.arguments as String), s);
       case AppRoutes.trackIncident:
         final a = s.arguments as Map<String, dynamic>;
+        final reportId = a['reportId'] as String;
         return _slide(TrackingPage(
-          reportId:   a['reportId'],
-          reportType: a['reportType'],
-          displayId:  a['displayId'],
-          patientLat: a['patientLat'],
-          patientLng: a['patientLng'],
+          reportId:   reportId,
+          reportType: a['reportType'] as String,
+          // Falls back to a short id derived from the report id itself —
+          // a notification tap's arguments don't carry a displayId.
+          displayId:  (a['displayId'] as String?) ??
+              (reportId.length > 6 ? reportId.substring(0, 6) : reportId),
+          patientLat: (a['patientLat'] as num?)?.toDouble(),
+          patientLng: (a['patientLng'] as num?)?.toDouble(),
         ), s);
       case AppRoutes.citizenProfile:
         return _slide(const CitizenProfilePage(), s);

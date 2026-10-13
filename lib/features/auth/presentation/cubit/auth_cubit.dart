@@ -12,6 +12,7 @@ import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/datasources/auth_remote_datasource.dart';
 import '../../data/datasources/auth_local_datasource.dart';
 import '../../../../core/services/location_service.dart';
+import '../../../../core/services/firebase_citizen_token.dart';
 
 part 'auth_state.dart';
 
@@ -44,6 +45,8 @@ class AuthCubit extends Cubit<AuthState> {
         } else {
           if (user.isAmbulances) {
             LocationService.instance.startTracking(ambulanceId: user.id);
+          } else if (user.isCitizen) {
+            saveCitizenFcmToken(user.id);
           }
           _startUserListener(user);
           emit(AuthAuthenticated(user));
@@ -90,6 +93,7 @@ class AuthCubit extends Cubit<AuthState> {
               phone: user.phone ?? '',
             ));
           } else {
+            if (user.isCitizen) saveCitizenFcmToken(user.id);
             _startUserListener(user);
             emit(AuthAuthenticated(user));
           }
@@ -127,6 +131,8 @@ class AuthCubit extends Cubit<AuthState> {
       } else {
         if (user.isAmbulances) {
           LocationService.instance.startTracking(ambulanceId: user.id);
+        } else if (user.isCitizen) {
+          saveCitizenFcmToken(user.id);
         }
         _startUserListener(user);
         emit(AuthAuthenticated(user));
@@ -172,6 +178,7 @@ class AuthCubit extends Cubit<AuthState> {
         additionalInfo: additionalInfo,
       );
 
+      saveCitizenFcmToken(user.id);
       _startUserListener(user);
       emit(AuthAuthenticated(user));
     } catch (e) {

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/constants/firestore_contract.dart';
 import '../../../core/route/app_routes.dart';
 import '../../../core/theme/design.dart';
 import '../../auth/presentation/cubit/auth_cubit.dart';
@@ -49,15 +50,15 @@ class NotificationsHistoryPage extends StatelessWidget {
 
   Future<void> _markAllRead(String uid) async {
     final q = await FirebaseFirestore.instance
-        .collection('notifications')
-        .where('ambulanceId', isEqualTo: uid)
-        .where('isRead', isEqualTo: false)
+        .collection(FirestoreCollections.notifications)
+        .where(NotificationFields.recipientId, isEqualTo: uid)
+        .where(NotificationFields.isRead, isEqualTo: false)
         .get();
     final batch = FirebaseFirestore.instance.batch();
     for (final d in q.docs) {
       batch.update(d.reference, {
-        'isRead': true,
-        'readAt': FieldValue.serverTimestamp(),
+        NotificationFields.isRead: true,
+        NotificationFields.readAt: FieldValue.serverTimestamp(),
       });
     }
     await batch.commit();
@@ -73,9 +74,9 @@ class _NotificationsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('notifications')
-          .where('ambulanceId', isEqualTo: ambulanceId)
-          .orderBy('createdAt', descending: true)
+          .collection(FirestoreCollections.notifications)
+          .where(NotificationFields.recipientId, isEqualTo: ambulanceId)
+          .orderBy(NotificationFields.createdAt, descending: true)
           .limit(50)
           .snapshots(),
       builder: (ctx, snap) {
@@ -120,14 +121,22 @@ class _NotifCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final d          = doc.data() as Map<String, dynamic>;
-    final isRead     = d['isRead'] as bool? ?? false;
-    final title      = d['title'] as String? ?? 'إشعار';
-    final body       = d['body'] as String? ?? '';
-    final type       = d['type'] as String? ?? '';
-    final reportId   = d['reportId'] as String?;
-    final reportType = d['reportType'] as String?;
-    final ts         = d['createdAt'] as Timestamp?;
-    final isEmergency = type.contains('emergency');
+    final isRead     = d[NotificationFields.isRead] as bool? ?? false;
+    final title      = d[NotificationFields.title] as String? ?? 'إشعار';
+    final body       = d[NotificationFields.body] as String? ?? '';
+    final type       = d[NotificationFields.type] as String? ?? '';
+    // Canonical field names (incidentId/incidentCollection) — the old
+    // reportId/reportType read here never matched anything the backend
+    // actually wrote, so tapping a notification could never navigate
+    // anywhere (FC18).
+    final incidentId = d[NotificationFields.incidentId] as String?;
+    final incidentCollection = d[NotificationFields.incidentCollection] as String?;
+    final reportType = incidentCollection == FirestoreCollections.criticals ? 'critical' : 'incident';
+    final ts         = d[NotificationFields.createdAt] as Timestamp?;
+    // type is 'critical_assigned' | 'incident_assigned', never contains
+    // 'emergency' — the old `type.contains('emergency')` check could never
+    // be true (FC17), so this styling never actually triggered.
+    final isEmergency = type.contains('critical');
     final color = isEmergency ? NC.critical : NC.primary;
 
     return GestureDetector(
@@ -135,17 +144,17 @@ class _NotifCard extends StatelessWidget {
         // Mark read
         if (!isRead) {
           doc.reference.update({
-            'isRead': true,
-            'readAt': FieldValue.serverTimestamp(),
+            NotificationFields.isRead: true,
+            NotificationFields.readAt: FieldValue.serverTimestamp(),
           });
         }
         // Navigate to report
-        if (reportId != null && reportType != null) {
+        if (incidentId != null && incidentCollection != null) {
           Navigator.pushNamed(
             context,
             AppRoutes.ambulanceReportDetails,
             arguments: {
-              'reportId': reportId,
+              'reportId': incidentId,
               'reportType': reportType,
             },
           );
@@ -233,7 +242,7 @@ class _NotifCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (reportId != null)
+            if (incidentId != null)
               const Icon(Icons.chevron_right_rounded,
                   color: NC.textLow, size: 16),
           ],
@@ -252,9 +261,9 @@ class _HistoryTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('ambulance_history')
-          .where('ambulanceId', isEqualTo: ambulanceId)
-          .orderBy('completedAt', descending: true)
+          .collection(FirestoreCollections.ambulanceHistory)
+          .where(AmbulanceHistoryFields.ambulanceId, isEqualTo: ambulanceId)
+          .orderBy(AmbulanceHistoryFields.completedAt, descending: true)
           .limit(30)
           .snapshots(),
       builder: (ctx, snap) {

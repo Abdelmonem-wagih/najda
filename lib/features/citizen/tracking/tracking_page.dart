@@ -15,16 +15,22 @@ class TrackingPage extends StatefulWidget {
   final String reportId;
   final String reportType; // 'critical' | 'incident' — see incidentKindFor()
   final String displayId;
-  final double patientLat;
-  final double patientLng;
+  // Nullable: a notification tap doesn't carry these, and an SOS submitted
+  // with no GPS fix (see SOSCubit._resolvePosition) has none either. Either
+  // way, _listenToReport() below fills these in from the live document the
+  // moment it loads — these are just an optional fast-path to avoid a blank
+  // first frame when the caller already has them (e.g. fresh off the SOS
+  // confirmation dialog).
+  final double? patientLat;
+  final double? patientLng;
 
   const TrackingPage({
     super.key,
     required this.reportId,
     required this.reportType,
     required this.displayId,
-    required this.patientLat,
-    required this.patientLng,
+    this.patientLat,
+    this.patientLng,
   });
 
   @override
@@ -62,11 +68,19 @@ class _TrackingPageState extends State<TrackingPage>
   StreamSubscription? _reportSub;
   StreamSubscription? _ambulanceSub;
 
+  // Patient position — widget.patientLat/Lng is just a fast-path initial
+  // value; the live document (read in _listenToReport) is authoritative
+  // and fills this in whenever the widget didn't have it.
+  double? _patientLat;
+  double? _patientLng;
+
   final String _mapsKey = dotenv.env['GOOGLE_MAPS_KEY'] ?? '';
 
   @override
   void initState() {
     super.initState();
+    _patientLat = widget.patientLat;
+    _patientLng = widget.patientLng;
     _loadIcons();
     _listenToReport();
 
@@ -125,12 +139,20 @@ class _TrackingPageState extends State<TrackingPage>
       final newDriver    = d[IncidentFields.assignedDriverName] as String? ?? '';
       final newVehicleId = d[IncidentFields.assignedVehicleId] as String? ?? '';
       final ambulanceId  = d[IncidentFields.assignedAmbulanceId] as String?;
+      final docLat       = (d[IncidentFields.latitude] as num?)?.toDouble();
+      final docLng       = (d[IncidentFields.longitude] as num?)?.toDouble();
+
+      final firstPosition = _patientLat == null && docLat != null && docLng != null;
 
       setState(() {
         _status        = newStatus;
         _driverName    = newDriver;
         _vehicleId     = newVehicleId;
+        _patientLat  ??= docLat;
+        _patientLng  ??= docLng;
       });
+
+      if (firstPosition) _updateMarkers();
 
       // Start listening to ambulance GPS once assigned.
       if (ambulanceId != null && ambulanceId.isNotEmpty && _ambulanceSub == null) {
@@ -209,7 +231,7 @@ class _TrackingPageState extends State<TrackingPage>
     _moveCtrl!.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         // Update route polyline
-        _drawRoute(to, LatLng(widget.patientLat, widget.patientLng));
+        _drawRoute(to, LatLng(_patientLat!, _patientLng!));
         // Fetch new ETA
         _fetchETA(to);
       }
@@ -225,7 +247,7 @@ class _TrackingPageState extends State<TrackingPage>
     // Patient marker (always shown)
     markers.add(Marker(
       markerId: const MarkerId('patient'),
-      position: LatLng(widget.patientLat, widget.patientLng),
+      position: LatLng(_patientLat!, _patientLng!),
       icon: _patientIcon ?? BitmapDescriptor.defaultMarkerWithHue(
           BitmapDescriptor.hueAzure),
       infoWindow: const InfoWindow(title: 'موقعك'),
@@ -305,7 +327,7 @@ class _TrackingPageState extends State<TrackingPage>
     // blank ETA with no explanation).
     final dist = _haversineKm(
       from.latitude, from.longitude,
-      widget.patientLat, widget.patientLng,
+      _patientLat!, _patientLng!,
     );
     if (mounted) {
       setState(() {
@@ -326,7 +348,7 @@ class _TrackingPageState extends State<TrackingPage>
       final url = Uri.parse(
         'https://maps.googleapis.com/maps/api/directions/json'
         '?origin=${from.latitude},${from.longitude}'
-        '&destination=${widget.patientLat},${widget.patientLng}'
+        '&destination=${_patientLat!},${_patientLng!}'
         '&mode=driving'
         '&departure_time=now'
         '&key=$_mapsKey',
@@ -364,7 +386,7 @@ class _TrackingPageState extends State<TrackingPage>
   void _fitMapBounds(LatLng ambulancePos) {
     if (_mapCtrl == null) return;
 
-    final patient   = LatLng(widget.patientLat, widget.patientLng);
+    final patient   = LatLng(_patientLat!, _patientLng!);
     final southwest = LatLng(
       min(ambulancePos.latitude, patient.latitude) - 0.005,
       min(ambulancePos.longitude, patient.longitude) - 0.005,
@@ -442,6 +464,16 @@ class _TrackingPageState extends State<TrackingPage>
   // ── Build ─────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    // No position yet (either the SOS was sent with no GPS fix, or the
+    // report document is still loading after e.g. a notification tap) —
+    // show a loading state instead of crashing GoogleMap with a null target.
+    if (_patientLat == null || _patientLng == null) {
+      return const Scaffold(
+        backgroundColor: NC.base,
+        body: NajdaSpinner(label: 'جارٍ تحديد موقع البلاغ...'),
+      );
+    }
+
     final (statusLabel, statusColor) = _getStatusInfo();
     final isCompleted = _status == IncidentStatus.completed || _status == IncidentStatus.cancelled;
 
@@ -452,7 +484,7 @@ class _TrackingPageState extends State<TrackingPage>
           // ── Full-screen map ─────────────────────────────────────
           GoogleMap(
             initialCameraPosition: CameraPosition(
-              target: LatLng(widget.patientLat, widget.patientLng),
+              target: LatLng(_patientLat!, _patientLng!),
               zoom: 15,
             ),
             markers:   _markers,
@@ -469,7 +501,7 @@ class _TrackingPageState extends State<TrackingPage>
               if (_ambulancePos != null) {
                 _drawRoute(
                   _ambulancePos!,
-                  LatLng(widget.patientLat, widget.patientLng),
+                  LatLng(_patientLat!, _patientLng!),
                 );
               }
             },
