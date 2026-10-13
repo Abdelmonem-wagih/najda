@@ -33,9 +33,40 @@ Branches created from:
 
 ---
 
-## Phase 1 — One Firebase backend + one contract
+## Phase 1 — One Firebase backend + one contract — ✅ COMPLETE, VERIFIED
 
-_(log fills in below as executed)_
+### 1.1 Single Firebase home
+**Fixed.** `firebase.json` (APP) now also references `storage.rules` (new file — there was no Storage rules file in the repo at all before this, confirmed absent; audit finding SEC5). Both READMEs updated to state the APP repo is the sole owner of Firebase config/rules/indexes/functions, with deploy commands. `storage.rules` is a safe baseline (owner-write, authenticated-read, 5MB/image-only on `incidents/{uid}/*`) — finalized with the dashboard-user read check in Phase 3.3.
+
+### 1.2 Park AI, delete legacy JS functions
+**Fixed.** Read `najda-dashboard/functions/index.js` in full (338 lines) before touching anything. Confirmed by grep (both repos, zero hits) that nothing writes to `reports`/`emergency_reports`, so `onReportCreated`/`onEmergencyReportCreated` were genuinely dead triggers. Ported `assignHospital` (+ `analyzeWithGroq`) to `najda_functions/src/ai/assignHospital.disabled.ts`, exported as `assignHospitalDisabled`, **not** exported from `index.ts` — verified it compiles cleanly (`npm run build` in `najda_functions`, 0 errors) without being reachable. Deleted `najda-dashboard/functions/`, `firebase.json`, `.firebaserc` entirely. APP's `firebase.json` already had exactly one functions codebase (`"codebase": "default"`), confirmed.
+
+### 1.3 Canonical contract
+**Fixed.** Created `najda_functions/src/contract.ts`, `lib/core/constants/firestore_contract.dart`, `src/lib/contract.js` (dashboard) with matching `COLLECTIONS`/`INCIDENT_STATUS`/`AMBULANCE_STATUS` blocks (marked with `CONTRACT:*:START/END`) plus full field-name constants, the `incidentCollectionFor()`/`incidentKindFor()` helpers, and a machine-readable `STATUS_TRANSITIONS` table. `firebase/CONTRACT.md` is the human-readable mirror. `scripts/check-contract.mjs` parses all three files and **verified passing** (`node scripts/check-contract.mjs` with `DASHBOARD_CONTRACT` pointed at `E:/najda-dashboard/src/lib/contract.js`: 12 collections, 8 incident statuses, 5 ambulance statuses, all matching). Verified `dart analyze` on the new Dart file (0 issues), `tsc` build (0 errors), `eslint` on the new JS file (0 errors).
+
+**Note:** replacing every hardcoded literal across both codebases with these constants is deferred to Phases 2/4/5, file-by-file, as each file gets touched anyway for its logic fix — not done as a separate blind pass, which would mean editing every file twice.
+
+### 1.4 Firestore indexes
+**Fixed — and found a bug beyond the original audit.** The pre-existing `firestore.indexes.json` used `//` comments, which is **not valid JSON** — confirmed by running it through `JSON.parse()`, which threw `SyntaxError: Unexpected token '/'`. `firebase deploy --only firestore:indexes` would have failed outright if ever run against this file; this was never caught by the original read-only audit. Regenerated as valid JSON (verified with `JSON.parse`) with exactly the index groups needed: `criticals`/`incidents` × (`assignedAmbulanceId`,`status`,`createdAt`), × (`patientUid`,`dedupeKey`,`status`), × (`status`,`createdAt` desc); `ambulances` × (`isOnline`,`status`); `notifications` × (`recipientId`,`createdAt` desc) and × (`recipientId`,`isRead`,`createdAt` desc); `ambulance_history` × (`ambulanceId`,`completedAt` desc). Rationale table in `CONTRACT.md` (JSON can't carry comments). **Needs manual verification**: could not validate against the live project — `firebase projects:list` confirms the CLI account on this machine does not have access to `ultra-bearing-402000`; deploying needs the account that owns the project.
+
+### Discoveries beyond the original audit (new findings, logged here)
+
+- The dashboard's legacy `functions/index.js` had its own `createAmbulanceAccount` with no admin check and a hardcoded Cairo fallback point (30.0444, 31.2357) — this duplicates (and is worse than) `najda_functions`'s `createAmbulancesAccount`, which also lacks an admin check per the original audit. Both are addressed together in Phase 2.8.
+- `firestore.rules` references collections outside the canonical schema that the hardening prompt didn't mention: `admins`, `patient_profiles` (commented "legacy — kept for backward compat"), `mission_cancellations`. Left untouched in Phase 1/3 since removing them wasn't requested and nothing confirms they're unused — flagged in `CONTRACT.md` for a follow-up decision.
+- `firestore.rules`'s `isAmbulance()`/`isAssignedAmbulance()` helpers fall back to reading a `users/{uid}.role` doc, even though no code anywhere writes a `users` collection (confirmed by the original audit and re-confirmed here). This fallback is dead weight today but not a live bug; will be removed when rules are rewritten in Phase 3 (the canonical schema explicitly retires `users`).
+- `firestore.indexes.json` was invalid JSON (above) — not caught by the original read-only audit, which only reviewed index *field names*, not whether the file would parse at all.
+
+---
+
+## Phase 2 — Backend (najda_functions) — NOT STARTED
+
+## Phase 3 — Rules (firestore.rules + storage.rules) — NOT STARTED (storage.rules has a Phase 1 baseline only)
+
+## Phase 4 — Flutter app — NOT STARTED
+
+## Phase 5 — Dashboard — NOT STARTED
+
+## Phase 6 — Verify everything (emulator E2E) — NOT STARTED
 
 ---
 
@@ -43,5 +74,12 @@ _(log fills in below as executed)_
 
 | Repo | Commit | Message |
 |---|---|---|
-| APP | (branch created) | — |
+| APP | `ca16215` | step 0: baseline numbers and v1-hardening branch setup |
+| APP | `c2204a9` | step 1.1: consolidate on one Firebase backend (APP repo) + add storage.rules |
+| APP | `0013d73` | step 1.2: park Groq hospital-assignment as disabled, unexported Cloud Function |
+| APP | `237e0df` | step 1.3a: add the canonical schema contract (functions + Flutter) and the cross-repo contract checker |
+| APP | `2b1293e` | step 1.4: regenerate firestore.indexes.json from actual queries (it was invalid JSON) |
 | DASHBOARD | (branch created) | — |
+| DASHBOARD | `c0776a2` | step 1.1: document that Firebase backend lives in the najda (app) repo |
+| DASHBOARD | `28d6ddb` | step 1.2: delete the legacy Firebase Functions codebase |
+| DASHBOARD | `df59b37` | step 1.3a: add the canonical schema contract mirror (contract.js) |
