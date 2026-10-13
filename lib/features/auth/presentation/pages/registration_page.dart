@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/route/app_routes.dart';
+import '../../../../core/utils/phone_utils.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -29,6 +30,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _nationalIdCtrl = TextEditingController();
+  final _emergencyNameCtrl = TextEditingController();
   final _emergencyCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _chronicCtrl = TextEditingController();
@@ -39,7 +41,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   @override
   void dispose() {
     for (final c in [
-      _nameCtrl, _nationalIdCtrl, _emergencyCtrl,
+      _nameCtrl, _nationalIdCtrl, _emergencyNameCtrl, _emergencyCtrl,
       _passwordCtrl, _chronicCtrl, _allergiesCtrl, _medsCtrl,
     ]) { c.dispose(); }
     super.dispose();
@@ -61,13 +63,19 @@ class _RegistrationPageState extends State<RegistrationPage> {
       return;
     }
 
+    final emergencyPhone = _emergencyCtrl.text.trim();
     context.read<AuthCubit>().completeRegistration(
       uid: widget.uid,
       phone: widget.phoneNumber,
       fullName: _nameCtrl.text.trim(),
       nationalId: _nationalIdCtrl.text.trim(),
       password: _passwordCtrl.text.trim().isEmpty ? null : _passwordCtrl.text.trim(),
-      emergencyContact: _emergencyCtrl.text.trim().isEmpty ? null : _emergencyCtrl.text.trim(),
+      emergencyContact: emergencyPhone.isEmpty
+          ? null
+          : (normalizeEgyptianPhone(emergencyPhone) ?? emergencyPhone),
+      emergencyContactName: _emergencyNameCtrl.text.trim().isEmpty
+          ? null
+          : _emergencyNameCtrl.text.trim(),
       chronicDiseases: _split(_chronicCtrl.text),
       allergies: _split(_allergiesCtrl.text),
       currentMedications: _split(_medsCtrl.text),
@@ -158,12 +166,26 @@ class _RegistrationPageState extends State<RegistrationPage> {
                     const SizedBox(height: AppSpacing.md),
 
                     RegistrationFormField(
+                      label: l10n.emergencyContactNameLabel,
+                      controller: _emergencyNameCtrl,
+                      icon: Icons.person_pin_outlined,
+                      optional: true,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    RegistrationFormField(
                       label: l10n.emergencyContactLabel,
                       controller: _emergencyCtrl,
                       icon: Icons.contact_phone_outlined,
-                      hint: '+20 1XX XXXX XXXX',
+                      hint: '01XXXXXXXXX',
                       keyboardType: TextInputType.phone,
                       optional: true,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return null; // optional
+                        return isValidEgyptianPhone(v.trim())
+                            ? null
+                            : l10n.invalidEgyptianPhone;
+                      },
                     ),
                     const SizedBox(height: AppSpacing.md),
 

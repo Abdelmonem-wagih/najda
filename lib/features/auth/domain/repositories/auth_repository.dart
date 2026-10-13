@@ -18,6 +18,7 @@ abstract class AuthRepository {
     required String nationalId,
     String? password,
     String? emergencyContact,
+    String? emergencyContactName,
     List<String> chronicDiseases,
     List<String> allergies,
     List<String> currentMedications,

@@ -190,7 +190,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nationalIdLabel => 'National ID *';
 
   @override
+  String get emergencyContactNameLabel => 'Emergency Contact Name';
+
+  @override
   String get emergencyContactLabel => 'Emergency Contact Number';
+
+  @override
+  String get invalidEgyptianPhone => 'Invalid Egyptian phone number';
 
   @override
   String get chronicDiseasesLabel => 'Chronic Diseases';

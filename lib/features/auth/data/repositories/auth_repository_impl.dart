@@ -117,6 +117,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String nationalId,
     String? password,
     String? emergencyContact,
+    String? emergencyContactName,
     List<String> chronicDiseases = const [],
     List<String> allergies = const [],
     List<String> currentMedications = const [],
@@ -139,7 +140,7 @@ class AuthRepositoryImpl implements AuthRepository {
     );
 
     final contact = EmergencyContact(
-      name: 'Emergency Contact', // Should ideally be passed separately
+      name: (emergencyContactName ?? '').trim(),
       phone: emergencyContact ?? '',
     );
 
@@ -148,6 +149,11 @@ class AuthRepositoryImpl implements AuthRepository {
       'phoneNumber': phone,
       'firstName': firstName,
       'lastName': lastName,
+      // nationalId was previously accepted as a required parameter here and
+      // then silently dropped — never written to Firestore at all, so it
+      // was always empty on every downstream read (including every SOS/
+      // incident doc, which copies it from the citizen profile).
+      'nationalId': nationalId,
       'medicalProfile': medicalProfile.toMap(),
       'emergencyContact': contact.toMap(),
       'createdAt': FieldValue.serverTimestamp(),
@@ -162,6 +168,7 @@ class AuthRepositoryImpl implements AuthRepository {
       phoneNumber: phone,
       firstName: firstName,
       lastName: lastName,
+      nationalId: nationalId,
       medicalProfile: medicalProfile,
       emergencyContactData: contact,
     );

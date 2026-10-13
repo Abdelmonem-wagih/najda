@@ -188,7 +188,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get nationalIdLabel => 'الرقم القومي *';
 
   @override
+  String get emergencyContactNameLabel => 'اسم جهة الاتصال الطارئة';
+
+  @override
   String get emergencyContactLabel => 'رقم جهة الاتصال الطارئة';
+
+  @override
+  String get invalidEgyptianPhone => 'رقم هاتف مصري غير صحيح';
 
   @override
   String get chronicDiseasesLabel => 'أمراض مزمنة';

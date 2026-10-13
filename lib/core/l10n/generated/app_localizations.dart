@@ -440,11 +440,23 @@ abstract class AppLocalizations {
   /// **'الرقم القومي *'**
   String get nationalIdLabel;
 
+  /// No description provided for @emergencyContactNameLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم جهة الاتصال الطارئة'**
+  String get emergencyContactNameLabel;
+
   /// No description provided for @emergencyContactLabel.
   ///
   /// In ar, this message translates to:
   /// **'رقم جهة الاتصال الطارئة'**
   String get emergencyContactLabel;
+
+  /// No description provided for @invalidEgyptianPhone.
+  ///
+  /// In ar, this message translates to:
+  /// **'رقم هاتف مصري غير صحيح'**
+  String get invalidEgyptianPhone;
 
   /// No description provided for @chronicDiseasesLabel.
   ///
