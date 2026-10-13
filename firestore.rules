@@ -15,195 +15,266 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Mobile app admin (admins/ collection)
+    // Mobile app admin (admins/ collection). Pre-existing, outside the v1
+    // canonical schema, left as-is — see firebase/CONTRACT.md "Discoveries".
     function isAppAdmin() {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    // Dashboard user (any role)
+    // Dashboard user: exists AND active==true (an operator/admin deactivated
+    // via setDashboardUserActive immediately loses all dashboard access).
     function isDashboardUser() {
       return isAuthenticated() &&
-        exists(/databases/$(database)/documents/dashboard_users/$(request.auth.uid));
+        exists(/databases/$(database)/documents/dashboard_users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/dashboard_users/$(request.auth.uid)).data.active == true;
     }
 
-    // Dashboard admin specifically
     function isDashboardAdmin() {
       return isDashboardUser() &&
         get(/databases/$(database)/documents/dashboard_users/$(request.auth.uid)).data.role == "admin";
     }
 
-    // Either admin type
     function isAdmin() {
       return isAppAdmin() || isDashboardAdmin();
     }
 
-    // Registered ambulances
-    function isAmbulance() {
-      return isAuthenticated() && (
-        request.auth.token.role == "ambulances" ||
-        request.auth.token.role == "paramedic" ||
-        // Fallback: check users collection for role
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "ambulances"
+    // Accepts every role string this app has ever used for an ambulance/
+    // paramedic Auth custom claim, old and new, so existing sessions keep
+    // working until their token naturally refreshes.
+    function isAmbulanceRole() {
+      return isAuthenticated() && request.auth.token.role in ["ambulance", "ambulances", "paramedic"];
+    }
+
+    // Null-safe: callers may pass resource.data.assignedAmbulanceId /
+    // recipientId, which can legitimately be null/absent (e.g. a still-
+    // pending incident, or a citizen-targeted notification).
+    function isAssignedAmbulance(ambulanceId) {
+      return ambulanceId != null && isAuthenticated() && (
+        ambulanceId == request.auth.uid ||
+        (isAmbulanceRole() && request.auth.token.ambulanceId == ambulanceId) ||
+        get(/databases/$(database)/documents/ambulances/$(ambulanceId)).data.uid == request.auth.uid
       );
     }
 
-    function isAssignedAmbulance(ambId) {
-      return isAuthenticated() && (
-        ambId == request.auth.uid ||
-        (request.auth.token.role in ["ambulances", "paramedic"] && (request.auth.token.ambulancesId == ambId || request.auth.uid == ambId)) ||
-        // Absolute fallback: Verify that the ambulance document is owned by this user
-        get(/databases/$(database)/documents/ambulances/$(ambId)).data.uid == request.auth.uid
-      );
+    // ── Incident status machine (mirrors najda_functions/src/contract.ts
+    //    STATUS_TRANSITIONS — this is the actor-level half of enforcement;
+    //    the Cloud Function status-machine trigger is the structural
+    //    backstop that reverts anything that slips through). ──────────────
+
+    function legalAmbulanceTransition(from, to) {
+      return (from == "assigned"   && to == "on_mission")  ||
+             (from == "on_mission" && to == "arrived")     ||
+             (from == "arrived"    && to == "to_hospital") ||
+             (from == "to_hospital"&& to == "completed");
     }
 
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // Users  (shared profile — both citizen and paramedic have a doc here)
-    // Written at registration by the mobile app
-    // ═══════════════════════════════════════════════════════════════════════
-
-    match /users/{userId} {
-      // Own read/write
-      allow read, write: if isOwner(userId);
-
-      // Dashboard + App Admin can read (for medical profile in SOS)
-      allow read: if isDashboardUser() || isAppAdmin();
-
-      // Ambulances can read for incident context
-      allow read: if isAmbulance();
-
-      // Only admins can delete
-      allow delete: if isAdmin();
+    function legalCitizenCancel(from, to) {
+      return to == "cancelled" && (from == "pending" || from == "assigned");
     }
 
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // Citizens  (role-specific collection for exists() checks)
-    // ═══════════════════════════════════════════════════════════════════════
-
-    match /citizens/{userId} {
-      allow read: if isOwner(userId) || isAmbulance() || isDashboardUser() || isAppAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin() || isDashboardUser();
-      allow delete: if isAdmin();
+    function isValidNewIncident(data) {
+      return data.status == "pending"
+        && data.get("assignedAmbulanceId", null) == null
+        && data.get("retryCount", 0) == 0
+        && data.get("dedupeKey", null) == null;
     }
 
-
     // ═══════════════════════════════════════════════════════════════════════
-    // Incidents (unified)
-    //
-    // Unified schema fields used in rules:
-    //   reportedBy        — who created the incident (citizen uid)
-    //   assignment.ambulanceId — assigned ambulance uid
-    //   status, assignment, assignedHospital, timeline, resolvedAt — protected
+    // criticals / incidents — same shape, same rules (SOS button vs
+    // accident wizard). ALL writes besides the ones below (assignment,
+    // status progression past 'assigned', retryCount, dedupeKey) are
+    // server-only (Cloud Functions use the Admin SDK and bypass these
+    // rules entirely).
     // ═══════════════════════════════════════════════════════════════════════
-
-    match /ambulances/{docId} {
-      allow read: if isAuthenticated();
-      // Relaxed update rule: Check UID field for ownership instead of custom claim
-      // as custom claims might be stale during the first login session.
-      allow update: if (isAuthenticated() && (resource.data.uid == request.auth.uid || docId == request.auth.uid)) || isAdmin();
-      allow create, delete: if isAdmin() || isDashboardUser();
-    }
 
     match /criticals/{docId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
+      allow read: if isOwner(resource.data.patientUid)
+        || isAssignedAmbulance(resource.data.get("assignedAmbulanceId", null))
+        || isDashboardUser();
+
+      allow create: if isOwner(request.resource.data.patientUid) && isValidNewIncident(request.resource.data);
+
+      allow update: if (
+          isAssignedAmbulance(resource.data.get("assignedAmbulanceId", null))
+          && legalAmbulanceTransition(resource.data.status, request.resource.data.status)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(["status", "updatedAt", "arrivedAt", "toHospitalAt", "completedAt", "enRouteAt", "suggestedHospitalName", "hospitalId", "medicalReportSubmitted"])
+        ) || (
+          isOwner(resource.data.patientUid)
+          && legalCitizenCancel(resource.data.status, request.resource.data.status)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"])
+        ) || (
+          isDashboardUser()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["hospitalId", "suggestedHospitalName", "updatedAt"])
+        ) || isAdmin();
+
+      allow delete: if false;
     }
 
     match /incidents/{docId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
+      allow read: if isOwner(resource.data.patientUid)
+        || isAssignedAmbulance(resource.data.get("assignedAmbulanceId", null))
+        || isDashboardUser();
+
+      allow create: if isOwner(request.resource.data.patientUid) && isValidNewIncident(request.resource.data);
+
+      allow update: if (
+          isAssignedAmbulance(resource.data.get("assignedAmbulanceId", null))
+          && legalAmbulanceTransition(resource.data.status, request.resource.data.status)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(["status", "updatedAt", "arrivedAt", "toHospitalAt", "completedAt", "enRouteAt", "suggestedHospitalName", "hospitalId", "medicalReportSubmitted"])
+        ) || (
+          isOwner(resource.data.patientUid)
+          && legalCitizenCancel(resource.data.status, request.resource.data.status)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"])
+        ) || (
+          isDashboardUser()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["hospitalId", "suggestedHospitalName", "updatedAt"])
+        ) || isAdmin();
+
+      allow delete: if false;
     }
 
-    match /notifications/{docId} {
-      allow read: if isAuthenticated()
-        && isAssignedAmbulance(resource.data.ambulanceId);
-      allow update: if isAuthenticated()
-        && isAssignedAmbulance(resource.data.ambulanceId);
-      allow create: if isAuthenticated();
+    // ═══════════════════════════════════════════════════════════════════════
+    // ambulances — status/currentIncident* are SERVER-WRITE ONLY (synced by
+    // the incident-status trigger). The owning crew may only write
+    // isOnline/lastActiveAt. create/delete happen only via the
+    // createAmbulanceAccount/deleteAmbulanceAccount callables (Admin SDK).
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /ambulances/{ambId} {
+      allow read: if (resource.data.uid == request.auth.uid)
+        || (ambId == request.auth.uid)
+        || isDashboardUser();
+
+      allow update: if ((resource.data.uid == request.auth.uid) || (ambId == request.auth.uid))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["isOnline", "lastActiveAt", "updatedAt"]);
+
+      allow create, delete: if false;
     }
 
-    match /_counters/{docId} {
-      allow read, write: if true;
+    // ═══════════════════════════════════════════════════════════════════════
+    // ambulance_private — secrets (fcmToken/email/phone). Owner may write
+    // only fcmToken. Dashboard can read (needs email/phone for the fleet
+    // list). create/delete happen only via account-management callables.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /ambulance_private/{ambId} {
+      allow read: if isAssignedAmbulance(ambId) || isDashboardUser();
+      allow update: if isAssignedAmbulance(ambId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["fcmToken"]);
+      allow create, delete: if false;
     }
 
-    match /medical_reports/{reportId} {
-      // Allow any authenticated user to create a report
-      // Security is handled by the fact that they must be a paramedic to reach this screen
-      allow create: if isAuthenticated();
+    // ═══════════════════════════════════════════════════════════════════════
+    // tracking — ONE doc per ambulance, latest point only. Any signed-in
+    // user may read (the citizen tracking screen needs this); only the
+    // owning ambulance may write, and only the whitelisted fields.
+    // ═══════════════════════════════════════════════════════════════════════
 
-      // Allow reading if the user is the one who wrote it, or an admin
-      allow read: if isAuthenticated() && (
-        resource.data.ambulanceId == request.auth.uid ||
-        isAmbulance() ||
-        isDashboardUser() ||
-        isAppAdmin()
-      );
-
-      // Immutable
-      allow update, delete: if isAdmin();
+    match /tracking/{ambId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAssignedAmbulance(ambId)
+        && request.resource.data.keys().hasOnly(["latitude", "longitude", "bearing", "speed", "accuracy", "updatedAt"]);
+      allow delete: if false;
     }
 
-
     // ═══════════════════════════════════════════════════════════════════════
-    // Ambulance History  (written only by Cloud Functions)
-    // ═══════════════════════════════════════════════════════════════════════
-
-    match /ambulance_history/{historyId} {
-      allow create, update, delete: if false;
-
-      allow read: if isAdmin()
-        || isDashboardUser()
-        || isAssignedAmbulance(resource.data.ambulanceId);
-    }
-
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // Mission Cancellations  (immutable after creation)
+    // citizens
     // ═══════════════════════════════════════════════════════════════════════
 
-    match /mission_cancellations/{docId} {
-      allow create: if isAssignedAmbulance(request.resource.data.ambulanceId);
-
-      allow read: if isAdmin()
-        || isDashboardUser()
-        || isAssignedAmbulance(resource.data.ambulanceId);
-
-      allow update, delete: if false;
-    }
-
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // Join Requests  (public form submission)
-    // ═══════════════════════════════════════════════════════════════════════
-
-    match /join_requests/{requestId} {
-      // Anyone can submit (public form, no auth required)
-      allow create: if true;
-
-      // Only dashboard/admin can read and process
-      allow read, update: if isAdmin() || isDashboardUser();
+    match /citizens/{userId} {
+      allow read: if isOwner(userId) || isDashboardUser() || isAmbulanceRole();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
     }
 
-
     // ═══════════════════════════════════════════════════════════════════════
-    // Patient Profiles  (legacy — kept for backward compat)
-    // New data should go to users/{uid}.medicalProfile
+    // notifications — server creates every notification; recipients may
+    // only toggle isRead/readAt on their own.
     // ═══════════════════════════════════════════════════════════════════════
 
-    match /patient_profiles/{userId} {
-      allow read: if isDashboardUser() || isAmbulance();
-      allow write: if isOwner(userId) || isAdmin();
+    match /notifications/{id} {
+      allow read: if isAuthenticated() && (
+        resource.data.recipientId == request.auth.uid ||
+        isAssignedAmbulance(resource.data.recipientId) ||
+        (resource.data.recipientRole == "admin" && isDashboardUser())
+      );
+      allow update: if (
+          resource.data.recipientId == request.auth.uid ||
+          isAssignedAmbulance(resource.data.recipientId) ||
+          (resource.data.recipientRole == "admin" && isDashboardUser())
+        ) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["isRead", "readAt"]);
+      allow create, delete: if false;
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // ambulance_history — written only by the status-machine Cloud Function
+    // (Admin SDK bypasses these rules). Readable by the ambulance it's
+    // about, and by dashboard users.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /ambulance_history/{historyId} {
+      allow read: if isAssignedAmbulance(resource.data.ambulanceId) || isDashboardUser();
+      allow create, update, delete: if false;
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Admins  (mobile app admin collection)
+    // hospitals — directory for manual hospital selection in v1.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /hospitals/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // join_requests — public create (no auth required — this is a "join
+    // our fleet" form, filled out before anyone has an account), strict
+    // field validation. Only dashboard/admin can read and process.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function isValidJoinRequest(data) {
+      return data.keys().hasOnly(["name", "phone", "email", "ambulanceId", "area", "status", "createdAt", "submittedAt"])
+        && data.name is string && data.name.size() > 0
+        && data.phone is string && data.phone.size() > 0
+        && data.status == "pending";
+    }
+
+    match /join_requests/{requestId} {
+      allow create: if isValidJoinRequest(request.resource.data);
+      allow read, update: if isDashboardUser();
+      allow delete: if isAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // dashboard_users — admin manages everyone; a user may update their own
+    // name/prefs (Phase 5.7's profile/notification-prefs save) but not
+    // their own role/active flag.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /dashboard_users/{uid} {
+      allow read: if isOwner(uid) || isDashboardUser();
+      allow update: if isDashboardAdmin()
+        || (isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "prefs"]));
+      allow create, delete: if isDashboardAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // _counters — internal server-only counters. The pre-hardening rule was
+    // `allow read, write: if true` (declared twice) — genuinely public
+    // read/write on an internal collection; fixed to server-only.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /_counters/{docId} {
+      allow read, write: if false;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Pre-existing collections outside the v1 canonical schema. Left as-is —
+    // not part of this hardening pass, see firebase/CONTRACT.md.
     // ═══════════════════════════════════════════════════════════════════════
 
     match /admins/{userId} {
@@ -211,23 +282,19 @@ service cloud.firestore {
       allow write: if isAppAdmin();
     }
 
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // Dashboard Users
-    // ═══════════════════════════════════════════════════════════════════════
-
-    match /dashboard_users/{uid} {
-      allow read: if isOwner(uid) || isDashboardUser();
-      allow write: if isDashboardAdmin();
+    match /patient_profiles/{userId} {
+      allow read: if isDashboardUser() || isAmbulanceRole();
+      allow write: if isOwner(userId) || isAdmin();
     }
 
-    match /_counters/{docId} {
-      allow read, write: if true;
+    match /mission_cancellations/{docId} {
+      allow create: if isAssignedAmbulance(request.resource.data.ambulanceId);
+      allow read: if isAdmin() || isDashboardUser() || isAssignedAmbulance(resource.data.ambulanceId);
+      allow update, delete: if false;
     }
 
-
     // ═══════════════════════════════════════════════════════════════════════
-    // Default — authenticated read / admin write only
+    // Default — authenticated read / admin write only.
     // ═══════════════════════════════════════════════════════════════════════
 
     match /{document=**} {

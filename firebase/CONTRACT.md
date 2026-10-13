@@ -116,6 +116,15 @@ Existing shapes kept. `dashboard_users/{uid}`: `{role: 'admin' | 'operator', nam
 
 See `najda_functions/src/contract.ts` → `STATUS_TRANSITIONS` for the machine-readable version of the transition table.
 
+## App Check (production requirement)
+
+Firestore/Storage/Functions rules alone don't stop a request that isn't coming from the real app — that's what App Check is for. Two things both have to be true in production, not just one:
+
+1. **Client-side**: the Flutter app must call `FirebaseAppCheck.instance.activate(...)` with `AndroidProvider.playIntegrity` / `AppleProvider.appAttest` in release builds, not just the debug provider inside `kDebugMode` (Phase 4.9 — this was previously debug-only, confirmed by the original audit, SEC3).
+2. **Server-side enforcement**: after 4.9 ships and has been live long enough to confirm real traffic is sending valid App Check tokens, turn on **Enforce** for Firestore, Storage, and Functions in the Firebase console (App Check → APIs). Turning this on *before* the client-side fix is live would break the app for every user still on an old build — sequence it deliberately, and consider Firebase's "Monitor" mode first to see real token pass/fail rates before flipping to "Enforce".
+
+This is a console toggle, not something expressed in `firestore.rules`/`storage.rules`/`firebase.json` — there's nothing to commit for step 2, just an operational runbook note.
+
 ## Firestore composite indexes
 
 `firestore.indexes.json` cannot carry comments (it's parsed as strict JSON — the pre-hardening file had `//` comments and was **invalid JSON**, confirmed with `JSON.parse`; it would have failed outright on `firebase deploy --only firestore:indexes`). Rationale for each index lives here instead:

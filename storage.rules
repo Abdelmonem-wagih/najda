@@ -1,7 +1,5 @@
 rules_version = '2';
 
-// NOTE: this is the Phase 1 baseline (closes the "no storage rules at all" gap).
-// Finalized with the dashboard-user read check in Phase 3.3.
 service firebase.storage {
   match /b/{bucket}/o {
 
@@ -13,9 +11,18 @@ service firebase.storage {
       return isAuthenticated() && request.auth.uid == uid;
     }
 
+    // Cross-service read of the Firestore dashboard_users doc — mirrors
+    // firestore.rules' isDashboardUser() (exists AND active==true).
+    function isDashboardUser() {
+      return isAuthenticated() &&
+        firestore.exists(/databases/(default)/documents/dashboard_users/$(request.auth.uid)) &&
+        firestore.get(/databases/(default)/documents/dashboard_users/$(request.auth.uid)).data.active == true;
+    }
+
     // Accident/incident photos uploaded by the reporting citizen.
+    // Read: the owner, or a dashboard user reviewing the report.
     match /incidents/{uid}/{fileName} {
-      allow read: if isAuthenticated();
+      allow read: if isOwner(uid) || isDashboardUser();
       allow write: if isOwner(uid)
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
