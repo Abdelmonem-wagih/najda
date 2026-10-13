@@ -213,7 +213,9 @@ class _CitizenHomePageState extends State<CitizenHomePage>
     final l10n = AppLocalizations.of(context)!;
     final authState = context.watch<AuthCubit>().state as AuthAuthenticated;
     final user = authState.user;
-    final name = user.fullName ?? '';
+    // user.fullName is a non-nullable getter (always resolves to at least
+    // ''), so the previous `?? ''` here was dead code, not a real bug.
+    final name = user.fullName;
 
     return BlocListener<SOSCubit, SOSState>(
       listener: (context, state) {

@@ -8,11 +8,12 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/constants/firestore_contract.dart';
 import '../../../core/theme/design.dart';
 
 class TrackingPage extends StatefulWidget {
   final String reportId;
-  final String reportType; // 'emergency_report' | 'report'
+  final String reportType; // 'critical' | 'incident' — see incidentKindFor()
   final String displayId;
   final double patientLat;
   final double patientLng;
@@ -47,12 +48,11 @@ class _TrackingPageState extends State<TrackingPage>
   // ── Animation (smooth movement) ───────────────────────────────────
   AnimationController? _moveCtrl;
   Animation<double>?   _moveAnim;
-  LatLng? _animFrom;
-  LatLng? _animTo;
 
   // ── ETA ───────────────────────────────────────────────────────────
   int?    _etaMinutes;
   double? _distanceKm;
+  bool    _routeUnavailable = false;
   Timer?  _etaTimer;
 
   // ── Report state ──────────────────────────────────────────────────
@@ -107,14 +107,7 @@ class _TrackingPageState extends State<TrackingPage>
 
   // ── Listen to report status ──────────────────────────────────────
   void _listenToReport() {
-    // In this app, we use 'incidents' collection for both SOS and others
-    // but the user's snippet suggested 'criticals' vs 'reports'.
-    // I will adapt it to the project's 'incidents' collection if possible,
-    // but to follow "exactly like Uber" snippet, I'll keep the logic but use 'incidents' as fallback.
-    
-    final col = widget.reportType == 'critical'
-        ? 'criticals'
-        : 'incidents';
+    final col = incidentCollectionFor(incidentKindFor(widget.reportType));
 
     _reportSub = FirebaseFirestore.instance
         .collection(col)
@@ -124,14 +117,14 @@ class _TrackingPageState extends State<TrackingPage>
       if (!snap.exists || !mounted) return;
       final d = snap.data()!;
 
-      final newStatus      = d['status'] as String? ?? 'assigned';
-      
-      // Adaptation to IncidentModel structure
-      final assignmentRaw = d['assignment'];
-      final Map<String, dynamic>? assignment = (assignmentRaw is Map<String, dynamic>) ? assignmentRaw : null;
-      final newDriver      = assignment?['driverName'] as String? ?? '';
-      final newVehicleId   = assignment?['vehicleId'] as String? ?? '';
-      final ambulanceId    = assignment?['ambulanceId'] as String?;
+      // FLAT fields only — the backend never writes a nested `assignment`
+      // map (it never did), so this used to read fields that were always
+      // null, which meant the ambulance marker/ETA/driver card never
+      // appeared for any real assignment. See firebase/CONTRACT.md.
+      final newStatus    = d[IncidentFields.status] as String? ?? IncidentStatus.pending;
+      final newDriver    = d[IncidentFields.assignedDriverName] as String? ?? '';
+      final newVehicleId = d[IncidentFields.assignedVehicleId] as String? ?? '';
+      final ambulanceId  = d[IncidentFields.assignedAmbulanceId] as String?;
 
       setState(() {
         _status        = newStatus;
@@ -139,7 +132,7 @@ class _TrackingPageState extends State<TrackingPage>
         _vehicleId     = newVehicleId;
       });
 
-      // Start listening to ambulance GPS when assigned
+      // Start listening to ambulance GPS once assigned.
       if (ambulanceId != null && ambulanceId.isNotEmpty && _ambulanceSub == null) {
         _listenToAmbulanceGPS(ambulanceId, newVehicleId);
       }
@@ -149,9 +142,10 @@ class _TrackingPageState extends State<TrackingPage>
   // ── Listen to ambulance GPS (real-time) ──────────────────────────
   void _listenToAmbulanceGPS(String ambulanceId, String vehicleId) {
     if (ambulanceId.isEmpty) return;
-    // Listen to 'ambulances' collection as updated by LocationService
+    // Position lives in tracking/{ambulanceId} — the ambulances doc itself
+    // no longer carries latitude/longitude/bearing (see CONTRACT.md).
     final stream = FirebaseFirestore.instance
-        .collection('ambulances')
+        .collection(FirestoreCollections.tracking)
         .doc(ambulanceId)
         .snapshots();
 
@@ -186,9 +180,6 @@ class _TrackingPageState extends State<TrackingPage>
   // ── CORE: Smooth marker animation (Uber effect) ───────────────────
   void _animateMarker(LatLng from, LatLng to, double bearing) {
     _moveCtrl?.dispose();
-
-    _animFrom = from;
-    _animTo   = to;
 
     _moveCtrl = AnimationController(
       vsync: this,
@@ -276,7 +267,10 @@ class _TrackingPageState extends State<TrackingPage>
       if (res.statusCode != 200) return;
       final data = json.decode(res.body);
 
-      if (data['routes']?.isEmpty ?? true) return;
+      if (data['routes']?.isEmpty ?? true) {
+        if (mounted) setState(() => _routeUnavailable = true);
+        return;
+      }
 
       // Decode polyline
       final encoded = data['routes'][0]['overview_polyline']['points'] as String;
@@ -304,19 +298,27 @@ class _TrackingPageState extends State<TrackingPage>
   }
 
   // ── Fetch ETA from Directions API ────────────────────────────────
+  void _fetchETAFallback(LatLng from) {
+    // Haversine/40km-h estimate — used when there's no Maps key AND when
+    // the Directions API is reachable but returns no route (previously
+    // this second case just silently did nothing, leaving a stale or
+    // blank ETA with no explanation).
+    final dist = _haversineKm(
+      from.latitude, from.longitude,
+      widget.patientLat, widget.patientLng,
+    );
+    if (mounted) {
+      setState(() {
+        _distanceKm = dist;
+        _etaMinutes = (dist / 40 * 60).round();
+        _routeUnavailable = true;
+      });
+    }
+  }
+
   Future<void> _fetchETA(LatLng from) async {
     if (_mapsKey.isEmpty) {
-      // Fallback: calculate ETA from distance (40 km/h city speed)
-      final dist = _haversineKm(
-        from.latitude, from.longitude,
-        widget.patientLat, widget.patientLng,
-      );
-      if (mounted) {
-        setState(() {
-          _distanceKm = dist;
-          _etaMinutes = (dist / 40 * 60).round();
-        });
-      }
+      _fetchETAFallback(from);
       return;
     }
 
@@ -333,7 +335,10 @@ class _TrackingPageState extends State<TrackingPage>
       final res  = await http.get(url);
       final data = json.decode(res.body);
 
-      if (data['routes']?.isEmpty ?? true) return;
+      if (data['routes']?.isEmpty ?? true) {
+        _fetchETAFallback(from);
+        return;
+      }
 
       final leg = data['routes'][0]['legs'][0];
 
@@ -346,10 +351,12 @@ class _TrackingPageState extends State<TrackingPage>
         setState(() {
           _etaMinutes  = (durationSec / 60).round();
           _distanceKm  = distanceM / 1000;
+          _routeUnavailable = false;
         });
       }
     } catch (e) {
       debugPrint('[ETA] Failed: $e');
+      _fetchETAFallback(from);
     }
   }
 
@@ -415,20 +422,18 @@ class _TrackingPageState extends State<TrackingPage>
   // ── Status label ─────────────────────────────────────────────────
   (String, Color) _getStatusInfo() {
     switch (_status) {
-      case 'assigned':
-      case 'dispatched':
-      case 'en_route':
+      case IncidentStatus.assigned:
+        return ('🚑 تم تعيين سيارة إسعاف', const Color(0xFF00C2FF));
+      case IncidentStatus.onMission:
         return ('🚑 الإسعاف في الطريق إليك', const Color(0xFF00C2FF));
-      case 'arrived_scene':
-      case 'on_scene':
-      case 'arrived':
+      case IncidentStatus.arrived:
         return ('✅ الإسعاف وصل إليك', const Color(0xFF00E096));
-      case 'en_route_hospital':
-      case 'to_hospital':
+      case IncidentStatus.toHospital:
         return ('🏥 في الطريق للمستشفى', const Color(0xFFBB86FC));
-      case 'completed':
-      case 'resolved':
+      case IncidentStatus.completed:
         return ('✅ اكتملت المهمة', const Color(0xFF00E096));
+      case IncidentStatus.cancelled:
+        return ('⛔ تم إلغاء البلاغ', const Color(0xFF9AA0A6));
       default:
         return ('⏳ جارٍ التعيين...', const Color(0xFFFFB800));
     }
@@ -438,7 +443,7 @@ class _TrackingPageState extends State<TrackingPage>
   @override
   Widget build(BuildContext context) {
     final (statusLabel, statusColor) = _getStatusInfo();
-    final isCompleted = _status == 'completed' || _status == 'resolved';
+    final isCompleted = _status == IncidentStatus.completed || _status == IncidentStatus.cancelled;
 
     return Scaffold(
       backgroundColor: NC.base,
@@ -485,21 +490,29 @@ class _TrackingPageState extends State<TrackingPage>
                         shape: BoxShape.circle,
                         border: Border.all(color: NC.cardBorder),
                       ),
-                      child: const Icon(Icons.arrow_back_ios_rounded,
-                          color: NC.textHigh, size: 18),
+                      // BackButtonIcon auto-mirrors for RTL, unlike a
+                      // literal Icons.arrow_back_ios_rounded which always
+                      // points the same physical direction.
+                      child: const IconTheme(
+                        data: IconThemeData(color: NC.textHigh, size: 18),
+                        child: BackButtonIcon(),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: NC.base.withOpacity(0.85),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: NC.cardBorder),
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: NC.base.withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: NC.cardBorder),
+                      ),
+                      child: Text('رقم البلاغ: ${widget.displayId}',
+                          overflow: TextOverflow.ellipsis,
+                          style: NC.label(13, color: NC.primary)),
                     ),
-                    child: Text('رقم البلاغ: ${widget.displayId}',
-                        style: NC.label(13, color: NC.primary)),
                   ),
                 ],
               ),
@@ -508,8 +521,8 @@ class _TrackingPageState extends State<TrackingPage>
 
           // ── Center on ambulance button ──────────────────────────
           if (_ambulancePos != null)
-            Positioned(
-              left: 16,
+            PositionedDirectional(
+              start: 16,
               bottom: 220,
               child: GestureDetector(
                 onTap: () => _fitMapBounds(_ambulancePos!),
@@ -596,6 +609,14 @@ class _TrackingPageState extends State<TrackingPage>
                   const SizedBox(height: 16),
 
                   // ETA + Distance
+                  if (_routeUnavailable && (_etaMinutes != null || _distanceKm != null))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'تعذر تحديد المسار الدقيق — الوقت تقديري',
+                        style: NC.body(11, color: NC.textMid),
+                      ),
+                    ),
                   if (_etaMinutes != null || _distanceKm != null)
                     Row(
                       children: [
@@ -667,9 +688,13 @@ class _TrackingPageState extends State<TrackingPage>
                             children: [
                               if (_driverName.isNotEmpty)
                                 Text(_driverName,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
                                     style: NC.label(14)),
                               if (_vehicleId.isNotEmpty)
                                 Text('🚑 عربية: $_vehicleId',
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
                                     style: NC.body(12,
                                         color: NC.textMid)),
                             ],

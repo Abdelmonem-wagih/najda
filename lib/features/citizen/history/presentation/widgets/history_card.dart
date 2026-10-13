@@ -6,8 +6,13 @@ import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/shared/widgets/app_widgets.dart';
 import '../../../../../core/l10n/generated/app_localizations.dart';
+import '../../../../../core/constants/firestore_contract.dart';
 import '../../../../../core/route/app_routes.dart';
-import '../../../report/data/models/incident_model.dart';
+// Hides the dead/legacy IncidentStatus enum defined in incident_model.dart
+// (reported/ai_assigning/en_route/resolved/... — never actually written
+// anywhere) so this file's canonical IncidentStatus (from
+// firestore_contract.dart) isn't ambiguous.
+import '../../../report/data/models/incident_model.dart' hide IncidentStatus;
 import 'history_details_sheet.dart';
 
 class HistoryCard extends StatelessWidget {
@@ -55,9 +60,10 @@ class HistoryCard extends StatelessWidget {
                       style: AppTextStyles.titleLarge,
                     ),
                     Text(
-                      ts != null
-                          ? DateFormat('dd MMM yyyy – HH:mm', 'ar').format(ts)
-                          : '—',
+                      // report.reportedAt is a non-nullable Timestamp, so
+                      // ts can never actually be null (confirmed benign —
+                      // not the logic bug flagged by flutter analyze).
+                      DateFormat('dd MMM yyyy – HH:mm', 'ar').format(ts),
                       style: AppTextStyles.bodySmall,
                     ),
                   ],
@@ -66,7 +72,7 @@ class HistoryCard extends StatelessWidget {
               AppStatusBadge(status: status),
             ],
           ),
-          if (!['completed', 'resolved', 'cancelled'].contains(status)) ...[
+          if (![IncidentStatus.completed, IncidentStatus.cancelled, IncidentStatus.duplicate].contains(status)) ...[
             const SizedBox(height: AppSpacing.md),
             GestureDetector(
               onTap: () => Navigator.pushNamed(
@@ -74,7 +80,12 @@ class HistoryCard extends StatelessWidget {
                 AppRoutes.trackIncident,
                 arguments: {
                   'reportId': report.id,
-                  'reportType': report.type == 'sos' ? 'emergency_report' : 'report',
+                  // Must match TrackingPage's incidentKindFor() check — this
+                  // used to send 'emergency_report'/'report', neither of
+                  // which is ever 'critical', so tracking a past SOS from
+                  // History always queried the wrong collection and the
+                  // tracking screen hung forever on "جارٍ تحديد الموقع...".
+                  'reportType': report.type == 'sos' ? 'critical' : 'incident',
                   'displayId': report.id.length > 6 ? report.id.substring(0, 6) : report.id,
                   'patientLat': report.location.latitude,
                   'patientLng': report.location.longitude,
