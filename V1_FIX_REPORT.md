@@ -132,7 +132,24 @@ Read `index.ts` in full before changing anything (confirmed the exact lines the 
 ### Manual verification needed (added to the checklist)
 Upgrade this (or any) machine to Java 21+, then run `npm --prefix najda_functions run test:rules` and fix anything that fails before trusting this rules file in production. Given the field-level `diff().affectedKeys()` logic is genuinely intricate, I'd treat passing this suite as a hard prerequisite for deploying these rules, not a nice-to-have.
 
-## Phase 4 — Flutter app — NOT STARTED
+## Phase 4 — Flutter app — IN PROGRESS (4.1, 4.2, 4.7, 4.9 done; 4.3-4.6, 4.8, 4.10-4.15 remaining)
+
+### 4.1 AI pause — ✅ Fixed
+`AppConstants.aiEnabled = false`. Route guarded, global FAB guarded, both Groq methods throw immediately when off (defense-in-depth), About page text conditional. Deleted 5 dead `NajdaAIService` methods entirely (confirmed zero call sites via grep) rather than just gating them — three called Cloud Functions that were never defined on the backend at all, two were architecturally misplaced non-AI admin functions. `flutter analyze`: 226 → 219.
+
+### 4.2 Citizen tracking fix — ✅ Fixed (the single highest-value fix in the project)
+`tracking_page.dart` now reads the flat `assignedAmbulanceId`/`assignedDriverName`/`assignedVehicleId` fields instead of the never-written nested `assignment` map, and listens to `tracking/{ambulanceId}` instead of the ambulance doc for position. This is the actual root-cause fix for "citizens never see their assigned ambulance" — confirmed by three independent audit passes as the single biggest blocker. Also fixed: dead status values in the label switch, a real "no route found" UI state (previously silent), RTL back-button mirroring (via `BackButtonIcon`, not a `matchTextDirection` param on `Icon` — that doesn't exist, caught immediately by `dart analyze`), `PositionedDirectional` for the center-on-ambulance FAB, overflow handling on three text widgets, and two confirmed-dead fields. `history_card.dart`'s `reportType` bug (passed `'emergency_report'`/`'report'`, never `'critical'`) fixed to match — this was the other half of why tracking-from-History always hung. `flutter analyze`: 219 → 215.
+
+### 4.7 Paramedic status machine — ✅ Fixed
+Added the real `on_mission` step (a "بدء المهمة" button between assigned and arrived — previously structurally unreachable). `_updateStatus()` no longer writes to `ambulances/{id}` or `ambulance_history` directly (Phase 3 rules now reject both from the client; the Phase 2 trigger handles it server-side). Removed the fake `_selectHospital()` AI stub and the dead `medical_reports` write; **folded the medical assessment form's real clinical data into two new incident fields (`medicalAssessment`, `medicalNotes`)** instead of just discarding it — required touching `contract.ts`/`firestore_contract.dart`/`contract.js`/`firestore.rules` again, a small well-justified cross-phase addition rather than silently dropping paramedic-entered data. Also fixed: the paramedic's own live map was reading dead `ambulances.lat/lng/heading` fields (now reads `tracking/{id}`), deleted the local dead `_IS`/`_AS` status classes in favor of the canonical ones.
+
+### 4.9 App Check in release — ✅ Fixed
+`main.dart`'s `activate()` call is no longer inside `if (kDebugMode)` — always runs now, with the real attestation providers in release.
+
+### Remaining Phase 4 work (not yet done)
+4.3 (SOS flow hardening: location fallback/timeout, re-entrancy guard, localized errors), 4.4 (native direct call via `flutter_phone_direct_caller` + E.164 normalization), 4.5 (persist `nationalId` at registration), 4.6 (stop writing ambulance `status` from the client entirely, wire `stopTracking()`/`startTracking()` into the online/offline toggle, single GPS writer), 4.8 (citizen FCM token + local-notification tap handler), 4.10 (route/role guards), 4.11 (full dead-stack deletion + remaining literal→constant replacement), 4.12 (first-aid image fixes), 4.13 (marker asset), 4.14 (i18n for the two newest screens), 4.15 (remaining dead-code cleanup + real tests).
+
+## Phase 5 — Dashboard — NOT STARTED
 
 ## Phase 5 — Dashboard — NOT STARTED
 
