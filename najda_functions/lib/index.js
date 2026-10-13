@@ -33,375 +33,186 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createAmbulancesAccount = exports.releaseAmbulance = exports.markNotificationRead = exports.manualAssign = exports.retryPending = exports.autoAssignIncident = exports.autoAssignCritical = void 0;
+exports.findNearestEligibleAmbulance = exports.markNotificationRead = exports.setDashboardUserActive = exports.createDashboardUser = exports.deleteAmbulanceAccount = exports.createAmbulanceAccount = exports.releaseAmbulance = exports.manualAssign = exports.retryPending = exports.onIncidentStatusChanged = exports.onCriticalStatusChanged = exports.autoAssignIncident = exports.autoAssignCritical = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
 const admin = __importStar(require("firebase-admin"));
+const contract_1 = require("./contract");
+const autoAssign_1 = require("./lib/autoAssign");
+const assignment_1 = require("./lib/assignment");
+const geo_1 = require("./lib/geo");
+Object.defineProperty(exports, "findNearestEligibleAmbulance", { enumerable: true, get: function () { return geo_1.findNearestEligibleAmbulance; } });
+const notify_1 = require("./lib/notify");
+const statusMachine_1 = require("./triggers/statusMachine");
 admin.initializeApp();
 const db = admin.firestore();
 // ═══════════════════════════════════════════════════════════════════
-// STATUS CONSTANTS — match Flutter app exactly
+// SHARED HELPERS
 // ═══════════════════════════════════════════════════════════════════
-const INCIDENT_STATUS = {
-    PENDING: 'pending',
-    ASSIGNED: 'assigned',
-    ON_MISSION: 'on_mission',
-    ARRIVED: 'arrived',
-    TO_HOSPITAL: 'to_hospital',
-    COMPLETED: 'completed',
-    CANCELLED: 'cancelled',
-    DUPLICATE: 'duplicate',
-};
-const AMBULANCE_STATUS = {
-    AVAILABLE: 'available',
-    ASSIGNED: 'assigned',
-    ON_MISSION: 'on_mission',
-    ARRIVED: 'arrived',
-    TO_HOSPITAL: 'to_hospital',
-};
-// ═══════════════════════════════════════════════════════════════════
-// UTILITIES
-// ═══════════════════════════════════════════════════════════════════
-function haversineKm(lat1, lng1, lat2, lng2) {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2
-        + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
-            * Math.sin(dLng / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+async function requireDashboardUser(uid, allowedRoles) {
+    if (!uid)
+        throw new https_1.HttpsError('unauthenticated', 'Not authenticated');
+    const snap = await db.collection(contract_1.COLLECTIONS.dashboardUsers).doc(uid).get();
+    if (!snap.exists)
+        throw new https_1.HttpsError('permission-denied', 'Not a dashboard user');
+    const data = snap.data();
+    if (data.active !== true)
+        throw new https_1.HttpsError('permission-denied', 'Account disabled');
+    if (!allowedRoles.includes(data.role))
+        throw new https_1.HttpsError('permission-denied', 'Insufficient role');
+    return data;
 }
-function buildDedupeKey(lat, lng, ts) {
-    const ms = ts instanceof admin.firestore.Timestamp ? ts.toMillis() : Date.now();
-    return `${lat.toFixed(3)}_${lng.toFixed(3)}_${Math.floor(ms / 300000)}`;
-}
-// ─── FIXED: Query ambulances with correct fields ──────────────────
-async function getAvailableAmbulances(tx) {
-    // TWO conditions: isOnline=true AND status='available'
-    // AND has location
-    const snap = await tx.get(db.collection('ambulances')
-        .where('isOnline', '==', true)
-        .where('status', '==', AMBULANCE_STATUS.AVAILABLE));
-    // Filter: must have lat/lng to be dispatchable
-    return snap.docs.filter(d => {
-        const data = d.data();
-        return data.latitude != null && data.longitude != null;
-    });
-}
-// ─── Find nearest ambulance ───────────────────────────────────────
-function findNearest(docs, lat, lng) {
-    let nearest = null;
-    let shortest = Infinity;
-    for (const doc of docs) {
-        const d = doc.data();
-        // Extra safety: skip if already on mission
-        if (d.currentIncidentId)
-            continue;
-        const dist = haversineKm(lat, lng, d.latitude, d.longitude);
-        if (dist < shortest) {
-            shortest = dist;
-            nearest = doc;
-        }
-    }
-    return nearest ? { doc: nearest, distKm: shortest } : null;
-}
-// ─── Apply assignment ─────────────────────────────────────────────
-async function applyAssignment(tx, incidentRef, ambulanceDoc, incidentId, incidentType // 'incident' | 'critical'
-) {
-    const amb = ambulanceDoc.data();
-    if (!amb)
-        return;
-    const ambulanceName = amb.ambulanceId ?? amb.plateNumber ?? ambulanceDoc.id;
-    const driverName = amb.driverName ?? amb.name ??
-        `${amb.firstName ?? ''} ${amb.lastName ?? ''}`.trim();
-    // 1. Update incident
-    tx.update(incidentRef, {
-        status: INCIDENT_STATUS.ASSIGNED,
-        assignedAmbulanceId: ambulanceDoc.id,
-        assignedAmbulanceName: ambulanceName,
-        assignedDriverName: driverName,
-        assignedFcmToken: amb.fcmToken ?? null,
-        assignedAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-    // 2. Update ambulance — Use canonical status
-    tx.update(db.collection('ambulances').doc(ambulanceDoc.id), {
-        status: AMBULANCE_STATUS.ASSIGNED,
-        currentIncidentId: incidentId,
-        currentIncidentType: incidentType,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-}
-// ─── Send FCM ─────────────────────────────────────────────────────
-async function sendFcm(token, title, body, data, channelId = 'najda_emergency') {
-    try {
-        await admin.messaging().send({
-            token,
-            notification: { title, body },
-            data: { ...data, click_action: 'FLUTTER_NOTIFICATION_CLICK' },
-            android: {
-                priority: 'high',
-                notification: {
-                    channelId,
-                    priority: 'max',
-                    defaultSound: true,
-                    defaultVibrateTimings: true,
-                },
-            },
-            apns: {
-                payload: { aps: { alert: { title, body }, sound: 'default', badge: 1 } },
-            },
-        });
-    }
-    catch (err) {
-        console.error('[FCM] Failed:', err);
-    }
-}
-// ─── Save notification ────────────────────────────────────────────
-async function saveNotification(ambulanceId, title, body, type, incidentId, incidentType, extra = {}) {
-    await db.collection('notifications').add({
-        ambulanceId,
-        title,
-        body,
-        type,
-        incidentId,
-        incidentType,
-        deepLink: `najda://incident/${incidentType}/${incidentId}`,
-        isRead: false,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        ...extra,
-    });
+async function afterAssignment(incidentId, incidentCollection, ambulanceId) {
+    const snap = await db.collection(incidentCollection).doc(incidentId).get();
+    const data = snap.data();
+    await (0, notify_1.notifyAmbulanceOfAssignment)(ambulanceId, incidentId, (0, contract_1.incidentKindFor)(incidentCollection), data?.[contract_1.INCIDENT_FIELDS.patientName], data?.[contract_1.INCIDENT_FIELDS.address]);
+    // The citizen is notified of 'assigned' via the status-machine trigger,
+    // which fires for this same write (status pending -> assigned) and calls
+    // notifyCitizenOfStatus — no separate call needed here.
 }
 // ═══════════════════════════════════════════════════════════════════
-// FUNCTION 1: AUTO-ASSIGN CRITICAL (SOS)
-// Triggers on: criticals/{incidentId}
+// AUTO-ASSIGN ON CREATE (distance only, no AI — Decision 2)
 // ═══════════════════════════════════════════════════════════════════
 exports.autoAssignCritical = (0, firestore_1.onDocumentCreated)('criticals/{incidentId}', async (event) => {
-    const snap = event.data;
-    if (!snap)
-        return;
     const incidentId = event.params.incidentId;
-    const data = snap.data();
-    if (!data.latitude || !data.longitude) {
-        console.warn('[critical] Missing location data');
-        return;
+    try {
+        const ambulanceId = await (0, autoAssign_1.tryAutoAssign)(incidentId, contract_1.COLLECTIONS.criticals);
+        if (ambulanceId)
+            await afterAssignment(incidentId, contract_1.COLLECTIONS.criticals, ambulanceId);
     }
-    const dedupeKey = buildDedupeKey(data.latitude, data.longitude, data.createdAt);
-    let assignedAmbulanceId = null;
-    await db.runTransaction(async (tx) => {
-        // Duplicate check
-        const dupSnap = await tx.get(db.collection('criticals')
-            .where('patientUid', '==', data.patientUid)
-            .where('dedupeKey', '==', dedupeKey)
-            .where('status', 'in', [INCIDENT_STATUS.ASSIGNED, INCIDENT_STATUS.ON_MISSION])
-            .limit(1));
-        if (!dupSnap.empty) {
-            tx.update(snap.ref, {
-                status: INCIDENT_STATUS.DUPLICATE,
-                dedupeKey,
-                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            });
-            console.log(`[critical] Duplicate → ${incidentId}`);
-            return;
-        }
-        // Find nearest ONLINE + AVAILABLE ambulance
-        const available = await getAvailableAmbulances(tx);
-        console.log(`[critical] Available ambulances: ${available.length}`);
-        const result = findNearest(available, data.latitude, data.longitude);
-        if (!result) {
-            tx.update(snap.ref, {
-                status: INCIDENT_STATUS.PENDING,
-                dedupeKey,
-                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            });
-            console.log(`[critical] No ambulance available → pending`);
-            return;
-        }
-        await applyAssignment(tx, snap.ref, result.doc, incidentId, 'critical');
-        tx.update(snap.ref, { dedupeKey });
-        assignedAmbulanceId = result.doc.id;
-        console.log(`[critical] ${incidentId} → ambulance ${result.doc.id} (${result.distKm.toFixed(1)}km)`);
-    });
-    // Send FCM (outside transaction)
-    if (assignedAmbulanceId) {
-        const ambDoc = await db.collection('ambulances').doc(assignedAmbulanceId).get();
-        const amb = ambDoc.data();
-        if (amb?.fcmToken) {
-            await sendFcm(amb.fcmToken, '🚨 حالة طوارئ عاجلة', `مريض ${data.patientName ?? 'غير محدد'} — ${data.address || 'تحقق من الموقع'}`, {
-                incidentId,
-                incidentType: 'critical',
-                displayId: data.shortId ?? incidentId.substring(0, 8),
-                patientName: data.patientName ?? '',
-                latitude: String(data.latitude),
-                longitude: String(data.longitude),
-            }, 'emergency_channel');
-            await saveNotification(assignedAmbulanceId, '🚨 حالة طوارئ عاجلة', `مريض ${data.patientName ?? 'غير محدد'} — ${data.address || 'تحقق من الموقع'}`, 'critical_assigned', incidentId, 'critical', { patientName: data.patientName, latitude: data.latitude, longitude: data.longitude });
-        }
+    catch (err) {
+        console.error(`[autoAssignCritical] ${incidentId}:`, err);
     }
 });
-// ═══════════════════════════════════════════════════════════════════
-// FUNCTION 2: AUTO-ASSIGN INCIDENT (Accident)
-// Triggers on: incidents/{incidentId}
-// ═══════════════════════════════════════════════════════════════════
 exports.autoAssignIncident = (0, firestore_1.onDocumentCreated)('incidents/{incidentId}', async (event) => {
-    const snap = event.data;
-    if (!snap)
-        return;
     const incidentId = event.params.incidentId;
-    const data = snap.data();
-    if (!data.latitude || !data.longitude) {
-        console.warn('[incident] Missing location data');
-        return;
+    try {
+        const ambulanceId = await (0, autoAssign_1.tryAutoAssign)(incidentId, contract_1.COLLECTIONS.incidents);
+        if (ambulanceId)
+            await afterAssignment(incidentId, contract_1.COLLECTIONS.incidents, ambulanceId);
     }
-    const dedupeKey = buildDedupeKey(data.latitude, data.longitude, data.createdAt);
-    let assignedAmbulanceId = null;
-    await db.runTransaction(async (tx) => {
-        const dupSnap = await tx.get(db.collection('incidents')
-            .where('patientUid', '==', data.patientUid)
-            .where('dedupeKey', '==', dedupeKey)
-            .where('status', 'in', [INCIDENT_STATUS.ASSIGNED, INCIDENT_STATUS.ON_MISSION])
-            .limit(1));
-        if (!dupSnap.empty) {
-            tx.update(snap.ref, {
-                status: INCIDENT_STATUS.DUPLICATE,
-                dedupeKey,
-                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            });
-            return;
-        }
-        const available = await getAvailableAmbulances(tx);
-        console.log(`[incident] Available ambulances: ${available.length}`);
-        const result = findNearest(available, data.latitude, data.longitude);
-        if (!result) {
-            tx.update(snap.ref, {
-                status: INCIDENT_STATUS.PENDING,
-                dedupeKey,
-                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            });
-            console.log(`[incident] No ambulance available → pending`);
-            return;
-        }
-        await applyAssignment(tx, snap.ref, result.doc, incidentId, 'incident');
-        tx.update(snap.ref, { dedupeKey });
-        assignedAmbulanceId = result.doc.id;
-        console.log(`[incident] ${incidentId} → ambulance ${result.doc.id} (${result.distKm.toFixed(1)}km)`);
-    });
-    // Send FCM (outside transaction)
-    if (assignedAmbulanceId) {
-        const ambDoc = await db.collection('ambulances').doc(assignedAmbulanceId).get();
-        const amb = ambDoc.data();
-        if (amb?.fcmToken) {
-            await sendFcm(amb.fcmToken, '📋 بلاغ حادث جديد', `${data.patientName ?? 'مريض'} — ${data.address || 'تحقق من الموقع'}`, {
-                incidentId,
-                incidentType: 'incident',
-                displayId: data.shortId ?? incidentId.substring(0, 8),
-                patientName: data.patientName ?? '',
-                latitude: String(data.latitude),
-                longitude: String(data.longitude),
-            }, 'incidents_channel');
-            await saveNotification(assignedAmbulanceId, '📋 بلاغ حادث جديد', `تم تعيينك للمريض ${data.patientName ?? 'غير محدد'}`, 'incident_assigned', incidentId, 'incident', { patientName: data.patientName, latitude: data.latitude, longitude: data.longitude });
-        }
+    catch (err) {
+        console.error(`[autoAssignIncident] ${incidentId}:`, err);
     }
 });
 // ═══════════════════════════════════════════════════════════════════
-// FUNCTION 3: RETRY PENDING (every 3 minutes)
+// STATUS MACHINE — validates every transition, reverts illegal ones,
+// syncs the ambulance, writes ambulance_history, notifies the citizen.
 // ═══════════════════════════════════════════════════════════════════
+exports.onCriticalStatusChanged = (0, firestore_1.onDocumentUpdated)('criticals/{incidentId}', async (event) => {
+    if (!event.data)
+        return;
+    try {
+        await (0, statusMachine_1.handleIncidentStatusChange)(event.data.before.data(), event.data.after.data(), event.data.after.ref, event.params.incidentId, contract_1.COLLECTIONS.criticals);
+    }
+    catch (err) {
+        console.error(`[onCriticalStatusChanged] ${event.params.incidentId}:`, err);
+    }
+});
+exports.onIncidentStatusChanged = (0, firestore_1.onDocumentUpdated)('incidents/{incidentId}', async (event) => {
+    if (!event.data)
+        return;
+    try {
+        await (0, statusMachine_1.handleIncidentStatusChange)(event.data.before.data(), event.data.after.data(), event.data.after.ref, event.params.incidentId, contract_1.COLLECTIONS.incidents);
+    }
+    catch (err) {
+        console.error(`[onIncidentStatusChanged] ${event.params.incidentId}:`, err);
+    }
+});
+// ═══════════════════════════════════════════════════════════════════
+// RETRY PENDING (every 3 minutes) — caps at 5 attempts, then alerts admins
+// ═══════════════════════════════════════════════════════════════════
+const MAX_RETRY_ATTEMPTS = 5;
 exports.retryPending = (0, scheduler_1.onSchedule)('every 3 minutes', async () => {
     const [critSnap, incSnap] = await Promise.all([
-        db.collection('criticals').where('status', '==', INCIDENT_STATUS.PENDING).get(),
-        db.collection('incidents').where('status', '==', INCIDENT_STATUS.PENDING).get(),
+        db.collection(contract_1.COLLECTIONS.criticals).where(contract_1.INCIDENT_FIELDS.status, '==', contract_1.INCIDENT_STATUS.pending).get(),
+        db.collection(contract_1.COLLECTIONS.incidents).where(contract_1.INCIDENT_FIELDS.status, '==', contract_1.INCIDENT_STATUS.pending).get(),
     ]);
-    const allPending = [
-        ...critSnap.docs.map(d => ({ doc: d, type: 'critical' })),
-        ...incSnap.docs.map(d => ({ doc: d, type: 'incident' })),
+    const all = [
+        ...critSnap.docs.map(doc => ({ doc, collection: contract_1.COLLECTIONS.criticals })),
+        ...incSnap.docs.map(doc => ({ doc, collection: contract_1.COLLECTIONS.incidents })),
     ];
-    console.log(`[retry] ${allPending.length} pending incidents`);
-    for (const { doc, type } of allPending) {
-        const data = doc.data();
-        if (!data.latitude || !data.longitude)
-            continue;
+    console.log(`[retryPending] ${all.length} pending incidents`);
+    for (const { doc, collection } of all) {
         try {
-            await db.runTransaction(async (tx) => {
-                const available = await getAvailableAmbulances(tx);
-                const result = findNearest(available, data.latitude, data.longitude);
-                if (!result)
-                    return;
-                await applyAssignment(tx, doc.ref, result.doc, doc.id, type);
-                console.log(`[retry] ${doc.id} → ${result.doc.id}`);
-            });
-        }
-        catch (err) {
-            console.error(`[retry] Failed for ${doc.id}:`, err);
-        }
-    }
-});
-// ═══════════════════════════════════════════════════════════════════
-// FUNCTION 4: MANUAL ASSIGN FROM DASHBOARD (Callable)
-// ═══════════════════════════════════════════════════════════════════
-exports.manualAssign = (0, https_1.onCall)(async (request) => {
-    if (!request.auth)
-        throw new https_1.HttpsError('unauthenticated', 'Not authenticated');
-    const { incidentId, incidentType, ambulanceId } = request.data;
-    if (!incidentId || !incidentType || !ambulanceId) {
-        throw new https_1.HttpsError('invalid-argument', 'Missing fields');
-    }
-    const collection = incidentType === 'critical' ? 'criticals' : 'incidents';
-    const incidentRef = db.collection(collection).doc(incidentId);
-    const ambDoc = await db.collection('ambulances').doc(ambulanceId).get();
-    if (!ambDoc.exists)
-        throw new https_1.HttpsError('not-found', 'Ambulance not found');
-    await db.runTransaction(async (tx) => {
-        const incSnap = await tx.get(incidentRef);
-        if (!incSnap.exists)
-            throw new https_1.HttpsError('not-found', 'Incident not found');
-        // Release previous ambulance if reassigning
-        const prevAmbId = incSnap.data()?.assignedAmbulanceId;
-        if (prevAmbId && prevAmbId !== ambulanceId) {
-            tx.update(db.collection('ambulances').doc(prevAmbId), {
-                status: AMBULANCE_STATUS.AVAILABLE,
-                currentIncidentId: null,
-                currentIncidentType: null,
+            const data = doc.data();
+            const currentRetryCount = (data[contract_1.INCIDENT_FIELDS.retryCount] ?? 0);
+            if (currentRetryCount >= MAX_RETRY_ATTEMPTS)
+                continue; // already alerted; wait for manual assign
+            const ambulanceId = await (0, autoAssign_1.tryAutoAssign)(doc.id, collection);
+            if (ambulanceId) {
+                await afterAssignment(doc.id, collection, ambulanceId);
+                continue;
+            }
+            const newCount = currentRetryCount + 1;
+            await doc.ref.update({
+                [contract_1.INCIDENT_FIELDS.retryCount]: newCount,
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
+            if (newCount >= MAX_RETRY_ATTEMPTS) {
+                await (0, notify_1.notifyAdminsNoAmbulanceAvailable)(doc.id, collection, data[contract_1.INCIDENT_FIELDS.shortId], newCount);
+            }
         }
-        await applyAssignment(tx, incidentRef, ambDoc, incidentId, incidentType);
-    });
-    // Notify
-    const amb = ambDoc.data();
-    if (amb.fcmToken) {
-        const incSnap = await incidentRef.get();
-        const inc = incSnap.data();
-        await sendFcm(amb.fcmToken, incidentType === 'critical' ? '🚨 تعيين طوارئ يدوي' : '📋 تعيين حادث يدوي', `تم تعيينك للمريض ${inc.patientName ?? ''}`, { incidentId, incidentType, patientName: inc.patientName ?? '' });
+        catch (err) {
+            console.error(`[retryPending] failed for ${collection}/${doc.id}:`, err);
+        }
     }
-    return { success: true };
 });
 // ═══════════════════════════════════════════════════════════════════
-// FUNCTION 5: MARK NOTIFICATION READ (Callable)
+// MANUAL ASSIGN / REASSIGN (dashboard — the ONLY callable it uses for both)
 // ═══════════════════════════════════════════════════════════════════
-exports.markNotificationRead = (0, https_1.onCall)(async (request) => {
-    if (!request.auth)
-        throw new https_1.HttpsError('unauthenticated', 'Not authenticated');
-    const { notificationId } = request.data;
-    if (!notificationId)
-        throw new https_1.HttpsError('invalid-argument', 'notificationId required');
-    await db.collection('notifications').doc(notificationId).update({
-        isRead: true,
-        readAt: admin.firestore.FieldValue.serverTimestamp(),
+exports.manualAssign = (0, https_1.onCall)(async (request) => {
+    const callerUid = request.auth?.uid;
+    const dashboardUser = await requireDashboardUser(callerUid, ['admin', 'operator']);
+    const { incidentId, incidentCollection, ambulanceId, force } = request.data;
+    if (!incidentId || !incidentCollection || !ambulanceId) {
+        throw new https_1.HttpsError('invalid-argument', 'incidentId, incidentCollection, and ambulanceId are required');
+    }
+    if (incidentCollection !== contract_1.COLLECTIONS.criticals && incidentCollection !== contract_1.COLLECTIONS.incidents) {
+        throw new https_1.HttpsError('invalid-argument', 'incidentCollection must be "criticals" or "incidents"');
+    }
+    const forceOverride = force === true && dashboardUser.role === 'admin';
+    const incidentRef = db.collection(incidentCollection).doc(incidentId);
+    const ambulanceRef = db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId);
+    let releasedPreviousAmbulanceId = null;
+    await db.runTransaction(async (tx) => {
+        const [incSnap, ambSnap, trackingSnap] = await Promise.all([
+            tx.get(incidentRef),
+            tx.get(ambulanceRef),
+            tx.get(db.collection(contract_1.COLLECTIONS.tracking).doc(ambulanceId)),
+        ]);
+        if (!incSnap.exists)
+            throw new https_1.HttpsError('not-found', 'Incident not found');
+        if (!ambSnap.exists)
+            throw new https_1.HttpsError('not-found', 'Ambulance not found');
+        if (!forceOverride) {
+            const tracking = trackingSnap.exists ? trackingSnap.data() : null;
+            const eligible = (0, geo_1.isAmbulanceEligible)(ambSnap.data(), tracking, admin.firestore.Timestamp.now());
+            if (!eligible) {
+                throw new https_1.HttpsError('failed-precondition', 'Ambulance is not currently eligible (offline, busy, or stale location). Pass force:true as an admin to override.');
+            }
+        }
+        const prevAmbulanceId = incSnap.data()?.[contract_1.INCIDENT_FIELDS.assignedAmbulanceId];
+        if (prevAmbulanceId && prevAmbulanceId !== ambulanceId) {
+            (0, assignment_1.releaseAmbulanceInTx)(tx, prevAmbulanceId);
+            releasedPreviousAmbulanceId = prevAmbulanceId;
+        }
+        (0, assignment_1.applyAssignment)(tx, incidentRef, incidentId, incidentCollection, ambSnap, callerUid);
     });
-    return { success: true };
+    await afterAssignment(incidentId, incidentCollection, ambulanceId);
+    return { success: true, releasedPreviousAmbulanceId };
 });
 // ═══════════════════════════════════════════════════════════════════
-// FUNCTION 6: RELEASE AMBULANCE (Callable — dashboard)
+// RELEASE AMBULANCE (dashboard — admin or operator)
 // ═══════════════════════════════════════════════════════════════════
 exports.releaseAmbulance = (0, https_1.onCall)(async (request) => {
-    if (!request.auth)
-        throw new https_1.HttpsError('unauthenticated', 'Not authenticated');
+    await requireDashboardUser(request.auth?.uid, ['admin', 'operator']);
     const { ambulanceId } = request.data;
     if (!ambulanceId)
         throw new https_1.HttpsError('invalid-argument', 'ambulanceId required');
-    await db.collection('ambulances').doc(ambulanceId).update({
-        status: AMBULANCE_STATUS.AVAILABLE,
+    await db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId).update({
+        status: 'available',
         currentIncidentId: null,
         currentIncidentType: null,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -409,49 +220,141 @@ exports.releaseAmbulance = (0, https_1.onCall)(async (request) => {
     return { success: true };
 });
 // ═══════════════════════════════════════════════════════════════════
-// FUNCTION 7: CREATE AMBULANCES ACCOUNT (Admin/Dashboard)
+// AMBULANCE ACCOUNT MANAGEMENT (dashboard — admin only)
 // ═══════════════════════════════════════════════════════════════════
-exports.createAmbulancesAccount = (0, https_1.onCall)(async (request) => {
-    if (!request.auth)
-        throw new https_1.HttpsError('unauthenticated', 'Not authenticated');
-    // In a real app, check for admin custom claim here
-    const { ambulancesId, email, password, driverName, phone, area, baseLocation } = request.data;
-    if (!ambulancesId || !email || !password) {
-        throw new https_1.HttpsError('invalid-argument', 'Missing required fields (ambulancesId, email, password)');
+exports.createAmbulanceAccount = (0, https_1.onCall)(async (request) => {
+    await requireDashboardUser(request.auth?.uid, ['admin']);
+    const { ambulanceId, email, password, driverName, phone, area, baseLocation } = request.data;
+    if (!ambulanceId || !email || !password || !baseLocation) {
+        throw new https_1.HttpsError('invalid-argument', 'Missing required fields: ambulanceId, email, password, baseLocation');
     }
     try {
-        // 1. Create Auth User
         const userRecord = await admin.auth().createUser({
             email,
             password,
-            phoneNumber: phone,
+            phoneNumber: phone || undefined,
             displayName: driverName,
         });
-        // 2. Set Custom Claims
-        await admin.auth().setCustomUserClaims(userRecord.uid, {
-            role: 'ambulances',
-            ambulancesId: ambulancesId,
-        });
-        // 3. Create Firestore Doc in 'ambulances'
-        await db.collection('ambulances').doc(ambulancesId).set({
+        await admin.auth().setCustomUserClaims(userRecord.uid, { role: 'ambulance', ambulanceId });
+        const batch = db.batch();
+        batch.set(db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId), {
             uid: userRecord.uid,
-            ambulancesId,
-            email,
-            driverName,
-            phone,
-            area,
+            ambulanceId,
+            driverName: driverName ?? '',
+            area: area ?? '',
             baseLocation,
-            currentLocation: baseLocation, // initial location is base
-            status: 'available',
             isOnline: false,
+            status: 'available',
+            currentIncidentId: null,
+            currentIncidentType: null,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
+        batch.set(db.collection(contract_1.COLLECTIONS.ambulancePrivate).doc(ambulanceId), {
+            email,
+            phone: phone ?? null,
+            fcmToken: null,
+        });
+        await batch.commit();
+        return { success: true, uid: userRecord.uid, ambulanceId };
+    }
+    catch (err) {
+        console.error('[createAmbulanceAccount] error:', err);
+        if (err.code === 'auth/email-already-exists')
+            throw new https_1.HttpsError('already-exists', 'Email already registered');
+        throw new https_1.HttpsError('internal', err.message || 'Failed to create account');
+    }
+});
+exports.deleteAmbulanceAccount = (0, https_1.onCall)(async (request) => {
+    await requireDashboardUser(request.auth?.uid, ['admin']);
+    const { ambulanceId } = request.data;
+    if (!ambulanceId)
+        throw new https_1.HttpsError('invalid-argument', 'ambulanceId required');
+    const ambSnap = await db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId).get();
+    if (!ambSnap.exists)
+        throw new https_1.HttpsError('not-found', 'Ambulance not found');
+    const uid = ambSnap.data()?.uid;
+    if (uid) {
+        try {
+            await admin.auth().updateUser(uid, { disabled: true });
+        }
+        catch (err) {
+            console.warn(`[deleteAmbulanceAccount] could not disable Auth user ${uid}:`, err);
+        }
+    }
+    const batch = db.batch();
+    batch.delete(db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId));
+    batch.delete(db.collection(contract_1.COLLECTIONS.ambulancePrivate).doc(ambulanceId));
+    batch.delete(db.collection(contract_1.COLLECTIONS.tracking).doc(ambulanceId));
+    await batch.commit();
+    return { success: true };
+});
+// ═══════════════════════════════════════════════════════════════════
+// DASHBOARD USER MANAGEMENT (admin only)
+// ═══════════════════════════════════════════════════════════════════
+exports.createDashboardUser = (0, https_1.onCall)(async (request) => {
+    await requireDashboardUser(request.auth?.uid, ['admin']);
+    const { email, password, name, role } = request.data;
+    if (!email || !password || !name || !['admin', 'operator'].includes(role)) {
+        throw new https_1.HttpsError('invalid-argument', 'Missing/invalid fields: email, password, name, role');
+    }
+    try {
+        const userRecord = await admin.auth().createUser({ email, password, displayName: name });
+        await admin.auth().setCustomUserClaims(userRecord.uid, { role: 'dashboard', dashboardRole: role });
+        await db.collection(contract_1.COLLECTIONS.dashboardUsers).doc(userRecord.uid).set({
+            role,
+            name,
+            email,
+            active: true,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
         return { success: true, uid: userRecord.uid };
     }
-    catch (error) {
-        console.error('[createAmbulancesAccount] Error:', error);
-        throw new https_1.HttpsError('internal', error.message || 'Failed to create account');
+    catch (err) {
+        console.error('[createDashboardUser] error:', err);
+        if (err.code === 'auth/email-already-exists')
+            throw new https_1.HttpsError('already-exists', 'Email already registered');
+        throw new https_1.HttpsError('internal', err.message || 'Failed to create dashboard user');
     }
+});
+exports.setDashboardUserActive = (0, https_1.onCall)(async (request) => {
+    await requireDashboardUser(request.auth?.uid, ['admin']);
+    const { uid, active } = request.data;
+    if (!uid || typeof active !== 'boolean')
+        throw new https_1.HttpsError('invalid-argument', 'uid and active are required');
+    await db.collection(contract_1.COLLECTIONS.dashboardUsers).doc(uid).update({ active });
+    try {
+        await admin.auth().updateUser(uid, { disabled: !active });
+    }
+    catch (err) {
+        console.warn(`[setDashboardUserActive] could not toggle Auth disabled for ${uid}:`, err);
+    }
+    return { success: true };
+});
+// ═══════════════════════════════════════════════════════════════════
+// MARK NOTIFICATION READ
+// ═══════════════════════════════════════════════════════════════════
+exports.markNotificationRead = (0, https_1.onCall)(async (request) => {
+    if (!request.auth)
+        throw new https_1.HttpsError('unauthenticated', 'Not authenticated');
+    const { notificationId } = request.data;
+    if (!notificationId)
+        throw new https_1.HttpsError('invalid-argument', 'notificationId required');
+    const ref = db.collection(contract_1.COLLECTIONS.notifications).doc(notificationId);
+    const snap = await ref.get();
+    if (!snap.exists)
+        throw new https_1.HttpsError('not-found', 'Notification not found');
+    const data = snap.data();
+    const isOwnNotification = data.recipientId === request.auth.uid;
+    let isDashboardCaller = false;
+    if (data.recipientRole === 'admin') {
+        const dashSnap = await db.collection(contract_1.COLLECTIONS.dashboardUsers).doc(request.auth.uid).get();
+        isDashboardCaller = dashSnap.exists && dashSnap.data()?.active === true;
+    }
+    if (!isOwnNotification && !isDashboardCaller) {
+        throw new https_1.HttpsError('permission-denied', 'Not your notification');
+    }
+    await ref.update({ isRead: true, readAt: admin.firestore.FieldValue.serverTimestamp() });
+    return { success: true };
 });
 //# sourceMappingURL=index.js.map

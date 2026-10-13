@@ -56,8 +56,10 @@ export type IncidentStatus = typeof INCIDENT_STATUS[keyof typeof INCIDENT_STATUS
 export type AmbulanceStatus = typeof AMBULANCE_STATUS[keyof typeof AMBULANCE_STATUS];
 export type IncidentKind = 'critical' | 'incident';
 
+export type IncidentCollection = typeof COLLECTIONS.criticals | typeof COLLECTIONS.incidents;
+
 /** Which collection a 'critical' vs 'incident' kind lives in. ONE helper, used everywhere. */
-export function incidentCollectionFor(kind: IncidentKind): string {
+export function incidentCollectionFor(kind: IncidentKind): IncidentCollection {
   return kind === 'critical' ? COLLECTIONS.criticals : COLLECTIONS.incidents;
 }
 
