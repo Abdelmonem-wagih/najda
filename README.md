@@ -316,3 +316,11 @@ firebase deploy --only storage
 # npx tsx najda_functions/scripts/migrate-v1.ts          (dry run)
 # npx tsx najda_functions/scripts/migrate-v1.ts --apply   (writes data)
 ```
+
+### Contract check
+
+`npm run check:contract` verifies `najda_functions/src/contract.ts`, `lib/core/constants/firestore_contract.dart`, and the dashboard's `src/lib/contract.js` all declare the same collection names and status enums. If the dashboard repo isn't checked out as a sibling directory (`../najda-dashboard`), point at it explicitly:
+
+```bash
+DASHBOARD_CONTRACT="/path/to/najda-dashboard/src/lib/contract.js" npm run check:contract
+```

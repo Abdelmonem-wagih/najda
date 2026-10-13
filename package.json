@@ -1,0 +1,8 @@
+{
+  "name": "najda-repo-tools",
+  "private": true,
+  "description": "Repo-level Node scripts for the Najda Flutter app (not a Node app). No runtime deps — check-contract.mjs uses only Node built-ins.",
+  "scripts": {
+    "check:contract": "node scripts/check-contract.mjs"
+  }
+}
