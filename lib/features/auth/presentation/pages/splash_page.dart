@@ -52,7 +52,7 @@ class _SplashPageState extends State<SplashPage>
         if (state is AuthAuthenticated) {
           final route = state.user.isCitizen
               ? AppRoutes.citizenHome
-              : AppRoutes.paramedicHome;
+              : AppRoutes.ambulanceHome;
           Navigator.pushReplacementNamed(context, route);
         } else if (state is AuthNeedsRegistration) {
           Navigator.pushReplacementNamed(

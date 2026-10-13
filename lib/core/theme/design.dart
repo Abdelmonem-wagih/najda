@@ -1,62 +1,67 @@
 import 'package:flutter/material.dart';
 
 // ═══════════════════════════════════════════════════════════════════
-// NAJDA V2 — Design System
-// Direction: Medical-grade dark command center. Navy-black base,
-// electric teal accent, critical red for emergencies.
-// Signature: Frosted glass cards over dark gradient backgrounds.
+// NAJDA V3 — Design System (Light Edition)
+// Direction: Clean, medical-grade, accessible.
+// Navy/White base with high-contrast electric accents.
 // ═══════════════════════════════════════════════════════════════════
 
 class NC {
   NC._();
 
-  // ── Palette ────────────────────────────────────────────────────────
-  static const Color base        = Color(0xFF050F1A); // near-black navy
-  static const Color surface     = Color(0xFF0B1929); // dark navy
-  static const Color card        = Color(0xFF0F2236); // card bg
-  static const Color cardBorder  = Color(0xFF1E3A52); // subtle border
-  static const Color overlay     = Color(0xFF162D44); // hover/pressed
+  // ── Palette (Light Mode Focused) ───────────────────────────────────
+  static const Color base        = Color(0xFFF8FAFC); // background
+  static const Color surface     = Color(0xFFFFFFFF); // surface
+  static const Color card        = Color(0xFFFFFFFF); // card bg
+  static const Color cardBorder  = Color(0xFFE2E8F0); // subtle border
+  static const Color overlay     = Color(0xFFF1F5F9); // hover/pressed
 
-  static const Color primary     = Color(0xFF00C2FF); // electric teal/cyan
-  static const Color primaryDim  = Color(0xFF006D8F); // muted teal
-  static const Color critical    = Color(0xFFFF3B55); // vivid red
-  static const Color criticalDim = Color(0xFF7A1120); // muted red
-  static const Color warning     = Color(0xFFFFB800); // amber
-  static const Color success     = Color(0xFF00E096); // mint green
+  static const Color primary     = Color(0xFF007AFF); // classic medical blue
+  static const Color primaryDim  = Color(0xFF0056B3); // muted blue
+  static const Color critical    = Color(0xFFE11D48); // vivid red
+  static const Color criticalDim = Color(0xFF9F1239); // muted red
+  static const Color warning     = Color(0xFFF59E0B); // amber
+  static const Color success     = Color(0xFF10B981); // emerald green
 
-  static const Color textHigh    = Color(0xFFF0F7FF); // primary text
-  static const Color textMid     = Color(0xFF8FAEC8); // secondary text
-  static const Color textLow     = Color(0xFF3D6280); // disabled/hint
+  static const Color textHigh    = Color(0xFF0F172A); // primary text
+  static const Color textMid     = Color(0xFF475569); // secondary text
+  static const Color textLow     = Color(0xFF94A3B8); // disabled/hint
 
   // ── Gradients ──────────────────────────────────────────────────────
   static const LinearGradient bgGrad = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF050F1A), Color(0xFF081624)],
+    colors: [Color(0xFFF8FAFC), Color(0xFFEFF6FF)],
   );
 
   static const LinearGradient primaryGrad = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF00C2FF), Color(0xFF0074FF)],
+    colors: [Color(0xFF007AFF), Color(0xFF0056B3)],
   );
 
   static const LinearGradient criticalGrad = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFFF3B55), Color(0xFFD4003C)],
+    colors: [Color(0xFFE11D48), Color(0xFF9F1239)],
   );
 
   static const LinearGradient successGrad = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF00E096), Color(0xFF00A86B)],
+    colors: [Color(0xFF10B981), Color(0xFF059669)],
   );
 
   static const LinearGradient cardGrad = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF0F2236), Color(0xFF0B1929)],
+    colors: [Color(0xFFFFFFFF), Color(0xFFF8FAFC)],
+  );
+
+  static const LinearGradient accentGradient = LinearGradient(
+    colors: [Color(0xFF378ADD), Color(0xFF185FA5)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
   );
 
   // ── Typography ─────────────────────────────────────────────────────
@@ -90,8 +95,8 @@ class NC {
       );
 
   static TextStyle inputText() => const TextStyle(
-        fontFamily: 'PlusJakartaSans',
-        color: Color(0xFFF0F7FF),
+        fontFamily: font,
+        color: textHigh,
         fontSize: 15,
         fontWeight: FontWeight.w400,
       );
@@ -101,21 +106,21 @@ class NC {
 // THEME
 // ═══════════════════════════════════════════════════════════════════
 class NajdaTheme {
-  static ThemeData get dark => ThemeData(
+  static ThemeData get light => ThemeData(
     useMaterial3: true,
     fontFamily: NC.font,
-    brightness: Brightness.dark,
+    brightness: Brightness.light,
     scaffoldBackgroundColor: NC.base,
-    colorScheme: const ColorScheme.dark(
+    colorScheme: const ColorScheme.light(
       primary: NC.primary,
       secondary: NC.success,
       error: NC.critical,
       surface: NC.surface,
-      onPrimary: NC.base,
+      onPrimary: Colors.white,
       onSurface: NC.textHigh,
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: Colors.transparent,
+      backgroundColor: NC.surface,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: true,
@@ -124,51 +129,40 @@ class NajdaTheme {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFF0F2236),
+      fillColor: NC.surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFF1E3A52), width: 1),
+        borderSide: const BorderSide(color: NC.cardBorder, width: 1),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFF1E3A52), width: 1),
+        borderSide: const BorderSide(color: NC.cardBorder, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFF00C2FF), width: 1.5),
+        borderSide: const BorderSide(color: NC.primary, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFFF3B55)),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFFFF3B55), width: 1.5),
+        borderSide: const BorderSide(color: NC.critical),
       ),
       hintStyle: TextStyle(
-        fontFamily: 'PlusJakartaSans',
-        color: Color(0xFF3D6280),
+        fontFamily: NC.font,
+        color: NC.textLow,
         fontSize: 14,
         fontWeight: FontWeight.w400,
       ),
       labelStyle: TextStyle(
-        fontFamily: 'PlusJakartaSans',
-        color: Color(0xFF8FAEC8),
+        fontFamily: NC.font,
+        color: NC.textMid,
         fontSize: 14,
       ),
-      errorStyle: TextStyle(
-        fontFamily: 'PlusJakartaSans',
-        color: Color(0xFFFF3B55),
-        fontSize: 12,
-      ),
-      prefixIconColor: Color(0xFF00C2FF),
-      suffixIconColor: Color(0xFF3D6280),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: NC.primary,
-        foregroundColor: NC.base,
+        foregroundColor: Colors.white,
         elevation: 0,
         minimumSize: const Size(double.infinity, 54),
         shape: RoundedRectangleBorder(
@@ -185,7 +179,7 @@ class NajdaTheme {
 // SHARED WIDGETS
 // ═══════════════════════════════════════════════════════════════════
 
-/// Glassmorphism card with dark base
+/// Professional card with subtle shadow and border
 class GlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -209,13 +203,13 @@ class GlassCard extends StatelessWidget {
       child: Container(
         padding: padding ?? const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          gradient: NC.cardGrad,
+          color: NC.surface,
           borderRadius: BorderRadius.circular(radius),
           border: Border.all(color: borderColor ?? NC.cardBorder, width: 1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 16,
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
@@ -226,7 +220,7 @@ class GlassCard extends StatelessWidget {
   }
 }
 
-/// Gradient button (full-width or custom size)
+/// Gradient button
 class GradientButton extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
@@ -260,9 +254,9 @@ class GradientButton extends StatelessWidget {
               ? null
               : [
             BoxShadow(
-              color: gradient.colors.first.withOpacity(0.35),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
+              color: gradient.colors.first.withOpacity(0.25),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
@@ -273,21 +267,18 @@ class GradientButton extends StatelessWidget {
             height: 22,
             child: CircularProgressIndicator(
               strokeWidth: 2.5,
-              valueColor: AlwaysStoppedAnimation(NC.textHigh),
+              valueColor: AlwaysStoppedAnimation(Colors.white),
             ),
           )
               : Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[
-                Icon(icon, color: NC.base, size: 20),
+                Icon(icon, color: Colors.white, size: 20),
                 const SizedBox(width: 10),
               ],
               Text(label,
-                  style: NC.label(16,
-                      color: gradient == NC.criticalGrad
-                          ? Colors.white
-                          : NC.base)),
+                  style: NC.label(16, color: Colors.white)),
             ],
           ),
         ),
@@ -296,7 +287,7 @@ class GradientButton extends StatelessWidget {
   }
 }
 
-/// Status badge — dark variant
+/// Status badge — high visibility
 class StatusBadge extends StatelessWidget {
   final String status;
 
@@ -308,9 +299,9 @@ class StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withOpacity(0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(label,
           style: NC.label(11, color: color, weight: FontWeight.w700)),
@@ -324,11 +315,13 @@ class StatusBadge extends StatelessWidget {
         return (NC.warning, 'قيد الانتظار');
       case 'assigned':
         return (NC.primary, 'مُعيَّن');
+      case 'on_mission':
       case 'in_progress':
       case 'OnMission':
-        return (NC.success, 'جارٍ');
+        return (NC.success, 'في الطريق');
       case 'arrived':
-        return (NC.primary, 'وصل');
+        return (const Color(0xFF00C2FF), 'وصل للمريض');
+      case 'to_hospital':
       case 'onTheWayToHospital':
         return (const Color(0xFFBB86FC), 'للمستشفى');
       case 'completed':
@@ -360,9 +353,8 @@ class NajdaEmpty extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              color: NC.card,
+              color: NC.overlay,
               shape: BoxShape.circle,
-              border: Border.all(color: NC.cardBorder),
             ),
             child: Icon(icon, size: 40, color: NC.textLow),
           ),

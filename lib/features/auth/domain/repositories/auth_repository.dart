@@ -25,7 +25,7 @@ abstract class AuthRepository {
   });
   Future<AppUser> signInWithEmail(String email, String password);
   Future<void> signOut();
-  Future<void> updateParamedicFcmToken(String paramedicId);
+  Future<void> updateAmbulanceFcmToken(String ambulanceId);
   Future<AppUser> signInWithCredential(AuthCredential credential);
   Future<AppUser> updateProfile({
     required String uid,

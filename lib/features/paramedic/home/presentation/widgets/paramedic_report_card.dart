@@ -8,11 +8,11 @@ import '../../../../../core/shared/widgets/app_widgets.dart';
 import '../../../../../core/l10n/generated/app_localizations.dart';
 import '../../../../citizen/report/data/models/incident_model.dart';
 
-class ParamedicReportCard extends StatelessWidget {
+class AmbulanceReportCard extends StatelessWidget {
   final IncidentModel report;
   final VoidCallback onTap;
 
-  const ParamedicReportCard({
+  const AmbulanceReportCard({
     super.key,
     required this.report,
     required this.onTap,

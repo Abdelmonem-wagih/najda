@@ -24,7 +24,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get loginAsCitizen => 'مواطن';
 
   @override
-  String get loginAsParamedic => 'مسعف';
+  String get loginAsAmbulance => 'الإسعاف';
 
   @override
   String get phoneNumber => 'رقم الهاتف';
@@ -100,7 +100,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get close => 'إغلاق';
 
   @override
-  String get paramedicInfo => 'حسابات المسعفين يُنشئها مشرف النظام فقط';
+  String get ambulanceInfo => 'حسابات الإسعاف يُنشئها مشرف النظام فقط';
 
   @override
   String get newUserPrompt => 'ليس لديك حساب؟';
@@ -251,8 +251,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get typeMessageHint => 'اكتب سؤالك هنا...';
 
   @override
-  String get paramedicWelcome =>
-      'مرحباً أيها المسعف! 🏥\n\nأنا مساعدك الطبي الميداني. يمكنني مساعدتك في البروتوكولات والجرعات والتفاعلات الدوائية.\n\nاسألني أي سؤال طبي.';
+  String get ambulanceWelcome =>
+      'مرحباً بك في نظام نجدة! 🏥\n\nأنا مساعدك الطبي الميداني. يمكنني مساعدتك في البروتوكولات والجرعات والتفاعلات الدوائية.\n\nاسألني أي سؤال طبي.';
 
   @override
   String get citizenWelcome =>
@@ -364,11 +364,11 @@ class AppLocalizationsAr extends AppLocalizations {
       'اختر التصنيف الأقرب للحالة للمساعدة في الاستجابة';
 
   @override
-  String get injuryDetailsTitle => 'تفاصيل الإصابة';
+  String get injuryDetailsTitle => 'إصابات الحالة';
 
   @override
   String get injuryDetailsSubtitle =>
-      'وصف حالة المصاب يساعد المسعف على الاستعداد';
+      'وصف حالة المصاب يساعد طاقم الإسعاف على الاستعداد';
 
   @override
   String get head => 'الرأس';
@@ -525,7 +525,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get normal_report => 'بلاغ عادي';
 
   @override
-  String paramedicGreeting(String name) {
+  String ambulanceGreeting(String name) {
     return 'مرحباً، $name';
   }
 
@@ -643,16 +643,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get backToAvailable => 'العودة للحالة المتاحة';
 
   @override
-  String get paramedicOnMission => 'في مهمة';
+  String get ambulanceOnMission => 'في مهمة';
 
   @override
-  String get paramedicArrived => 'وصل للمريض';
+  String get ambulanceArrived => 'وصل للمريض';
 
   @override
-  String get paramedicToHospital => 'في طريقه للمستشفى';
+  String get ambulanceToHospital => 'في طريقه للمستشفى';
 
   @override
-  String get paramedicAvailable => 'متاح';
+  String get ambulanceAvailable => 'متاح';
 
   @override
   String get medicalReport => 'التقرير الطبي';
@@ -702,7 +702,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get markAllRead => 'تحديد الكل كمقروء';
 
   @override
-  String get paramedicHistory => 'سجل المهام';
+  String get ambulanceHistory => 'سجل المهام';
 
   @override
   String get missionCompleted => 'مهمة مكتملة';
@@ -886,7 +886,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get ambulanceAssigned => 'تم تعيين سيارة إسعاف';
 
   @override
-  String get paramedicName => 'اسم المسعف';
+  String get ambulanceName => 'معرف الإسعاف';
 
   @override
   String get plateNumberLabel => 'رقم اللوحة';
@@ -937,6 +937,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shareApp => 'مشاركة التطبيق';
 
   @override
+  String get locationSharingActive => 'تتبع الموقع نشط';
+
+  @override
+  String get critical => 'حالة حرجة';
+
+  @override
+  String get incident => 'حادث';
+
+  @override
+  String get emergencyFeed => 'خلاصة الطوارئ';
+
+  @override
+  String get homeTab => 'الرئيسية';
+
+  @override
+  String get historyTab => 'السجل';
+
+  @override
+  String get notificationsTab => 'الإشعارات';
+
+  @override
+  String get profileTab => 'الملف';
+
+  @override
   String get language => 'اللغة';
 
   @override
@@ -961,7 +985,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get roleCitizen => 'مواطن';
 
   @override
-  String get roleParamedic => 'مسعف';
+  String get roleAmbulances => 'الإسعاف';
 
   @override
   String get defaultUserName => 'مستخدم نجدة';
@@ -1019,7 +1043,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get privacyDataCollectionDesc =>
-      '• الموقع الجغرافي (GPS): يتم جمعه فقط عند إرسال بلاغ طوارئ لتحديد موقعك بدقة.\\n• الملف الطبي: المعلومات التي تدخلها (فصيلة الدم، الحساسية، الأمراض المزمنة) لمساعدة المسعفين.\\n• رقم الهاتف: للتحقق من الهوية والتواصل معك عند الضرورة.';
+      '• الموقع الجغرافي (GPS): يتم جمعه فقط عند إرسال بلاغ طوارئ لتحديد موقعك بدقة.\\n• الملف الطبي: المعلومات التي تدخلها (فصيلة الدم، الحساسية، الأمراض المزمنة) لمساعدة طاقم الإسعاف.\\n• رقم الهاتف: للتحقق من الهوية والتواصل معك عند الضرورة.';
 
   @override
   String get privacyDataUsage => 'استخدام البيانات';

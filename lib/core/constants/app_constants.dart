@@ -2,20 +2,20 @@ class AppConstants {
   AppConstants._();
 
   // ─── Firebase Collections ────────────────────────────────────────────────
-  static const String usersCollection            = 'users';
-  static const String incidentsCollection        = 'incidents';
+  static const String citizensCollection         = 'citizens';
   static const String ambulancesCollection       = 'ambulances';
-  static const String paramedicsCollection       = 'paramedics';
+  static const String incidentsCollection        = 'incidents';
   static const String trackingCollection         = 'tracking';
   static const String hospitalsCollection        = 'hospitals';
   static const String assignmentsCollection       = 'assignments';
   static const String notificationsCollection    = 'notifications';
   static const String joinRequestsCollection     = 'join_requests';
+  static const String medicalReportsCollection   = 'medical_reports';
 
   // ─── User Roles ──────────────────────────────────────────────────────────
-  static const String roleCitizen   = 'citizen';
-  static const String roleParamedic = 'paramedic';
-  static const String roleAdmin     = 'admin';
+  static const String roleCitizen    = 'citizen';
+  static const String roleAmbulances = 'ambulances';
+  static const String roleAdmin      = 'admin';
 
   // ─── Incident Status ─────────────────────────────────────────────────────
   static const String statusReported    = 'reported';

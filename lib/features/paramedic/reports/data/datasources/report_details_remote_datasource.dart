@@ -7,11 +7,11 @@ import '../../../../citizen/report/data/models/incident_model.dart';
 abstract class ReportDetailsRemoteDataSource {
   Future<IncidentModel> getReportDetails(String reportId, String reportType);
   Future<void> updateIncidentStatus(String reportId, String reportType, String status);
-  Future<void> updateParamedicStatus(String paramedicId, String status);
+  Future<void> updateAmbulanceStatus(String ambulanceId, String status);
   Future<void> submitMedicalReport({
     required String reportId,
     required String reportType,
-    required AppUser paramedic,
+    required AppUser ambulance,
     required Map<String, String> answers,
     required String notes,
   });
@@ -38,15 +38,16 @@ class ReportDetailsRemoteDataSourceImpl implements ReportDetailsRemoteDataSource
         {
           'event': status,
           'timestamp': DateTime.now(),
-          'actor': 'paramedic', // In a real app, this would be the paramedic's UID
+          'actor': 'ambulance', // In a real app, this would be the ambulance's UID
         }
       ]),
     });
   }
 
   @override
-  Future<void> updateParamedicStatus(String paramedicId, String status) async {
-    await _firestore.collection(AppConstants.paramedicsCollection).doc(paramedicId).update({
+  Future<void> updateAmbulanceStatus(String ambulanceId, String status) async {
+    // 1. Update ambulance doc
+    await _firestore.collection(AppConstants.ambulancesCollection).doc(ambulanceId).update({
       'status': status,
       'updatedAt': FieldValue.serverTimestamp(),
     });
@@ -56,7 +57,7 @@ class ReportDetailsRemoteDataSourceImpl implements ReportDetailsRemoteDataSource
   Future<void> submitMedicalReport({
     required String reportId,
     required String reportType,
-    required AppUser paramedic,
+    required AppUser ambulance,
     required Map<String, String> answers,
     required String notes,
   }) async {
@@ -74,7 +75,7 @@ class ReportDetailsRemoteDataSourceImpl implements ReportDetailsRemoteDataSource
         {
           'event': 'resolved',
           'timestamp': DateTime.now(),
-          'actor': paramedic.id,
+          'actor': ambulance.id,
         }
       ]),
     });

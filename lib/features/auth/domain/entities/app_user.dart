@@ -19,11 +19,18 @@ class MedicalProfile extends Equatable {
 
   factory MedicalProfile.fromMap(Map<String, dynamic>? map) {
     if (map == null) return const MedicalProfile();
+
+    List<String> parseList(dynamic val) {
+      if (val is List) return val.map((e) => e.toString()).toList();
+      if (val is String && val.isNotEmpty) return val.split(',').map((e) => e.trim()).toList();
+      return [];
+    }
+
     return MedicalProfile(
       bloodType: map['bloodType'] as String?,
-      chronicDiseases: List<String>.from(map['chronicDiseases'] ?? []),
-      currentMeds: List<String>.from(map['currentMeds'] ?? map['currentMedications'] ?? []),
-      allergies: List<String>.from(map['allergies'] ?? []),
+      chronicDiseases: parseList(map['chronicDiseases']),
+      currentMeds: parseList(map['currentMeds'] ?? map['currentMedications']),
+      allergies: parseList(map['allergies']),
       notes: map['notes'] as String? ?? map['additionalInfo'] as String?,
     );
   }
@@ -89,13 +96,22 @@ class UserModel extends Equatable {
   final MedicalProfile medicalProfile;
   final EmergencyContact emergencyContactData; // Renamed from emergencyContact
 
-  // Paramedic-specific
-  final String? currentAmbulanceId;
-  final String? status; // "active" | "inactive" | "on_duty" | "off_duty"
-  final bool isAvailable;
+  // Ambulances-specific
+  final bool isOnline;             // true = working shift, false = off duty
+  final String status;             // "available" | "assigned" | "on_mission" | "arrived" | "to_hospital"
+  final String? currentIncidentId;
+  final String? currentIncidentType;  // "incident" | "critical"
+  final String? ambulanceId;
+  final String? plateNumber;
   final String? fcmToken;
   final double? latitude;
   final double? longitude;
+  final double? bearing;
+  final String? area;
+  final Timestamp? lastActiveAt;
+
+  // Backward compatibility getter
+  String? get currentAmbulanceId => ambulanceId;
 
   const UserModel({
     required this.id,
@@ -110,12 +126,18 @@ class UserModel extends Equatable {
     this.updatedAt,
     required this.medicalProfile,
     required this.emergencyContactData,
-    this.currentAmbulanceId,
-    this.status,
-    this.isAvailable = true,
+    this.isOnline = true,
+    this.status = 'available',
+    this.currentIncidentId,
+    this.currentIncidentType,
+    this.ambulanceId,
+    this.plateNumber,
     this.fcmToken,
     this.latitude,
     this.longitude,
+    this.bearing,
+    this.area,
+    this.lastActiveAt,
   });
 
   // Helper for backward compatibility or display
@@ -129,30 +151,58 @@ class UserModel extends Equatable {
   String? get additionalInfo => medicalProfile.notes;
 
 
-  bool get isCitizen => role == 'citizen';
-  bool get isParamedic => role == 'paramedic';
-  bool get isAdmin => role == 'admin';
+  bool get isCitizen => role == AppConstants.roleCitizen;
+  bool get isAmbulances => role == AppConstants.roleAmbulances;
+  bool get isAdmin => role == AppConstants.roleAdmin;
 
   factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
+    // Robust parsing for MedicalProfile
+    MedicalProfile medical;
+    final medRaw = map['medicalProfile'];
+    if (medRaw is Map<String, dynamic>) {
+      medical = MedicalProfile.fromMap(medRaw);
+    } else {
+      medical = const MedicalProfile();
+    }
+
+    // Robust parsing for EmergencyContact (handles legacy String phone)
+    EmergencyContact contact;
+    final contactRaw = map['emergencyContact'];
+    if (contactRaw is Map<String, dynamic>) {
+      contact = EmergencyContact.fromMap(contactRaw);
+    } else if (contactRaw is String) {
+      contact = EmergencyContact(name: 'Emergency Contact', phone: contactRaw);
+    } else {
+      contact = const EmergencyContact(name: '', phone: '');
+    }
+
     return UserModel(
       id: uid,
-      role: map['role'] as String? ?? 'citizen',
-      phoneNumber: map['phoneNumber'] as String?,
+      role: map['role'] as String? ?? '',
+      phoneNumber: (map['phoneNumber'] ?? map['phone']) as String?,
       email: map['email'] as String?,
-      firstName: map['firstName'] as String?,
-      lastName: map['lastName'] as String?,
-      nationalId: map['nationalId'] as String?,
-      profileImageUrl: map['profileImageUrl'] as String?,
+      firstName: (map['firstName'] ?? map['fullName'] ?? '').toString().split(' ').first,
+      lastName: (map['firstName'] ?? map['fullName'] ?? '').toString().contains(' ') 
+          ? (map['firstName'] ?? map['fullName'] ?? '').toString().split(' ').sublist(1).join(' ')
+          : '',
+      nationalId: map['nationalId']?.toString(),
+      profileImageUrl: map['profileImageUrl']?.toString(),
       createdAt: map['createdAt'] as Timestamp?,
       updatedAt: map['updatedAt'] as Timestamp?,
-      medicalProfile: MedicalProfile.fromMap(map['medicalProfile'] as Map<String, dynamic>?),
-      emergencyContactData: EmergencyContact.fromMap(map['emergencyContact'] as Map<String, dynamic>?),
-      currentAmbulanceId: map['currentAmbulanceId'] as String?,
-      status: map['status'] as String?,
-      isAvailable: map['isAvailable'] as bool? ?? true,
-      fcmToken: map['fcmToken'] as String?,
-      latitude: (map['latitude'] as num?)?.toDouble(),
-      longitude: (map['longitude'] as num?)?.toDouble(),
+      medicalProfile: medical,
+      emergencyContactData: contact,
+      isOnline: (map['isOnline'] ?? true) as bool,
+      status: (map['status'] ?? map['availabilityStatus'] ?? 'available').toString(),
+      currentIncidentId: map['currentIncidentId']?.toString(),
+      currentIncidentType: map['currentIncidentType']?.toString(),
+      ambulanceId: (map['ambulanceId'] ?? map['currentAmbulanceId'] ?? map['vehicleId'])?.toString(),
+      plateNumber: map['plateNumber']?.toString(),
+      fcmToken: map['fcmToken']?.toString(),
+      latitude: (map['latitude'] ?? map['lat'] as num?)?.toDouble(),
+      longitude: (map['longitude'] ?? map['lng'] as num?)?.toDouble(),
+      bearing: (map['bearing'] as num?)?.toDouble() ?? 0,
+      area: map['area']?.toString(),
+      lastActiveAt: map['lastActiveAt'] as Timestamp? ?? map['lastSeen'] as Timestamp?,
     );
   }
 
@@ -170,12 +220,20 @@ class UserModel extends Equatable {
       'updatedAt': FieldValue.serverTimestamp(),
       'medicalProfile': medicalProfile.toMap(),
       'emergencyContact': emergencyContactData.toMap(),
-      'currentAmbulanceId': currentAmbulanceId,
+      'isOnline': isOnline,
       'status': status,
-      'isAvailable': isAvailable,
+      'currentIncidentId': currentIncidentId,
+      'currentIncidentType': currentIncidentType,
+      'ambulanceId': ambulanceId,
+      'plateNumber': plateNumber,
       'fcmToken': fcmToken,
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
+      if (latitude != null) 'lat': latitude,
+      if (longitude != null) 'lng': longitude,
+      if (bearing != null) 'bearing': bearing,
+      if (area != null) 'area': area,
+      if (lastActiveAt != null) 'lastActiveAt': lastActiveAt,
     };
   }
 
@@ -192,12 +250,18 @@ class UserModel extends Equatable {
     Timestamp? updatedAt,
     MedicalProfile? medicalProfile,
     EmergencyContact? emergencyContactData,
-    String? currentAmbulanceId,
+    bool? isOnline,
     String? status,
-    bool? isAvailable,
+    String? currentIncidentId,
+    String? currentIncidentType,
+    String? ambulanceId,
+    String? plateNumber,
     String? fcmToken,
     double? latitude,
     double? longitude,
+    double? bearing,
+    String? area,
+    Timestamp? lastActiveAt,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -212,12 +276,18 @@ class UserModel extends Equatable {
       updatedAt: updatedAt ?? this.updatedAt,
       medicalProfile: medicalProfile ?? this.medicalProfile,
       emergencyContactData: emergencyContactData ?? this.emergencyContactData,
-      currentAmbulanceId: currentAmbulanceId ?? this.currentAmbulanceId,
+      isOnline: isOnline ?? this.isOnline,
       status: status ?? this.status,
-      isAvailable: isAvailable ?? this.isAvailable,
+      currentIncidentId: currentIncidentId ?? this.currentIncidentId,
+      currentIncidentType: currentIncidentType ?? this.currentIncidentType,
+      ambulanceId: ambulanceId ?? this.ambulanceId,
+      plateNumber: plateNumber ?? this.plateNumber,
       fcmToken: fcmToken ?? this.fcmToken,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      bearing: bearing ?? this.bearing,
+      area: area ?? this.area,
+      lastActiveAt: lastActiveAt ?? this.lastActiveAt,
     );
   }
 
@@ -235,12 +305,18 @@ class UserModel extends Equatable {
         updatedAt,
         medicalProfile,
         emergencyContactData,
-        currentAmbulanceId,
+        isOnline,
         status,
-        isAvailable,
+        currentIncidentId,
+        currentIncidentType,
+        ambulanceId,
+        plateNumber,
         fcmToken,
         latitude,
         longitude,
+        bearing,
+        area,
+        lastActiveAt,
       ];
 }
 

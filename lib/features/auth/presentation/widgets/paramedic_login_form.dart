@@ -3,13 +3,13 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/l10n/generated/app_localizations.dart';
 
-class ParamedicLoginForm extends StatelessWidget {
+class AmbulanceLoginForm extends StatelessWidget {
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final bool obscurePassword;
   final VoidCallback onTogglePassword;
 
-  const ParamedicLoginForm({
+  const AmbulanceLoginForm({
     super.key,
     required this.emailController,
     required this.passwordController,
@@ -30,7 +30,7 @@ class ParamedicLoginForm extends StatelessWidget {
           keyboardType: TextInputType.emailAddress,
           textDirection: TextDirection.ltr,
           decoration: const InputDecoration(
-            hintText: 'paramedic@najda.eg',
+            hintText: 'ambulance@najda.eg',
             prefixIcon: Icon(Icons.email_outlined, size: 20),
           ),
           validator: (v) {

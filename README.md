@@ -1,6 +1,6 @@
 # نجدة — Najda Unified App
 
-تطبيق موحد للمواطن والمسعف على Flutter. يتغير الـ UI كلياً بناءً على الـ **role** المخزّن في Firestore بعد تسجيل الدخول.
+تطبيق موحد للمواطن والإسعاف على Flutter. يتغير الـ UI كلياً بناءً على الـ **role** المخزّن في Firestore بعد تسجيل الدخول.
 
 ---
 
@@ -23,7 +23,7 @@ lib/
     │       ├── cubit/auth_cubit.dart  ← AuthCubit + AuthState
     │       └── pages/
     │           ├── splash_page.dart
-    │           ├── login_page.dart    ← Tab: Citizen (phone) | Paramedic (email)
+    │           ├── login_page.dart    ← Tab: Citizen (phone) | Ambulance (email)
     │           ├── otp_page.dart
     │           └── registration_page.dart
     ├── citizen/
@@ -34,9 +34,9 @@ lib/
     │   ├── emergency/                 ← EmergencyNumbersPage
     │   └── profile/                   ← CitizenProfilePage
     └── paramedic/
-        ├── home/                      ← ParamedicHomePage (tabs: Emergency | Assigned)
+        ├── home/                      ← AmbulanceHomePage (tabs: Emergency | Assigned)
         ├── reports/                   ← ReportDetailsPage (map + status flow + medical form)
-        ├── notifications/             ← ParamedicNotificationsPage + ParamedicHistoryPage
+        ├── notifications/             ← NotificationsHistoryPage
         └── navigation/                ← NavigationPage stub
 ```
 
@@ -134,12 +134,12 @@ flutter run
 | Collection | الاستخدام |
 |---|---|
 | `citizens` | بيانات المواطنين (phone auth) |
-| `paramedics` | بيانات المسعفين (email auth) |
-| `reports` | البلاغات العادية (من المواطنين) |
-| `emergency_reports` | بلاغات الطوارئ |
-| `medical_reports` | التقارير الطبية (من المسعفين) |
-| `paramedic_history` | سجل مهام المسعفين (تُكتب بـ Cloud Functions) |
-| `notifications` | إشعارات المسعفين |
+| `ambulances` | بيانات الإسعاف (email auth) |
+| `incidents` | البلاغات العادية (من المواطنين) |
+| `criticals` | بلاغات الطوارئ |
+| `medical_reports` | التقارير الطبية (من الإسعاف) |
+| `ambulance_history` | سجل مهام الإسعاف (تُكتب بـ Cloud Functions) |
+| `notifications` | إشعارات الإسعاف |
 | `mission_cancellations` | سجل المهام الملغاة |
 | `ambulances` | بيانات عربيات الإسعاف |
 | `admins` | حسابات الأدمن |
@@ -161,24 +161,22 @@ flutter run
 }
 ```
 
-### هيكل وثيقة `paramedics`
+### هيكل وثيقة `ambulances`
 ```json
 {
-  "role": "paramedic",
-  "email": "paramedic@najda.com",
-  "firstName": "محمد",
-  "lastName": "أحمد",
-  "phoneNumber": "+201XXXXXXXXX",
-  "licenseNumber": "LIC-XXXX",
+  "role": "ambulances",
+  "email": "ambulance@najda.com",
+  "driverName": "محمد أحمد",
+  "phone": "+201XXXXXXXXX",
+  "area": "القاهرة",
   "ambulanceId": "AMB-001",
-  "isAvailable": true,
-  "isActive": true,
+  "isOnline": true,
   "status": "available",
   "fcmToken": "...",
   "latitude": 30.0444,
   "longitude": 31.2357,
-  "assignedReportId": null,
-  "assignedReportType": null,
+  "currentIncidentId": null,
+  "currentIncidentType": null,
   "createdAt": "Timestamp",
   "updatedAt": "Timestamp"
 }
@@ -215,31 +213,30 @@ SplashPage
     ├── Not authenticated → LoginPage
     │       ├── Tab: Citizen  → Phone → OTP → [New user] → RegistrationPage → CitizenHomePage
     │       │                                [Existing]  → CitizenHomePage
-    │       └── Tab: Paramedic → Email + Password → ParamedicHomePage
+    │       └── Tab: Ambulance → Email + Password → AmbulanceHomePage
     │
     └── Authenticated
             ├── role = "citizen"   → CitizenHomePage
-            └── role = "paramedic" → ParamedicHomePage
+            └── role = "ambulances" → AmbulanceHomePage
 ```
 
 ---
 
-## إضافة مسعفين
+## إضافة طواقم الإسعاف
 
-المسعفون **لا** يسجّلون بأنفسهم — يُضافون يدوياً من الـ Dashboard أو Cloud Functions:
+الإسعاف **لا** يسجّلون بأنفسهم — يُضافون يدوياً من الـ Dashboard أو Cloud Functions:
 
 ```javascript
 // Cloud Function / Admin script
 await admin.auth().createUser({ email, password });
-await db.collection('paramedics').doc(uid).set({
-  role: 'paramedic',
+await db.collection('ambulances').doc(ambulancesId).set({
+  role: 'ambulances',
   email,
-  firstName,
-  lastName,
-  licenseNumber,
-  ambulanceId,
-  isAvailable: true,
-  isActive: true,
+  driverName,
+  phone,
+  area,
+  ambulancesId,
+  isOnline: true,
   status: 'available',
   createdAt: admin.firestore.FieldValue.serverTimestamp(),
 });
@@ -254,7 +251,7 @@ await db.collection('paramedics').doc(uid).set({
 | Navy | `#0C2340` | AppBar، Headers، Splash |
 | Primary Blue | `#185FA5` | Buttons، Links، Icons |
 | Accent Blue | `#378ADD` | Secondary actions، Badges |
-| Critical Red | `#E24B4A` | SOS، Errors، Paramedic login |
+| Critical Red | `#E24B4A` | SOS، Errors، Ambulance login |
 | Success Green | `#22C55E` | Available status، Success |
 | Warning | `#F59E0B` | Pending status، Tips |
 | Surface | `#F5F7FA` | Scaffold background |

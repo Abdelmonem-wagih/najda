@@ -5,9 +5,12 @@ import '../../../report/data/models/incident_model.dart';
 
 abstract class SOSRemoteDataSource {
   Future<String> triggerSOS({
-    required AppUser user,
+    required UserModel user,
     required double latitude,
     required double longitude,
+    required double accuracy,
+    required String address,
+    required String shortId,
   });
 }
 
@@ -16,38 +19,49 @@ class SOSRemoteDataSourceImpl implements SOSRemoteDataSource {
 
   @override
   Future<String> triggerSOS({
-    required AppUser user,
+    required UserModel user,
     required double latitude,
     required double longitude,
+    required double accuracy,
+    required String address,
+    required String shortId,
   }) async {
-    final geohash = encodeGeohash(latitude, longitude);
-    
-    final docRef = await _firestore
-        .collection('incidents')
-        .add({
-      'type': 'sos',
-      'severity': 'critical',
-      'status': IncidentStatus.reported,
-      'reportedBy': user.id,
-      'reporterPhone': user.phoneNumber,
-      'reportedAt': FieldValue.serverTimestamp(),
+    final docRef = await _firestore.collection('criticals').add({
+      // ── Identity ─────────────────────────────────────────────
+      'shortId': shortId,
+      'incidentType': 'emergency',
+      'source': 'sos_button',
+
+      // ── Patient — ALL profile fields ─────────────────────────
+      'patientUid': user.id,
+      'patientName': user.fullName,
+      'nationalId': user.nationalId ?? '',
+      'phoneNumber': user.phone ?? '',
+      'emergencyContact': user.emergencyContact,
+      'bloodType': user.medicalProfile.bloodType ?? '',
+
+      // Medical history
+      'chronicDiseases': user.medicalProfile.chronicDiseases,
+      'allergies': user.medicalProfile.allergies,
+      'currentMedications': user.medicalProfile.currentMeds,
+      'additionalInfo': user.medicalProfile.notes ?? '',
+
+      // ── Location — lat, lng AND address ──────────────────────
+      'latitude': latitude,
+      'longitude': longitude,
+      'address': address,
+      'accuracy': accuracy,
+
+      // ── Status ───────────────────────────────────────────────
+      'status': 'pending',
+      'assignedAmbulanceId': null,
+      'assignedDriverName': null,
+      'assignedVehicleId': null,
+      'medicalReportSubmitted': false,
+
+      // ── Timestamps ───────────────────────────────────────────
+      'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
-      'location': {
-        'latitude': latitude,
-        'longitude': longitude,
-        'geohash': geohash,
-        'address': '', // To be filled by cloud function or reverse geocoding
-      },
-      'victimCount': 1,
-      'reporterMedicalProfile': user.medicalProfile.toMap(),
-      'reporterEmergencyContact': user.emergencyContactData.toMap(),
-      'timeline': [
-        {
-          'event': 'reported',
-          'timestamp': DateTime.now(),
-          'actor': user.id,
-        }
-      ],
     });
     return docRef.id;
   }

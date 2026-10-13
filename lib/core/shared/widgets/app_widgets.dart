@@ -30,33 +30,39 @@ class AppStatusBadge extends StatelessWidget {
   }
 
   (Color, String) _resolve(BuildContext context, String s) {
-    final l10n = AppLocalizations.of(context)!;
     switch (s) {
+      case 'pending':
       case 'reported':
-        return (AppColors.warning, 'Reported');
+        return (AppColors.warning, 'تم الإبلاغ');
       case 'ai_assigning':
-        return (AppColors.warning, 'AI Assigning');
+        return (AppColors.warning, 'جاري التعيين');
       case 'assigned':
-        return (AppColors.info, l10n.statusAssigned);
+        return (AppColors.info, 'تم التعيين');
+      case 'on_mission':
       case 'en_route':
-        return (AppColors.primaryBlue, 'En Route');
+        return (AppColors.primaryBlue, 'في الطريق');
       case 'arrived':
-        return (AppColors.accentBlue, l10n.paramedicArrived);
+        return (AppColors.accentBlue, 'وصل الموقع');
+      case 'to_hospital':
+        return (const Color(0xFFBB86FC), 'للمستشفى');
+      case 'completed':
       case 'resolved':
-        return (AppColors.success, 'Resolved');
+        return (AppColors.success, 'مكتمل');
       case 'unassigned':
-        return (AppColors.criticalRed, 'Unassigned');
+        return (AppColors.criticalRed, 'غير معين');
       case 'reassigned':
-        return (AppColors.info, 'Reassigned');
+        return (AppColors.info, 'تمت إعادة التعيين');
+      case 'cancelled':
+      case 'duplicate':
+        return (AppColors.textMuted, 'ملغى');
       case 'available':
-        return (AppColors.success, l10n.available);
+        return (AppColors.success, 'متاح');
       case 'dispatched':
-        return (AppColors.info, 'Dispatched');
+        return (AppColors.info, 'مُرسل');
       default:
         return (AppColors.textMuted, s);
     }
   }
-
 }
 
 class AppCard extends StatelessWidget {

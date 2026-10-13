@@ -3,6 +3,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_text_styles.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/l10n/l10n_extension.dart';
+import '../../../../../core/constants/app_constants.dart';
 import '../../../../auth/domain/entities/app_user.dart';
 
 class ProfileHeader extends StatelessWidget {
@@ -69,7 +70,7 @@ class ProfileHeader extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  user.role == 'paramedic' ? context.l10n.roleParamedic : context.l10n.roleCitizen,
+                  user.role == AppConstants.roleAmbulances ? context.l10n.roleAmbulances : context.l10n.roleCitizen,
                   style: AppTextStyles.labelMedium.copyWith(
                     color: AppColors.primaryBlue,
                     fontWeight: FontWeight.bold,

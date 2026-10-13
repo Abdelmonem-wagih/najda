@@ -22,7 +22,6 @@ import '../../features/citizen/report/presentation/pages/report_page.dart';
 import '../../features/citizen/report/presentation/cubit/report_cubit.dart';
 import '../../features/citizen/report/data/repositories/report_repository_impl.dart';
 import '../../features/citizen/report/data/datasources/report_remote_datasource.dart';
-import '../../features/paramedic/home/paramedic_home_page.dart';
 import '../../features/paramedic/notifications/notifications_history_page.dart';
 import '../../features/paramedic/reports/report_details_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
@@ -33,6 +32,9 @@ import '../../features/settings/presentation/pages/terms_page.dart';
 import '../../features/settings/presentation/pages/about_page.dart';
 import '../../features/settings/presentation/pages/rate_page.dart';
 import '../../features/settings/presentation/pages/share_page.dart';
+import '../../features/citizen/tracking/tracking_page.dart';
+
+import '../../features/paramedic/presentation/pages/paramedic_main_scaffold.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -53,6 +55,7 @@ class AppRoutes {
   static const String citizenProfile   = '/citizen/profile';
   static const String editProfile      = '/citizen/edit-profile';
   static const String citizenTracking  = '/citizen/tracking';
+  static const String trackIncident    = '/citizen/track';
   
   // Settings
   static const String settings         = '/settings';
@@ -66,11 +69,11 @@ class AppRoutes {
 
   static const String aiChat           = '/ai/chat';
 
-  // Paramedic
-  static const String paramedicHome         = '/paramedic/home';
-  static const String paramedicReportDetails = '/paramedic/report-details';
-  static const String paramedicNotifications = '/paramedic/notifications';
-  static const String paramedicHistory      = '/paramedic/history';
+  // Ambulance
+  static const String ambulanceHome         = '/ambulance/home';
+  static const String ambulanceReportDetails = '/ambulance/report-details';
+  static const String ambulanceNotifications = '/ambulance/notifications';
+  static const String ambulanceHistory      = '/ambulance/history';
 }
 
 class AppRouter {
@@ -124,6 +127,15 @@ class AppRouter {
         return _slide(const EmergencyNumbersPage(), s);
       case AppRoutes.citizenTracking:
         return _slide(SosTrackingScreen(reportId: s.arguments as String), s);
+      case AppRoutes.trackIncident:
+        final a = s.arguments as Map<String, dynamic>;
+        return _slide(TrackingPage(
+          reportId:   a['reportId'],
+          reportType: a['reportType'],
+          displayId:  a['displayId'],
+          patientLat: a['patientLat'],
+          patientLng: a['patientLng'],
+        ), s);
       case AppRoutes.citizenProfile:
         return _slide(const CitizenProfilePage(), s);
       case AppRoutes.editProfile:
@@ -150,16 +162,18 @@ class AppRouter {
       case AppRoutes.aiChat:
         return _modal(const AiChatPage(), s);
 
-      // Paramedic
-      case AppRoutes.paramedicHome:
-        return _fade(const ParamedicHomePage(), s);
-      case AppRoutes.paramedicReportDetails:
+      // Ambulance
+      case AppRoutes.ambulanceHome:
+        return _fade(const AmbulanceMainScaffold(), s);
+      case AppRoutes.ambulanceReportDetails:
         final a = s.arguments as Map<String, dynamic>;
-        return _slide(ReportDetailsPage(
-            reportId: a['reportId'], reportType: a['reportType']), s);
-      case AppRoutes.paramedicNotifications:
+        return _slide(
+            ReportDetailsPage(
+                reportId: a['reportId'], reportType: a['reportType']),
+            s);
+      case AppRoutes.ambulanceNotifications:
         return _slide(const NotificationsHistoryPage(showHistory: false), s);
-      case AppRoutes.paramedicHistory:
+      case AppRoutes.ambulanceHistory:
         return _slide(const NotificationsHistoryPage(showHistory: true), s);
 
       default:

@@ -87,7 +87,7 @@ class _OtpPageState extends State<OtpPage> {
             context,
             state.user.isCitizen
                 ? AppRoutes.citizenHome
-                : AppRoutes.paramedicHome,
+                : AppRoutes.ambulanceHome,
             (r) => false,
           );
         } else if (state is AuthNeedsRegistration) {

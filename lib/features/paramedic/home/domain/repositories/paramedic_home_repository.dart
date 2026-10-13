@@ -1,8 +1,8 @@
 
 import '../../../../citizen/report/data/models/incident_model.dart';
 
-abstract class ParamedicHomeRepository {
-  Stream<List<IncidentModel>> getAssignedReports(String paramedicId);
-  Stream<List<IncidentModel>> getAssignedEmergencyReports(String paramedicId);
-  Future<void> updateAvailability(String paramedicId, bool isAvailable);
+abstract class AmbulanceHomeRepository {
+  Stream<List<IncidentModel>> getAssignedReports(String ambulanceId);
+  Stream<List<IncidentModel>> getAssignedEmergencyReports(String ambulanceId);
+  Future<void> updateOnlineStatus(String ambulanceId, bool isOnline);
 }

@@ -1,16 +1,20 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:najda/core/constants/app_constants.dart';
 import 'package:najda/core/utils/geohash.dart';
 import 'package:najda/features/auth/domain/entities/app_user.dart';
 import '../models/incident_model.dart';
 
 abstract class ReportRemoteDataSource {
-  Future<void> submitReport({
-    required AppUser user,
+  Future<String> submitReport({
+    required UserModel user,
     required double latitude,
     required double longitude,
+    required double accuracy,
+    required String address,
+    required String shortId,
     required String type,
     String? consciousnessLevel,
     String? injuryLocation,
@@ -30,10 +34,13 @@ class ReportRemoteDataSourceImpl implements ReportRemoteDataSource {
         _storage = storage ?? FirebaseStorage.instance;
 
   @override
-  Future<void> submitReport({
-    required AppUser user,
+  Future<String> submitReport({
+    required UserModel user,
     required double latitude,
     required double longitude,
+    required double accuracy,
+    required String address,
+    required String shortId,
     required String type,
     String? consciousnessLevel,
     String? injuryLocation,
@@ -42,38 +49,72 @@ class ReportRemoteDataSourceImpl implements ReportRemoteDataSource {
   }) async {
     String? imageUrl;
     if (image != null) {
-      final ref = _storage.ref(
-          'reports/${user.id}/${DateTime.now().millisecondsSinceEpoch}.jpg');
-      await ref.putFile(image);
-      imageUrl = await ref.getDownloadURL();
+      try {
+        final storageRef = _storage
+            .ref()
+            .child('incidents')
+            .child(user.id)
+            .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
+
+        final metadata = SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {'uploadedBy': user.id},
+        );
+
+        final uploadTask = storageRef.putFile(image, metadata);
+        final snapshot = await uploadTask;
+        imageUrl = await snapshot.ref.getDownloadURL();
+      } catch (storageErr) {
+        // Image upload failed — continue without image, don't block the report
+        debugPrint('Image upload failed: $storageErr');
+        imageUrl = null;
+      }
     }
 
-    final geohash = encodeGeohash(latitude, longitude);
+    final docRef = await _firestore.collection('incidents').add({
+      // ── Identity ─────────────────────────────────────────────
+      'shortId': shortId,
+      'incidentType': 'report',
+      'source': 'accident_form',
 
-    final incident = IncidentModel(
-      id: '', 
-      type: 'accident',
-      severity: 'medium', // Default for reports, AI will adjust
-      status: AppConstants.statusReported,
-      reportedBy: user.id,
-      reporterPhone: user.phoneNumber,
-      reportedAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-      location: IncidentLocation(
-        latitude: latitude,
-        longitude: longitude,
-        geohash: geohash,
-        address: '',
-      ),
-      description: 'Accident Type: $type\nConsciousness: $consciousnessLevel\nInjury: $injuryLocation\nPain: $painLevel',
-      reporterMedicalProfile: user.medicalProfile.toMap(),
-      reporterEmergencyContact: user.emergencyContactData.toMap(),
-      timeline: [
-        TimelineEvent(event: 'reported', timestamp: Timestamp.now(), actor: user.id),
-      ],
-    );
+      // ── Reporter info ─────────────────────────────────────────
+      'patientUid': user.id,
+      'patientName': user.fullName,
+      'nationalId': user.nationalId ?? '',
+      'phoneNumber': user.phone ?? '',
+      'emergencyContact': user.emergencyContact,
+      'bloodType': user.medicalProfile.bloodType ?? '',
+      'chronicDiseases': user.medicalProfile.chronicDiseases,
+      'allergies': user.medicalProfile.allergies,
+      'currentMedications': user.medicalProfile.currentMeds,
+      'additionalInfo': user.medicalProfile.notes ?? '',
 
-    await _firestore.collection(AppConstants.incidentsCollection).add(incident.toFirestore());
+      // ── Accident details (answers) ────────────────────────────
+      'accidentType': type,
+      'consciousnessLevel': consciousnessLevel ?? '',
+      'injuryLocation': injuryLocation ?? '',
+      'painLevel': painLevel ?? '',
+      'imageUrl': imageUrl ?? '',
+
+      // ── Location — lat, lng AND address ──────────────────────
+      'latitude': latitude,
+      'longitude': longitude,
+      'address': address,
+      'accuracy': accuracy,
+
+      // ── Status ───────────────────────────────────────────────
+      'status': 'pending',
+      'assignedAmbulanceId': null,
+      'assignedDriverName': null,
+      'assignedVehicleId': null,
+      'medicalReportSubmitted': false,
+
+      // ── Timestamps ───────────────────────────────────────────
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    return docRef.id;
   }
 }
 

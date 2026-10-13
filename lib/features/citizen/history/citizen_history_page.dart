@@ -71,18 +71,34 @@ class _HistoryView extends StatelessWidget {
           }
           if (state is HistoryLoaded) {
             final reports = state.reports;
-            if (reports.isEmpty) {
-              return AppEmptyState(
-                icon: Icons.history_outlined,
-                title: l10n.historyEmpty,
-                subtitle: l10n.historyDescription,
-              );
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              itemCount: reports.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
-              itemBuilder: (ctx, i) => HistoryCard(report: reports[i]),
+            return RefreshIndicator(
+              onRefresh: () async {
+                final authState =
+                    context.read<AuthCubit>().state as AuthAuthenticated;
+                context.read<HistoryCubit>().loadHistory(authState.user.id);
+                await Future.delayed(const Duration(milliseconds: 600));
+              },
+              child: reports.isEmpty
+                  ? ListView(
+                      children: [
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.7,
+                          child: AppEmptyState(
+                            icon: Icons.history_outlined,
+                            title: l10n.historyEmpty,
+                            subtitle: l10n.historyDescription,
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      itemCount: reports.length,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: AppSpacing.md),
+                      itemBuilder: (ctx, i) => HistoryCard(report: reports[i]),
+                    ),
             );
           }
           return const SizedBox.shrink();

@@ -21,13 +21,44 @@ class AuthRepositoryImpl implements AuthRepository {
     final firebaseUser = await remoteDataSource.currentUser;
     if (firebaseUser == null) return null;
 
-    final role = await localDataSource.getUserRole();
+    final tokenResult = await firebaseUser.getIdTokenResult(true);
+    String? role = tokenResult.claims?['role'];
+    
+    // If claim is missing, try local storage
+    role ??= await localDataSource.getUserRole();
 
-    if (role == AppConstants.roleParamedic) {
-      return remoteDataSource.fetchParamedic(firebaseUser.uid);
+    AppUser? user;
+    if (role == AppConstants.roleAmbulances) {
+      user = await remoteDataSource.fetchAmbulanceData(firebaseUser.uid);
+      // Fallback: maybe it's actually a citizen or role was wrong
+      if (user == null) {
+        user = await remoteDataSource.fetchCitizen(firebaseUser.uid);
+        if (user != null) {
+          await localDataSource.saveUserRole(AppConstants.roleCitizen);
+        }
+      }
     } else {
-      return remoteDataSource.fetchCitizen(firebaseUser.uid);
+      user = await remoteDataSource.fetchCitizen(firebaseUser.uid);
+      // Fallback: maybe it's an ambulance
+      if (user == null) {
+        user = await remoteDataSource.fetchAmbulanceData(firebaseUser.uid);
+        if (user != null) {
+          await localDataSource.saveUserRole(AppConstants.roleAmbulances);
+        }
+      }
     }
+
+    if (user != null) {
+      // Ensure local role is correct for next time
+      final detectedRole = user.isAmbulances ? AppConstants.roleAmbulances : AppConstants.roleCitizen;
+      await localDataSource.saveUserRole(detectedRole);
+      
+      if (user.role.isEmpty) {
+        return user.copyWith(role: detectedRole);
+      }
+    }
+    
+    return user;
   }
 
   @override
@@ -68,6 +99,11 @@ class AuthRepositoryImpl implements AuthRepository {
         medicalProfile: const MedicalProfile(),
         emergencyContactData: const EmergencyContact(name: '', phone: ''),
       );
+    }
+
+    // Ensure role is set for citizen if missing
+    if (user.role.isEmpty) {
+      return user.copyWith(role: AppConstants.roleCitizen);
     }
 
     return user;
@@ -137,25 +173,40 @@ class AuthRepositoryImpl implements AuthRepository {
     final uc = await remoteDataSource.signInWithEmailAndPassword(email.trim(), password);
     final uid = uc.user!.uid;
 
-    final user = await remoteDataSource.fetchParamedic(uid);
+    final user = await remoteDataSource.fetchAmbulanceData(uid);
     if (user == null) {
       await remoteDataSource.signOut();
-      throw FirebaseAuthException(code: 'user-not-found', message: 'NOT_A_PARAMEDIC');
+      throw FirebaseAuthException(code: 'user-not-found', message: 'NOT_AN_AMBULANCE');
     }
 
-    await localDataSource.saveUserRole(AppConstants.roleParamedic);
+    await localDataSource.saveUserRole(AppConstants.roleAmbulances);
     await localDataSource.saveUserId(uid);
     await localDataSource.saveUserEmail(email);
 
-    return user;
+    // Set online status to true upon login
+    await remoteDataSource.updateAmbulanceOnlineStatus(user.id, true, status: 'available');
+
+    if (user.role.isEmpty || user.role == AppConstants.roleCitizen) {
+      return user.copyWith(
+        role: AppConstants.roleAmbulances,
+        isOnline: true,
+      );
+    }
+
+    return user.copyWith(isOnline: true);
   }
 
   @override
   Future<void> signOut() async {
     final uid = await localDataSource.getUserId();
     final role = await localDataSource.getUserRole();
-    if (role == AppConstants.roleParamedic && uid != null) {
-      await remoteDataSource.updateParamedicFcmToken(uid, null);
+    if (role == AppConstants.roleAmbulances && uid != null) {
+      final user = await remoteDataSource.fetchAmbulanceData(uid);
+      if (user != null) {
+        await remoteDataSource.updateAmbulanceFcmToken(user.id, null);
+        // Set online status to false upon logout
+        await remoteDataSource.updateAmbulanceOnlineStatus(user.id, false, status: 'available');
+      }
     }
 
     await remoteDataSource.signOut();
@@ -163,13 +214,13 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> updateParamedicFcmToken(String paramedicId) async {
+  Future<void> updateAmbulanceFcmToken(String ambulanceId) async {
     try {
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) {
-        await remoteDataSource.updateParamedicFcmToken(paramedicId, token);
+        await remoteDataSource.updateAmbulanceFcmToken(ambulanceId, token);
         FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-          remoteDataSource.updateParamedicFcmToken(paramedicId, newToken);
+          remoteDataSource.updateAmbulanceFcmToken(ambulanceId, newToken);
         });
       }
     } catch (_) {}
@@ -192,6 +243,11 @@ class AuthRepositoryImpl implements AuthRepository {
         medicalProfile: const MedicalProfile(),
         emergencyContactData: const EmergencyContact(name: '', phone: ''),
       );
+    }
+
+    // Ensure role is set for citizen if missing
+    if (user.role.isEmpty) {
+      return user.copyWith(role: AppConstants.roleCitizen);
     }
 
     return user;

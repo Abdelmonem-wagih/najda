@@ -1,15 +1,16 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 
-// import 'firebase_options.dart';
-
+import 'core/theme/design.dart';
+import 'firebase_options.dart';
 import 'core/route/app_routes.dart';
 import 'core/l10n/generated/app_localizations.dart';
-import 'core/theme/app_theme.dart';
-import 'core/theme/app_colors.dart';
+import 'core/services/notification_service.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
 import 'features/settings/presentation/cubit/settings_cubit.dart';
 import 'features/settings/presentation/cubit/settings_state.dart';
@@ -38,8 +39,18 @@ void main() async {
   ]);
 
   await Firebase.initializeApp(
-    // options: DefaultFirebaseOptions.currentPlatform,
+    options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Initialize Notifications
+  await NotificationService.instance.init(AppRouter.navigatorKey);
+
+  if (kDebugMode) {
+    await FirebaseAppCheck.instance.activate(
+      androidProvider: AndroidProvider.debug,
+      appleProvider: AppleProvider.debug,
+    );
+  }
 
   runApp(const NajdaApp());
 }
@@ -66,7 +77,7 @@ class NajdaApp extends StatelessWidget {
             navigatorKey: AppRouter.navigatorKey,
             title: 'نجدة',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.light,
+            theme: NajdaTheme.light,
             locale: state.locale,
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -77,7 +88,7 @@ class NajdaApp extends StatelessWidget {
               child: Stack(
                 children: [
                   child!,
-                  // Draggable AI button — visible for both citizen and paramedic
+                  // Draggable AI button — visible for both citizen and ambulance
                   BlocBuilder<AuthCubit, AuthState>(
                     builder: (ctx, state) {
                       if (state is AuthAuthenticated) {

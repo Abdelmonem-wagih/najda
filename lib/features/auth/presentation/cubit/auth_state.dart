@@ -30,7 +30,7 @@ class AuthNeedsRegistration extends AuthState {
   List<Object?> get props => [uid, phone];
 }
 
-/// Fully authenticated — both citizen and paramedic land here
+/// Fully authenticated — both citizen and ambulance land here
 class AuthAuthenticated extends AuthState {
   final AppUser user;
   const AuthAuthenticated(this.user);

@@ -13,6 +13,7 @@ class ReportState extends Equatable {
   final File? image;
   final ReportStatus status;
   final String? errorMessage;
+  final String? shortId;
 
   const ReportState({
     this.step = 0,
@@ -23,6 +24,7 @@ class ReportState extends Equatable {
     this.image,
     this.status = ReportStatus.initial,
     this.errorMessage,
+    this.shortId,
   });
 
   ReportState copyWith({
@@ -34,6 +36,7 @@ class ReportState extends Equatable {
     File? image,
     ReportStatus? status,
     String? errorMessage,
+    String? shortId,
   }) {
     return ReportState(
       step: step ?? this.step,
@@ -44,6 +47,7 @@ class ReportState extends Equatable {
       image: image ?? this.image,
       status: status ?? this.status,
       errorMessage: errorMessage ?? this.errorMessage,
+      shortId: shortId ?? this.shortId,
     );
   }
 
@@ -57,5 +61,6 @@ class ReportState extends Equatable {
         image,
         status,
         errorMessage,
+        shortId,
       ];
 }

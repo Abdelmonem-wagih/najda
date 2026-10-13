@@ -22,11 +22,11 @@ class ReportDetailsCubit extends Cubit<ReportDetailsState> {
       emit(ReportDetailsLoaded(report: report));
       _startLocation();
       
-      // If report is already assigned to this paramedic and en_route, ensure tracking is on
+      // If report is already assigned to this ambulance and en_route, ensure tracking is on
       if (report.status == AppConstants.statusEnRoute || report.status == AppConstants.statusArrived) {
-        final paramedic = report.assignment?.paramedicId;
-        if (paramedic != null) {
-          TrackingService().startTracking(report.assignment?.ambulanceId ?? 'unknown', report.id);
+        final ambulance = report.assignment?.ambulanceId;
+        if (ambulance != null) {
+          TrackingService().startTracking(report.assignment?.vehicleId ?? 'unknown', report.id);
         }
       }
     } catch (e) {
@@ -48,20 +48,20 @@ class ReportDetailsCubit extends Cubit<ReportDetailsState> {
     });
   }
 
-  Future<void> updateStatus(String reportId, String reportType, String paramedicId, String newStatus) async {
+  Future<void> updateStatus(String reportId, String reportType, String ambulanceId, String newStatus) async {
     if (state is! ReportDetailsLoaded) return;
     final currentState = state as ReportDetailsLoaded;
     
     emit(currentState.copyWith(isSubmitting: true));
     try {
       await _repository.updateIncidentStatus(reportId, reportType, newStatus);
-      await _repository.updateParamedicStatus(paramedicId, newStatus);
+      await _repository.updateAmbulanceStatus(ambulanceId, newStatus);
       
       final updatedReport = await _repository.getReportDetails(reportId, reportType);
       
       // Handle Tracking Service lifecycle
       if (newStatus == AppConstants.statusEnRoute) {
-        TrackingService().startTracking(updatedReport.assignment?.ambulanceId ?? 'unknown', reportId);
+        TrackingService().startTracking(updatedReport.assignment?.vehicleId ?? 'unknown', reportId);
       } else if (newStatus == AppConstants.statusResolved) {
         TrackingService().stopTracking();
       }
@@ -82,7 +82,7 @@ class ReportDetailsCubit extends Cubit<ReportDetailsState> {
   Future<void> submitMedicalReport({
     required String reportId,
     required String reportType,
-    required AppUser paramedic,
+    required AppUser ambulance,
     required Map<String, String> answers,
     required String notes,
   }) async {
@@ -94,12 +94,12 @@ class ReportDetailsCubit extends Cubit<ReportDetailsState> {
       await _repository.submitMedicalReport(
         reportId: reportId,
         reportType: reportType,
-        paramedic: paramedic,
+        ambulance: ambulance,
         answers: answers,
         notes: notes,
       );
       
-      await updateStatus(reportId, reportType, paramedic.id, AppConstants.statusResolved);
+      await updateStatus(reportId, reportType, ambulance.id, AppConstants.statusResolved);
       emit(currentState.copyWith(isSubmitting: false, showMedicalForm: false));
     } catch (e) {
       emit(currentState.copyWith(isSubmitting: false));

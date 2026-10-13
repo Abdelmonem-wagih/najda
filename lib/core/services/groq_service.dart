@@ -39,7 +39,7 @@ class NajdaAIService {
 
   Future<String> askAssistant({
     required String message,
-    required String role, // 'citizen' | 'paramedic'
+    required String role, // 'citizen' | 'ambulances'
     List<Map<String, String>> history = const [],
     String? context,
   }) async {
@@ -68,7 +68,7 @@ class NajdaAIService {
       throw Exception('GROQ_API_KEY not found in .env file');
     }
 
-    final systemPrompt = role == 'paramedic'
+    final systemPrompt = role == 'ambulances'
         ? '''أنت مساعد طبي متخصص لمسعفي الإسعاف في نظام نجدة للطوارئ بمصر.
 تقدم: دعم القرار الإكلينيكي، الجرعات، بروتوكولات الإسعاف الميداني.
 أجب بالعربية بإيجاز ووضوح مناسبَين للعمل الميداني.
@@ -270,26 +270,26 @@ class NajdaAIService {
     }
   }
 
-  // ── 4. Create Paramedic Account (admin/dashboard) ──────────────────
+  // ── 4. Create Ambulance Account (admin/dashboard) ──────────────────
 
-  Future<Map<String, dynamic>> createParamedicAccount({
+  Future<Map<String, dynamic>> createAmbulanceAccount({
+    required String ambulancesId,
     required String email,
     required String password,
-    required String firstName,
-    required String lastName,
-    required String phoneNumber,
-    required String licenseNumber,
-    required String ambulanceId,
+    required String driverName,
+    required String phone,
+    required String area,
+    required Map<String, double> baseLocation,
   }) async {
     try {
-      final result = await _functions.httpsCallable('createParamedicAccount').call({
+      final result = await _functions.httpsCallable('createAmbulancesAccount').call({
+        'ambulancesId': ambulancesId,
         'email': email,
         'password': password,
-        'firstName': firstName,
-        'lastName': lastName,
-        'phoneNumber': phoneNumber,
-        'licenseNumber': licenseNumber,
-        'ambulanceId': ambulanceId,
+        'driverName': driverName,
+        'phone': phone,
+        'area': area,
+        'baseLocation': baseLocation,
       });
       return Map<String, dynamic>.from(result.data as Map);
     } on FirebaseFunctionsException catch (e) {
@@ -299,10 +299,10 @@ class NajdaAIService {
 
   // ── 5. Release Ambulance (admin) ───────────────────────────────────
 
-  Future<void> releaseAmbulance(String paramedicId) async {
+  Future<void> releaseAmbulance(String ambulanceId) async {
     try {
       await _functions.httpsCallable('releaseAmbulance').call({
-        'paramedicId': paramedicId,
+        'ambulanceId': ambulanceId,
       });
     } on FirebaseFunctionsException catch (e) {
       throw _mapError(e);

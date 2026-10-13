@@ -19,22 +19,22 @@ class ReportDetailsRepositoryImpl implements ReportDetailsRepository {
   }
 
   @override
-  Future<void> updateParamedicStatus(String paramedicId, String status) {
-    return remoteDataSource.updateParamedicStatus(paramedicId, status);
+  Future<void> updateAmbulanceStatus(String ambulanceId, String status) {
+    return remoteDataSource.updateAmbulanceStatus(ambulanceId, status);
   }
 
   @override
   Future<void> submitMedicalReport({
     required String reportId,
     required String reportType,
-    required AppUser paramedic,
+    required AppUser ambulance,
     required Map<String, String> answers,
     required String notes,
   }) {
     return remoteDataSource.submitMedicalReport(
       reportId: reportId,
       reportType: reportType,
-      paramedic: paramedic,
+      ambulance: ambulance,
       answers: answers,
       notes: notes,
     );

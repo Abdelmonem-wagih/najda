@@ -64,9 +64,8 @@ class IncidentLocation extends Equatable {
 
 class IncidentAssignment extends Equatable {
   final String? ambulanceId;
-  final String? ambulancePlate;
-  final String? paramedicId;
-  final String? paramedicName;
+  final String? vehicleId;
+  final String? driverName;
   final Timestamp? assignedAt;
   final String assignedBy; // "ai" | "admin" | "system"
   final double? aiConfidenceScore;
@@ -74,9 +73,8 @@ class IncidentAssignment extends Equatable {
 
   const IncidentAssignment({
     this.ambulanceId,
-    this.ambulancePlate,
-    this.paramedicId,
-    this.paramedicName,
+    this.vehicleId,
+    this.driverName,
     this.assignedAt,
     required this.assignedBy,
     this.aiConfidenceScore,
@@ -86,10 +84,9 @@ class IncidentAssignment extends Equatable {
   factory IncidentAssignment.fromMap(Map<String, dynamic>? map) {
     if (map == null) return const IncidentAssignment(assignedBy: 'system');
     return IncidentAssignment(
-      ambulanceId: map['ambulanceId'] as String?,
-      ambulancePlate: map['ambulancePlate'] as String?,
-      paramedicId: map['paramedicId'] as String?,
-      paramedicName: map['paramedicName'] as String?,
+      ambulanceId: map['ambulanceId'] as String? ?? map['paramedicId'] as String?,
+      vehicleId: map['vehicleId'] as String? ?? map['ambulancePlate'] as String? ?? map['ambulanceId'] as String?,
+      driverName: map['driverName'] as String? ?? map['paramedicName'] as String?,
       assignedAt: map['assignedAt'] as Timestamp?,
       assignedBy: map['assignedBy'] as String? ?? 'system',
       aiConfidenceScore: (map['aiConfidenceScore'] as num?)?.toDouble(),
@@ -100,9 +97,8 @@ class IncidentAssignment extends Equatable {
   Map<String, dynamic> toMap() {
     return {
       'ambulanceId': ambulanceId,
-      'ambulancePlate': ambulancePlate,
-      'paramedicId': paramedicId,
-      'paramedicName': paramedicName,
+      'vehicleId': vehicleId,
+      'driverName': driverName,
       'assignedAt': assignedAt,
       'assignedBy': assignedBy,
       'aiConfidenceScore': aiConfidenceScore,
@@ -113,9 +109,8 @@ class IncidentAssignment extends Equatable {
   @override
   List<Object?> get props => [
         ambulanceId,
-        ambulancePlate,
-        paramedicId,
-        paramedicName,
+        vehicleId,
+        driverName,
         assignedAt,
         assignedBy,
         aiConfidenceScore,
@@ -326,15 +321,15 @@ class IncidentModel extends Equatable {
       injuryLocation: d['injuryLocation'] as String?,
       painLevel: d['painLevel'] as String?,
       imageUrl: d['imageUrl'] as String?,
-      reporterMedicalProfile: d['reporterMedicalProfile'] as Map<String, dynamic>?,
-      reporterEmergencyContact: d['reporterEmergencyContact'] as Map<String, dynamic>?,
+      reporterMedicalProfile: d['reporterMedicalProfile'] is Map<String, dynamic> ? d['reporterMedicalProfile'] : null,
+      reporterEmergencyContact: d['reporterEmergencyContact'] is Map<String, dynamic> ? d['reporterEmergencyContact'] : null,
       assignment: d['assignment'] != null
           ? IncidentAssignment.fromMap(Map<String, dynamic>.from(d['assignment']))
           : d['assignedAmbulanceId'] != null 
               ? IncidentAssignment(
                   ambulanceId: d['assignedAmbulanceId'] as String?,
-                  paramedicId: d['assignedParamedicId'] as String?,
-                  paramedicName: d['assignedParamedicName'] as String?,
+                  driverName: d['assignedParamedicName'] as String?,
+                  vehicleId: d['assignedAmbulanceId'] as String?,
                   assignedBy: 'system',
                 )
               : null,

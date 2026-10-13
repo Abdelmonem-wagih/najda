@@ -87,7 +87,7 @@ class _LoginPageState extends State<LoginPage>
             ctx,
             state.user.isCitizen
                 ? AppRoutes.citizenHome
-                : AppRoutes.paramedicHome,
+                : AppRoutes.ambulanceHome,
             (r) => false,
           );
         } else if (state is AuthNeedsRegistration) {
@@ -157,7 +157,7 @@ class _LoginPageState extends State<LoginPage>
                     roleIndex: _roleIndex,
                     onRoleChanged: _switchRole,
                     citizenLabel: l10n.loginAsCitizen,
-                    paramedicLabel: l10n.loginAsParamedic,
+                    paramedicLabel: l10n.loginAsAmbulance,
                   ),
                   const SizedBox(height: AppSpacing.xl),
 
@@ -166,7 +166,7 @@ class _LoginPageState extends State<LoginPage>
                     opacity: _fade,
                     child: _roleIndex == 0
                         ? CitizenLoginForm(phoneController: _phoneCtrl)
-                        : ParamedicLoginForm(
+                        : AmbulanceLoginForm(
                             emailController: _emailCtrl,
                             passwordController: _passCtrl,
                             obscurePassword: _obscure,
@@ -241,7 +241,7 @@ class _LoginPageState extends State<LoginPage>
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(
-                              l10n.paramedicInfo,
+                              l10n.ambulanceInfo,
                               style: AppTextStyles.bodySmall.copyWith(color: AppColors.primaryBlue),
                             ),
                           ),

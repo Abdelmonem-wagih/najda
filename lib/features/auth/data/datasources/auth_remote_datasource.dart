@@ -6,7 +6,7 @@ import '../../domain/entities/app_user.dart';
 
 abstract class AuthRemoteDataSource {
   Future<User?> get currentUser;
-  Future<AppUser?> fetchParamedic(String uid);
+  Future<AppUser?> fetchAmbulanceData(String uid);
   Future<AppUser?> fetchCitizen(String uid);
   Future<void> verifyPhoneNumber({
     required String phoneNumber,
@@ -21,7 +21,8 @@ abstract class AuthRemoteDataSource {
   Future<void> updatePassword(String password);
   Future<void> saveCitizenProfile(String uid, Map<String, dynamic> data);
   Future<void> updateCitizenProfile(String uid, Map<String, dynamic> data);
-  Future<void> updateParamedicFcmToken(String paramedicId, String? token);
+  Future<void> updateAmbulanceFcmToken(String ambulanceId, String? token);
+  Future<void> updateAmbulanceOnlineStatus(String ambulanceId, bool isOnline, {String? status});
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -32,30 +33,24 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<User?> get currentUser async => _auth.currentUser;
 
   @override
-  Future<AppUser?> fetchParamedic(String uid) async {
-    // According to unified schema, both roles are in 'users' collection
-    final doc = await _firestore
-        .collection(AppConstants.usersCollection)
-        .doc(uid)
+  Future<AppUser?> fetchAmbulanceData(String uid) async {
+    // According to ambulances schema, we query the 'ambulances' collection where uid matches
+    final query = await _firestore
+        .collection(AppConstants.ambulancesCollection)
+        .where('uid', isEqualTo: uid)
+        .limit(1)
         .get();
     
-    if (doc.exists) {
-      return UserModel.fromMap(doc.data()!, uid);
-    }
+    if (query.docs.isEmpty) return null;
     
-    // Fallback for legacy paramedics collection if needed
-    final legacyDoc = await _firestore.collection('paramedics').doc(uid).get();
-    if (legacyDoc.exists) {
-      return UserModel.fromMap(legacyDoc.data()!, uid);
-    }
-    
-    return null;
+    final doc = query.docs.first;
+    return UserModel.fromMap(doc.data(), doc.id);
   }
 
   @override
   Future<AppUser?> fetchCitizen(String uid) async {
     final doc = await _firestore
-        .collection(AppConstants.usersCollection)
+        .collection(AppConstants.citizensCollection)
         .doc(uid)
         .get();
     
@@ -104,7 +99,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<void> saveCitizenProfile(String uid, Map<String, dynamic> data) async {
     await _firestore
-        .collection(AppConstants.usersCollection)
+        .collection(AppConstants.citizensCollection)
         .doc(uid)
         .set(data, SetOptions(merge: true));
   }
@@ -112,20 +107,35 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<void> updateCitizenProfile(String uid, Map<String, dynamic> data) async {
     await _firestore
-        .collection(AppConstants.usersCollection)
+        .collection(AppConstants.citizensCollection)
         .doc(uid)
-        .update(data);
+        .set(data, SetOptions(merge: true));
   }
 
   @override
-  Future<void> updateParamedicFcmToken(String paramedicId, String? token) async {
+  Future<void> updateAmbulanceFcmToken(String ambulanceId, String? token) async {
     final update = token == null 
         ? {'fcmToken': FieldValue.delete()} 
         : {'fcmToken': token, 'updatedAt': FieldValue.serverTimestamp()};
         
     await _firestore
-        .collection(AppConstants.usersCollection)
-        .doc(paramedicId)
+        .collection(AppConstants.ambulancesCollection)
+        .doc(ambulanceId)
+        .set(update, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> updateAmbulanceOnlineStatus(String ambulanceId, bool isOnline, {String? status}) async {
+    final Map<String, dynamic> update = {
+      'isOnline': isOnline,
+      'lastActiveAt': FieldValue.serverTimestamp(),
+    };
+    if (status != null) {
+      update['status'] = status;
+    }
+    await _firestore
+        .collection(AppConstants.ambulancesCollection)
+        .doc(ambulanceId)
         .update(update);
   }
 }

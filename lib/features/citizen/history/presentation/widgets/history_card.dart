@@ -6,6 +6,7 @@ import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/shared/widgets/app_widgets.dart';
 import '../../../../../core/l10n/generated/app_localizations.dart';
+import '../../../../../core/route/app_routes.dart';
 import '../../../report/data/models/incident_model.dart';
 import 'history_details_sheet.dart';
 
@@ -16,7 +17,7 @@ class HistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isEmergency = report.type == 'sos';
+    final isEmergency = report.type == 'sos' || report.type == 'emergency';
     final status = report.status;
     final ts = report.reportedAt.toDate();
     final type = report.accidentType ?? '';
@@ -65,6 +66,41 @@ class HistoryCard extends StatelessWidget {
               AppStatusBadge(status: status),
             ],
           ),
+          if (!['completed', 'resolved', 'cancelled'].contains(status)) ...[
+            const SizedBox(height: AppSpacing.md),
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(
+                context,
+                AppRoutes.trackIncident,
+                arguments: {
+                  'reportId': report.id,
+                  'reportType': report.type == 'sos' ? 'emergency_report' : 'report',
+                  'displayId': report.id.length > 6 ? report.id.substring(0, 6) : report.id,
+                  'patientLat': report.location.latitude,
+                  'patientLng': report.location.longitude,
+                },
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withOpacity(0.1),
+                  borderRadius: AppRadius.radiusMd,
+                  border: Border.all(color: AppColors.primaryBlue.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.my_location_rounded,
+                        color: AppColors.primaryBlue, size: 16),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text('تتبع الإسعاف',
+                        style: AppTextStyles.labelLarge
+                            .copyWith(color: AppColors.primaryBlue)),
+                  ],
+                ),
+              ),
+            ),
+          ],
 
           if (report.address.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),

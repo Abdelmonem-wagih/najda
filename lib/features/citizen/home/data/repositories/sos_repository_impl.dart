@@ -9,14 +9,20 @@ class SOSRepositoryImpl implements SOSRepository {
 
   @override
   Future<String> triggerSOS({
-    required AppUser user,
+    required UserModel user,
     required double latitude,
     required double longitude,
+    required double accuracy,
+    required String address,
+    required String shortId,
   }) {
     return remoteDataSource.triggerSOS(
       user: user,
       latitude: latitude,
       longitude: longitude,
+      accuracy: accuracy,
+      address: address,
+      shortId: shortId,
     );
   }
 }

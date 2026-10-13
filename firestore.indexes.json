@@ -50,17 +50,16 @@
         { "fieldPath": "reportedAt", "order": "ASCENDING"  }
       ]
     },
-    // Paramedic: find active incident assigned to them
+    // Ambulance: find active incident assigned to them
     {
       "collectionGroup": "incidents",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "assignment.paramedicId", "order": "ASCENDING" },
+        { "fieldPath": "assignment.ambulanceId", "order": "ASCENDING" },
         { "fieldPath": "status",                 "order": "ASCENDING" }
       ]
     },
 
-    // ── ambulances/ ───────────────────────────────────────────────────────
     // assignAmbulance: status == "available" (+ geohash for proximity)
     {
       "collectionGroup": "ambulances",
@@ -90,7 +89,7 @@
         { "fieldPath": "status",     "order": "ASCENDING" }
       ]
     },
-    // Paramedic: own assignments
+    // Ambulance: own assignments
     {
       "collectionGroup": "assignments",
       "queryScope": "COLLECTION",
@@ -102,7 +101,7 @@
     },
 
     // ── notifications/ ────────────────────────────────────────────────────
-    // Paramedic / citizen: own + broadcast notifications
+    // Ambulance / citizen: own + broadcast notifications
     {
       "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
@@ -122,10 +121,18 @@
       ]
     },
 
-    // ── paramedics/ ───────────────────────────────────────────────────────
+    // ── ambulances/ ───────────────────────────────────────────────────────
     // assignAmbulance: available + active
     {
-      "collectionGroup": "paramedics",
+      "collectionGroup": "ambulances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isOnline",  "order": "ASCENDING" },
+        { "fieldPath": "status",    "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "ambulances",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "status",    "order": "ASCENDING" },
@@ -133,22 +140,22 @@
       ]
     },
 
-    // ── paramedic_history/ ────────────────────────────────────────────────
+    // ── ambulance_history/ ────────────────────────────────────────────────
     {
-      "collectionGroup": "paramedic_history",
+      "collectionGroup": "ambulance_history",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "paramedicId", "order": "ASCENDING"  },
+        { "fieldPath": "ambulanceId", "order": "ASCENDING"  },
         { "fieldPath": "resolvedAt",  "order": "DESCENDING" }
       ]
     },
 
-    // ── medical_reports/ ──────────────────────────────────────────────────
+    // ── medical_incidents/ ──────────────────────────────────────────────────
     {
       "collectionGroup": "medical_reports",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "paramedicId", "order": "ASCENDING"  },
+        { "fieldPath": "ambulanceId", "order": "ASCENDING"  },
         { "fieldPath": "submittedAt", "order": "DESCENDING" }
       ]
     },
@@ -166,7 +173,7 @@
       "collectionGroup": "mission_cancellations",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "paramedicId", "order": "ASCENDING"  },
+        { "fieldPath": "ambulanceId", "order": "ASCENDING"  },
         { "fieldPath": "cancelledAt", "order": "DESCENDING" }
       ]
     },
@@ -178,6 +185,24 @@
       "fields": [
         { "fieldPath": "status",      "order": "ASCENDING"  },
         { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "criticals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedAmbulanceId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "incidents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedAmbulanceId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
 

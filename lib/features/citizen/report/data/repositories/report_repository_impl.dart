@@ -9,10 +9,13 @@ class ReportRepositoryImpl implements ReportRepository {
   ReportRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<void> submitReport({
-    required AppUser user,
+  Future<String> submitReport({
+    required UserModel user,
     required double latitude,
     required double longitude,
+    required double accuracy,
+    required String address,
+    required String shortId,
     required String type,
     String? consciousnessLevel,
     String? injuryLocation,
@@ -23,6 +26,9 @@ class ReportRepositoryImpl implements ReportRepository {
       user: user,
       latitude: latitude,
       longitude: longitude,
+      accuracy: accuracy,
+      address: address,
+      shortId: shortId,
       type: type,
       consciousnessLevel: consciousnessLevel,
       injuryLocation: injuryLocation,

@@ -128,11 +128,11 @@ abstract class AppLocalizations {
   /// **'مواطن'**
   String get loginAsCitizen;
 
-  /// No description provided for @loginAsParamedic.
+  /// No description provided for @loginAsAmbulance.
   ///
   /// In ar, this message translates to:
-  /// **'مسعف'**
-  String get loginAsParamedic;
+  /// **'الإسعاف'**
+  String get loginAsAmbulance;
 
   /// No description provided for @phoneNumber.
   ///
@@ -278,11 +278,11 @@ abstract class AppLocalizations {
   /// **'إغلاق'**
   String get close;
 
-  /// No description provided for @paramedicInfo.
+  /// No description provided for @ambulanceInfo.
   ///
   /// In ar, this message translates to:
-  /// **'حسابات المسعفين يُنشئها مشرف النظام فقط'**
-  String get paramedicInfo;
+  /// **'حسابات الإسعاف يُنشئها مشرف النظام فقط'**
+  String get ambulanceInfo;
 
   /// No description provided for @newUserPrompt.
   ///
@@ -566,11 +566,11 @@ abstract class AppLocalizations {
   /// **'اكتب سؤالك هنا...'**
   String get typeMessageHint;
 
-  /// No description provided for @paramedicWelcome.
+  /// No description provided for @ambulanceWelcome.
   ///
   /// In ar, this message translates to:
-  /// **'مرحباً أيها المسعف! 🏥\n\nأنا مساعدك الطبي الميداني. يمكنني مساعدتك في البروتوكولات والجرعات والتفاعلات الدوائية.\n\nاسألني أي سؤال طبي.'**
-  String get paramedicWelcome;
+  /// **'مرحباً بك في نظام نجدة! 🏥\n\nأنا مساعدك الطبي الميداني. يمكنني مساعدتك في البروتوكولات والجرعات والتفاعلات الدوائية.\n\nاسألني أي سؤال طبي.'**
+  String get ambulanceWelcome;
 
   /// No description provided for @citizenWelcome.
   ///
@@ -768,13 +768,13 @@ abstract class AppLocalizations {
   /// No description provided for @injuryDetailsTitle.
   ///
   /// In ar, this message translates to:
-  /// **'تفاصيل الإصابة'**
+  /// **'إصابات الحالة'**
   String get injuryDetailsTitle;
 
   /// No description provided for @injuryDetailsSubtitle.
   ///
   /// In ar, this message translates to:
-  /// **'وصف حالة المصاب يساعد المسعف على الاستعداد'**
+  /// **'وصف حالة المصاب يساعد طاقم الإسعاف على الاستعداد'**
   String get injuryDetailsSubtitle;
 
   /// No description provided for @head.
@@ -1083,11 +1083,11 @@ abstract class AppLocalizations {
   /// **'بلاغ عادي'**
   String get normal_report;
 
-  /// No description provided for @paramedicGreeting.
+  /// No description provided for @ambulanceGreeting.
   ///
   /// In ar, this message translates to:
   /// **'مرحباً، {name}'**
-  String paramedicGreeting(String name);
+  String ambulanceGreeting(String name);
 
   /// No description provided for @availableForReports.
   ///
@@ -1311,29 +1311,29 @@ abstract class AppLocalizations {
   /// **'العودة للحالة المتاحة'**
   String get backToAvailable;
 
-  /// No description provided for @paramedicOnMission.
+  /// No description provided for @ambulanceOnMission.
   ///
   /// In ar, this message translates to:
   /// **'في مهمة'**
-  String get paramedicOnMission;
+  String get ambulanceOnMission;
 
-  /// No description provided for @paramedicArrived.
+  /// No description provided for @ambulanceArrived.
   ///
   /// In ar, this message translates to:
   /// **'وصل للمريض'**
-  String get paramedicArrived;
+  String get ambulanceArrived;
 
-  /// No description provided for @paramedicToHospital.
+  /// No description provided for @ambulanceToHospital.
   ///
   /// In ar, this message translates to:
   /// **'في طريقه للمستشفى'**
-  String get paramedicToHospital;
+  String get ambulanceToHospital;
 
-  /// No description provided for @paramedicAvailable.
+  /// No description provided for @ambulanceAvailable.
   ///
   /// In ar, this message translates to:
   /// **'متاح'**
-  String get paramedicAvailable;
+  String get ambulanceAvailable;
 
   /// No description provided for @medicalReport.
   ///
@@ -1425,11 +1425,11 @@ abstract class AppLocalizations {
   /// **'تحديد الكل كمقروء'**
   String get markAllRead;
 
-  /// No description provided for @paramedicHistory.
+  /// No description provided for @ambulanceHistory.
   ///
   /// In ar, this message translates to:
   /// **'سجل المهام'**
-  String get paramedicHistory;
+  String get ambulanceHistory;
 
   /// No description provided for @missionCompleted.
   ///
@@ -1761,11 +1761,11 @@ abstract class AppLocalizations {
   /// **'تم تعيين سيارة إسعاف'**
   String get ambulanceAssigned;
 
-  /// No description provided for @paramedicName.
+  /// No description provided for @ambulanceName.
   ///
   /// In ar, this message translates to:
-  /// **'اسم المسعف'**
-  String get paramedicName;
+  /// **'معرف الإسعاف'**
+  String get ambulanceName;
 
   /// No description provided for @plateNumberLabel.
   ///
@@ -1863,6 +1863,54 @@ abstract class AppLocalizations {
   /// **'مشاركة التطبيق'**
   String get shareApp;
 
+  /// No description provided for @locationSharingActive.
+  ///
+  /// In ar, this message translates to:
+  /// **'تتبع الموقع نشط'**
+  String get locationSharingActive;
+
+  /// No description provided for @critical.
+  ///
+  /// In ar, this message translates to:
+  /// **'حالة حرجة'**
+  String get critical;
+
+  /// No description provided for @incident.
+  ///
+  /// In ar, this message translates to:
+  /// **'حادث'**
+  String get incident;
+
+  /// No description provided for @emergencyFeed.
+  ///
+  /// In ar, this message translates to:
+  /// **'خلاصة الطوارئ'**
+  String get emergencyFeed;
+
+  /// No description provided for @homeTab.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرئيسية'**
+  String get homeTab;
+
+  /// No description provided for @historyTab.
+  ///
+  /// In ar, this message translates to:
+  /// **'السجل'**
+  String get historyTab;
+
+  /// No description provided for @notificationsTab.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإشعارات'**
+  String get notificationsTab;
+
+  /// No description provided for @profileTab.
+  ///
+  /// In ar, this message translates to:
+  /// **'الملف'**
+  String get profileTab;
+
   /// No description provided for @language.
   ///
   /// In ar, this message translates to:
@@ -1911,11 +1959,11 @@ abstract class AppLocalizations {
   /// **'مواطن'**
   String get roleCitizen;
 
-  /// No description provided for @roleParamedic.
+  /// No description provided for @roleAmbulances.
   ///
   /// In ar, this message translates to:
-  /// **'مسعف'**
-  String get roleParamedic;
+  /// **'الإسعاف'**
+  String get roleAmbulances;
 
   /// No description provided for @defaultUserName.
   ///
@@ -2022,7 +2070,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyDataCollectionDesc.
   ///
   /// In ar, this message translates to:
-  /// **'• الموقع الجغرافي (GPS): يتم جمعه فقط عند إرسال بلاغ طوارئ لتحديد موقعك بدقة.\\n• الملف الطبي: المعلومات التي تدخلها (فصيلة الدم، الحساسية، الأمراض المزمنة) لمساعدة المسعفين.\\n• رقم الهاتف: للتحقق من الهوية والتواصل معك عند الضرورة.'**
+  /// **'• الموقع الجغرافي (GPS): يتم جمعه فقط عند إرسال بلاغ طوارئ لتحديد موقعك بدقة.\\n• الملف الطبي: المعلومات التي تدخلها (فصيلة الدم، الحساسية، الأمراض المزمنة) لمساعدة طاقم الإسعاف.\\n• رقم الهاتف: للتحقق من الهوية والتواصل معك عند الضرورة.'**
   String get privacyDataCollectionDesc;
 
   /// No description provided for @privacyDataUsage.

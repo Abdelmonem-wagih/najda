@@ -1,17 +1,23 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../auth/domain/entities/app_user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/datasources/auth_remote_datasource.dart';
 import '../../data/datasources/auth_local_datasource.dart';
+import '../../../../core/services/location_service.dart';
 
 part 'auth_state.dart';
 
 class AuthCubit extends Cubit<AuthState> {
   final AuthRepository _repository;
+  StreamSubscription? _userSub;
 
   AuthCubit({AuthRepository? repository})
       : _repository = repository ??
@@ -36,12 +42,40 @@ class AuthCubit extends Cubit<AuthState> {
             phone: user.phone ?? '',
           ));
         } else {
+          if (user.isAmbulances) {
+            LocationService.instance.startTracking(
+              ambulanceId: user.id,
+              collection: AppConstants.ambulancesCollection,
+            );
+          }
+          _startUserListener(user);
           emit(AuthAuthenticated(user));
         }
       }
     } catch (e) {
       emit(AuthUnauthenticated());
     }
+  }
+
+  void _startUserListener(AppUser user) {
+    _userSub?.cancel();
+    final col = user.isAmbulances 
+        ? AppConstants.ambulancesCollection 
+        : AppConstants.citizensCollection;
+    
+    // ambulance document ID might be user.ambulanceId
+    final docId = user.isAmbulances ? (user.ambulanceId ?? user.id) : user.id;
+
+    _userSub = FirebaseFirestore.instance
+        .collection(col)
+        .doc(docId)
+        .snapshots()
+        .listen((snap) {
+      if (snap.exists && state is AuthAuthenticated) {
+        final updatedUser = UserModel.fromMap(snap.data()!, snap.id);
+        emit(AuthAuthenticated(updatedUser));
+      }
+    });
   }
 
   // ─── Citizen: Phone + OTP ────────────────────────────────────────────────
@@ -59,6 +93,7 @@ class AuthCubit extends Cubit<AuthState> {
               phone: user.phone ?? '',
             ));
           } else {
+            _startUserListener(user);
             emit(AuthAuthenticated(user));
           }
         },
@@ -93,6 +128,13 @@ class AuthCubit extends Cubit<AuthState> {
           phone: user.phone ?? '',
         ));
       } else {
+        if (user.isAmbulances) {
+          LocationService.instance.startTracking(
+            ambulanceId: user.id,
+            collection: AppConstants.ambulancesCollection,
+          );
+        }
+        _startUserListener(user);
         emit(AuthAuthenticated(user));
       }
     } on FirebaseAuthException catch (e) {
@@ -134,6 +176,7 @@ class AuthCubit extends Cubit<AuthState> {
         additionalInfo: additionalInfo,
       );
 
+      _startUserListener(user);
       emit(AuthAuthenticated(user));
     } catch (e) {
       emit(AuthError(e.toString()));
@@ -176,7 +219,7 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  // ─── Paramedic: Email + Password ─────────────────────────────────────────
+  // ─── Ambulance: Email + Password ─────────────────────────────────────────
 
   Future<void> signInWithEmail(String email, String password) async {
     emit(AuthLoading());
@@ -184,8 +227,15 @@ class AuthCubit extends Cubit<AuthState> {
       final user = await _repository.signInWithEmail(email, password);
       
       // Update FCM token
-      await _repository.updateParamedicFcmToken(user.id);
+      await _repository.updateAmbulanceFcmToken(user.id);
 
+      if (user.isAmbulances) {
+        LocationService.instance.startTracking(
+          ambulanceId: user.id,
+          collection: AppConstants.ambulancesCollection,
+        );
+      }
+      _startUserListener(user);
       emit(AuthAuthenticated(user));
     } on FirebaseAuthException catch (e) {
       emit(AuthError(_mapFirebaseError(e.code)));
@@ -194,15 +244,27 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+  AppUser _ambulanceFromDoc(String uid, Map<String, dynamic> d) {
+    return UserModel.fromMap(d, uid);
+  }
+
   // ─── Sign Out ────────────────────────────────────────────────────────────
 
   Future<void> signOut() async {
     try {
+      _userSub?.cancel();
+      await LocationService.instance.stopTracking();
       await _repository.signOut();
       emit(AuthUnauthenticated());
     } catch (_) {
       emit(AuthUnauthenticated());
     }
+  }
+
+  @override
+  Future<void> close() {
+    _userSub?.cancel();
+    return super.close();
   }
 
   String _mapFirebaseError(String code) {

@@ -1,7 +1,9 @@
 import 'package:najda/features/auth/domain/entities/app_user.dart';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -59,26 +61,33 @@ class ReportCubit extends Cubit<ReportState> {
   }
 
   Future<void> submitReport({
-    required AppUser user,
+    required UserModel user,
   }) async {
     if (state.type == null) return;
 
     emit(state.copyWith(status: ReportStatus.loading));
 
     try {
-      final perm = await Geolocator.checkPermission();
+      var perm = await Geolocator.checkPermission();
       if (perm == LocationPermission.denied) {
-        await Geolocator.requestPermission();
+        perm = await Geolocator.requestPermission();
       }
-      
+
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
       );
+
+      final address = await _resolveAddress(pos.latitude, pos.longitude);
+      final shortId = 'RPT-${_generateShortId()}';
 
       await repository.submitReport(
         user: user,
         latitude: pos.latitude,
         longitude: pos.longitude,
+        accuracy: pos.accuracy,
+        address: address,
+        shortId: shortId,
         type: state.type!.name,
         consciousnessLevel: state.consciousness,
         injuryLocation: state.injuryLocation,
@@ -86,12 +95,31 @@ class ReportCubit extends Cubit<ReportState> {
         image: state.image,
       );
 
-      emit(state.copyWith(status: ReportStatus.success));
+      emit(state.copyWith(status: ReportStatus.success, shortId: shortId));
     } catch (e) {
       emit(state.copyWith(
         status: ReportStatus.error,
         errorMessage: 'فشل إرسال البلاغ',
       ));
+    }
+  }
+
+  String _generateShortId() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final rand = Random.secure();
+    return List.generate(8, (_) => chars[rand.nextInt(chars.length)]).join();
+  }
+
+  Future<String> _resolveAddress(double lat, double lng) async {
+    try {
+      final marks = await placemarkFromCoordinates(lat, lng);
+      if (marks.isEmpty) return '';
+      final p = marks.first;
+      return [p.street, p.subLocality, p.locality, p.administrativeArea]
+          .where((s) => s != null && s!.isNotEmpty)
+          .join('، ');
+    } catch (_) {
+      return '';
     }
   }
 }

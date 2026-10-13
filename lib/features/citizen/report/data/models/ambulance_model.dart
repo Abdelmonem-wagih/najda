@@ -77,8 +77,8 @@ class AmbulanceModel extends Equatable {
   final AmbulanceLocation? currentLocation;
   final String? assignedIncidentId;
   final String? assignedHospitalId;
-  final String? paramedicId;
-  final String? paramedicName;
+  final String? uid;
+  final String? driverName;
   final String? baseStationId;
   final BaseLocation? baseLocation;
   final String? geohash;
@@ -92,8 +92,8 @@ class AmbulanceModel extends Equatable {
     this.currentLocation,
     this.assignedIncidentId,
     this.assignedHospitalId,
-    this.paramedicId,
-    this.paramedicName,
+    this.uid,
+    this.driverName,
     this.baseStationId,
     this.baseLocation,
     this.geohash,
@@ -102,24 +102,39 @@ class AmbulanceModel extends Equatable {
 
   factory AmbulanceModel.fromFirestore(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
+    
+    // Support both nested 'currentLocation' and flat 'lat'/'lng' fields
+    AmbulanceLocation? loc;
+    if (d['currentLocation'] != null) {
+      loc = AmbulanceLocation.fromMap(Map<String, dynamic>.from(d['currentLocation']));
+    } else if (d['lat'] != null && d['lng'] != null) {
+      loc = AmbulanceLocation(
+        latitude: (d['lat'] as num).toDouble(),
+        longitude: (d['lng'] as num).toDouble(),
+        updatedAt: d['updatedAt'] as Timestamp? ?? d['lastActiveAt'] as Timestamp? ?? Timestamp.now(),
+        heading: (d['heading'] as num?)?.toDouble(),
+        speed: (d['speed'] as num?)?.toDouble(),
+      );
+    }
+
     return AmbulanceModel(
       id: doc.id,
-      plateNumber: d['plateNumber'] as String? ?? '',
+      plateNumber: d['plateNumber'] as String? ?? d['id'] as String? ?? '',
       vehicleType: d['vehicleType'] as String? ?? 'basic',
       status: d['status'] as String? ?? 'offline',
-      currentLocation: d['currentLocation'] != null
-          ? AmbulanceLocation.fromMap(Map<String, dynamic>.from(d['currentLocation']))
-          : null,
-      assignedIncidentId: d['assignedIncidentId'] as String?,
+      currentLocation: loc,
+      assignedIncidentId: d['assignedIncidentId'] as String? ?? d['missionId'] as String?,
       assignedHospitalId: d['assignedHospitalId'] as String?,
-      paramedicId: d['paramedicId'] as String?,
-      paramedicName: d['paramedicName'] as String?,
+      uid: d['uid'] as String? ?? d['paramedicId'] as String?,
+      driverName: d['driverName'] as String? ?? d['paramedicName'] as String?,
       baseStationId: d['baseStationId'] as String?,
       baseLocation: d['baseLocation'] != null
           ? BaseLocation.fromMap(Map<String, dynamic>.from(d['baseLocation']))
-          : null,
+          : (d['baseLat'] != null && d['baseLng'] != null)
+            ? BaseLocation(latitude: (d['baseLat'] as num).toDouble(), longitude: (d['baseLng'] as num).toDouble())
+            : null,
       geohash: d['geohash'] as String?,
-      lastActiveAt: d['lastActiveAt'] as Timestamp? ?? Timestamp.now(),
+      lastActiveAt: d['lastActiveAt'] as Timestamp? ?? d['updatedAt'] as Timestamp? ?? Timestamp.now(),
     );
   }
 
@@ -129,15 +144,20 @@ class AmbulanceModel extends Equatable {
       'plateNumber': plateNumber,
       'vehicleType': vehicleType,
       'status': status,
-      if (currentLocation != null) 'currentLocation': currentLocation!.toMap(),
+      if (currentLocation != null) ...{
+        'currentLocation': currentLocation!.toMap(),
+        'lat': currentLocation!.latitude,
+        'lng': currentLocation!.longitude,
+      },
       'assignedIncidentId': assignedIncidentId,
       'assignedHospitalId': assignedHospitalId,
-      'paramedicId': paramedicId,
-      'paramedicName': paramedicName,
+      'uid': uid,
+      'driverName': driverName,
       'baseStationId': baseStationId,
       if (baseLocation != null) 'baseLocation': baseLocation!.toMap(),
       'geohash': geohash,
       'lastActiveAt': lastActiveAt,
+      'updatedAt': lastActiveAt,
     };
   }
 
@@ -150,8 +170,8 @@ class AmbulanceModel extends Equatable {
         currentLocation,
         assignedIncidentId,
         assignedHospitalId,
-        paramedicId,
-        paramedicName,
+        uid,
+        driverName,
         baseStationId,
         baseLocation,
         geohash,

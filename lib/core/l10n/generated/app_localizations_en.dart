@@ -24,7 +24,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginAsCitizen => 'Citizen';
 
   @override
-  String get loginAsParamedic => 'Paramedic';
+  String get loginAsAmbulance => 'Ambulance';
 
   @override
   String get phoneNumber => 'Phone Number';
@@ -100,8 +100,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get close => 'Close';
 
   @override
-  String get paramedicInfo =>
-      'Paramedic accounts are created by system admin only';
+  String get ambulanceInfo =>
+      'Ambulance accounts are created by system admin only';
 
   @override
   String get newUserPrompt => 'Don\'t have an account?';
@@ -153,7 +153,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get medicalInfoSubtitle =>
-      'Sent to paramedics during reports to aid quick diagnosis';
+      'Sent to ambulance team during reports to aid quick diagnosis';
 
   @override
   String get passwordLabel => 'Account Password';
@@ -253,8 +253,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get typeMessageHint => 'Type your question here...';
 
   @override
-  String get paramedicWelcome =>
-      'Hello Paramedic! 🏥\n\nI am your field medical assistant. I can help with protocols, dosages, and drug interactions.\n\nAsk me any medical question.';
+  String get ambulanceWelcome =>
+      'Hello! 🏥\n\nI am your field medical assistant. I can help with protocols, dosages, and drug interactions.\n\nAsk me any medical question.';
 
   @override
   String get citizenWelcome =>
@@ -372,7 +372,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get injuryDetailsSubtitle =>
-      'Describing the patient\'s condition helps the paramedic prepare';
+      'Describing the patient\'s condition helps the ambulance team prepare';
 
   @override
   String get head => 'Head';
@@ -529,7 +529,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get normal_report => 'Normal Report';
 
   @override
-  String paramedicGreeting(String name) {
+  String ambulanceGreeting(String name) {
     return 'Hello, $name';
   }
 
@@ -648,16 +648,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backToAvailable => 'Return to Available';
 
   @override
-  String get paramedicOnMission => 'On Mission';
+  String get ambulanceOnMission => 'On Mission';
 
   @override
-  String get paramedicArrived => 'Arrived at Patient';
+  String get ambulanceArrived => 'Arrived at Patient';
 
   @override
-  String get paramedicToHospital => 'En Route to Hospital';
+  String get ambulanceToHospital => 'En Route to Hospital';
 
   @override
-  String get paramedicAvailable => 'Available';
+  String get ambulanceAvailable => 'Available';
 
   @override
   String get medicalReport => 'Medical Report';
@@ -706,7 +706,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get markAllRead => 'Mark all as read';
 
   @override
-  String get paramedicHistory => 'Mission History';
+  String get ambulanceHistory => 'Mission History';
 
   @override
   String get missionCompleted => 'Mission Completed';
@@ -892,7 +892,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ambulanceAssigned => 'Ambulance Assigned';
 
   @override
-  String get paramedicName => 'Paramedic Name';
+  String get ambulanceName => 'Ambulance Name';
 
   @override
   String get plateNumberLabel => 'Plate Number';
@@ -943,6 +943,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareApp => 'Share App';
 
   @override
+  String get locationSharingActive => 'Location sharing active';
+
+  @override
+  String get critical => 'CRITICAL';
+
+  @override
+  String get incident => 'INCIDENT';
+
+  @override
+  String get emergencyFeed => 'Emergency Feed';
+
+  @override
+  String get homeTab => 'Home';
+
+  @override
+  String get historyTab => 'History';
+
+  @override
+  String get notificationsTab => 'Notifications';
+
+  @override
+  String get profileTab => 'Profile';
+
+  @override
   String get language => 'Language';
 
   @override
@@ -967,7 +991,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roleCitizen => 'Citizen';
 
   @override
-  String get roleParamedic => 'Paramedic';
+  String get roleAmbulances => 'Ambulance';
 
   @override
   String get defaultUserName => 'Najda User';
@@ -1025,7 +1049,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacyDataCollectionDesc =>
-      '• GPS: Collected only when sending an emergency report to determine your location accurately.\\n• Medical Profile: Info you enter (blood type, allergies, chronic diseases) to assist paramedics.\\n• Phone Number: For identity verification and contacting you when necessary.';
+      '• GPS: Collected only when sending an emergency report to determine your location accurately.\\n• Medical Profile: Info you enter (blood type, allergies, chronic diseases) to assist ambulance team.\\n• Phone Number: For identity verification and contacting you when necessary.';
 
   @override
   String get privacyDataUsage => 'Data Usage';

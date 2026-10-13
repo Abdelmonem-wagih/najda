@@ -2,26 +2,26 @@ import 'package:equatable/equatable.dart';
 
 import '../../../../citizen/report/data/models/incident_model.dart';
 
-class ParamedicHomeState extends Equatable {
+class AmbulanceHomeState extends Equatable {
   final List<IncidentModel> assignedReports;
   final List<IncidentModel> emergencyReports;
   final bool isLoading;
   final String? errorMessage;
 
-  const ParamedicHomeState({
+  const AmbulanceHomeState({
     this.assignedReports = const [],
     this.emergencyReports = const [],
     this.isLoading = false,
     this.errorMessage,
   });
 
-  ParamedicHomeState copyWith({
+  AmbulanceHomeState copyWith({
     List<IncidentModel>? assignedReports,
     List<IncidentModel>? emergencyReports,
     bool? isLoading,
     String? errorMessage,
   }) {
-    return ParamedicHomeState(
+    return AmbulanceHomeState(
       assignedReports: assignedReports ?? this.assignedReports,
       emergencyReports: emergencyReports ?? this.emergencyReports,
       isLoading: isLoading ?? this.isLoading,

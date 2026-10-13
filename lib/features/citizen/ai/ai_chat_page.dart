@@ -10,6 +10,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/shared/widgets/app_widgets.dart';
 import '../../auth/presentation/cubit/auth_cubit.dart';
+import '../../../core/constants/app_constants.dart';
 
 class AiChatPage extends StatefulWidget {
   const AiChatPage({super.key});
@@ -34,7 +35,7 @@ class _AiChatPageState extends State<AiChatPage> {
     '🔥 إسعاف الحروق',
   ];
 
-  static const _paramedicSuggestions = [
+  static const _ambulanceSuggestions = [
     '💊 جرعة الأدرينالين',
     '🫀 بروتوكول الصدمة',
     '🧠 علامات السكتة',
@@ -49,8 +50,8 @@ class _AiChatPageState extends State<AiChatPage> {
     _role = s is AuthAuthenticated ? s.user.role : 'citizen';
 
     _msgs.add(_Msg(
-      text: _role == 'paramedic'
-          ? 'مرحباً أيها المسعف! 🏥\n\nأنا مساعدك الطبي الميداني. يمكنني مساعدتك في البروتوكولات والجرعات والتفاعلات الدوائية.\n\nاسألني أي سؤال طبي.'
+      text: _role == AppConstants.roleAmbulances
+          ? 'مرحباً بك في نظام نجدة! 🏥\n\nأنا مساعدك الطبي الميداني. يمكنني مساعدتك في البروتوكولات والجرعات والتفاعلات الدوائية.\n\nاسألني أي سؤال طبي.'
           : 'مرحباً! أنا مساعد نجدة الذكي 🤖\n\nيمكنني مساعدتك في تقييم الأعراض وإرشادات الإسعافات الأولية.\n\n⚠️ في الطوارئ اتصل بـ 123 فوراً!',
       isUser: false,
     ));
@@ -171,8 +172,8 @@ class _AiChatPageState extends State<AiChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    final suggestions = _role == 'paramedic' ? _paramedicSuggestions : _citizenSuggestions;
-    final accentColor = _role == 'paramedic' ? AppColors.criticalRed : AppColors.primaryBlue;
+    final suggestions = _role == AppConstants.roleAmbulances ? _ambulanceSuggestions : _citizenSuggestions;
+    final accentColor = _role == AppConstants.roleAmbulances ? AppColors.criticalRed : AppColors.primaryBlue;
 
     return Scaffold(
       backgroundColor: AppColors.background,
