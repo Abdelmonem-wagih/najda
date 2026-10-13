@@ -290,3 +290,29 @@ await db.collection('ambulances').doc(ambulancesId).set({
 NajdaApp.of(context)?.setLocale('en');
 NajdaApp.of(context)?.setLocale('ar');
 ```
+
+---
+
+## Firebase Backend (single source of truth)
+
+This repo is the **only** place the Firebase backend for project `ultra-bearing-402000` is configured and deployed from:
+
+- `firebase.json`, `.firebaserc` — project config
+- `firestore.rules`, `firestore.indexes.json` — security rules + indexes
+- `storage.rules` — Cloud Storage rules
+- `najda_functions/` — the one and only Cloud Functions codebase (`default`)
+- `firebase/CONTRACT.md` — the canonical Firestore schema shared by this app, the Cloud Functions, and the dashboard
+
+The dashboard repo (`najda-dashboard`) does **not** host any Firebase config or Cloud Functions of its own — it only holds a client-side Firebase config (env vars) and calls the callables defined in `najda_functions/`.
+
+### Deploy commands (in order)
+
+```bash
+firebase deploy --only firestore:indexes
+firebase deploy --only functions
+firebase deploy --only firestore:rules
+firebase deploy --only storage
+# then, after reviewing a dry run:
+# npx tsx najda_functions/scripts/migrate-v1.ts          (dry run)
+# npx tsx najda_functions/scripts/migrate-v1.ts --apply   (writes data)
+```

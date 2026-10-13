@@ -1,0 +1,29 @@
+rules_version = '2';
+
+// NOTE: this is the Phase 1 baseline (closes the "no storage rules at all" gap).
+// Finalized with the dashboard-user read check in Phase 3.3.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    // Accident/incident photos uploaded by the reporting citizen.
+    match /incidents/{uid}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(uid)
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Default deny — everything else must be explicitly allowed above.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
