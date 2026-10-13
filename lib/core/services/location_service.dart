@@ -5,26 +5,66 @@ import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:geolocator/geolocator.dart';
 
-/// Paramedic-side: sends GPS to Firestore every 5 seconds.
+import '../constants/firestore_contract.dart';
+
+double _calculateBearing(double lat1, double lng1, double lat2, double lng2) {
+  final dLng  = (lng2 - lng1) * pi / 180;
+  final rlat1 = lat1 * pi / 180;
+  final rlat2 = lat2 * pi / 180;
+  final y = sin(dLng) * cos(rlat2);
+  final x = cos(rlat1) * sin(rlat2) -
+            sin(rlat1) * cos(rlat2) * cos(dLng);
+  return (atan2(y, x) * 180 / pi + 360) % 360;
+}
+
+/// Writes exactly the tracking/{ambulanceId} field whitelist firestore.rules
+/// enforces ({latitude, longitude, bearing, speed, accuracy, updatedAt},
+/// nothing else) — a `.set()` (not merge), since tracking is "one doc per
+/// ambulance, latest point only".
+Future<void> _writeTrackingPoint({
+  required String ambulanceId,
+  required double latitude,
+  required double longitude,
+  required double bearing,
+  required double speed,
+  required double accuracy,
+}) async {
+  await FirebaseFirestore.instance
+      .collection(FirestoreCollections.tracking)
+      .doc(ambulanceId)
+      .set({
+    TrackingFields.latitude: latitude,
+    TrackingFields.longitude: longitude,
+    TrackingFields.bearing: bearing,
+    TrackingFields.speed: speed,
+    TrackingFields.accuracy: accuracy,
+    TrackingFields.updatedAt: FieldValue.serverTimestamp(),
+  });
+}
+
+/// Paramedic-side: sends GPS to tracking/{ambulanceId} every 5 seconds.
 /// Works in foreground AND background (Android foreground service).
+///
+/// Writes ONLY to `tracking/` — never to the ambulance doc itself, which no
+/// longer carries position fields at all (lat/lng/latitude/longitude/
+/// heading/area/speed/accuracy/lastSeen were all removed from the canonical
+/// ambulances schema; `area` in particular used to get silently overwritten
+/// with a raw coordinate string by this exact writer every ~5s, destroying
+/// the admin-entered zone name). firestore.rules also now rejects any of
+/// those fields on an `ambulances` client update, so this isn't optional.
 class LocationService {
   LocationService._();
   static final instance = LocationService._();
 
   StreamSubscription<Position>? _posStream;
   String? _ambulanceId;
-  String? _collection;
   bool _isRunning = false;
   Position? _lastPosition;
 
   // ── Start ────────────────────────────────────────────────────────
-  Future<void> startTracking({
-    required String ambulanceId,
-    required String collection, // 'ambulances'
-  }) async {
+  Future<void> startTracking({required String ambulanceId}) async {
     if (_isRunning) return;
     _ambulanceId = ambulanceId;
-    _collection  = collection;
 
     // Request permissions
     var perm = await Geolocator.checkPermission();
@@ -38,7 +78,7 @@ class LocationService {
 
     _isRunning = true;
 
-    // Send immediately on login
+    // Send immediately on start
     await _sendCurrentPosition();
 
     // Stream: send every time moved 10 meters OR every 5 seconds
@@ -59,7 +99,7 @@ class LocationService {
     });
 
     // Also start background service for when app is killed
-    await _initBackgroundService(ambulanceId, collection);
+    await _initBackgroundService(ambulanceId);
     debugPrint('[GPS] Tracking started for $ambulanceId');
   }
 
@@ -68,10 +108,14 @@ class LocationService {
     _isRunning = false;
     await _posStream?.cancel();
     _posStream = null;
+    _ambulanceId = null;
+    _lastPosition = null;
     final service = FlutterBackgroundService();
     service.invoke('stop');
     debugPrint('[GPS] Tracking stopped');
   }
+
+  bool get isRunning => _isRunning;
 
   // ── Send current position once ────────────────────────────────────
   Future<void> _sendCurrentPosition() async {
@@ -87,14 +131,13 @@ class LocationService {
     }
   }
 
-  // ── Write to Firestore ────────────────────────────────────────────
+  // ── Write to tracking/{ambulanceId} ────────────────────────────────
   Future<void> _sendToFirestore(Position pos) async {
-    if (_ambulanceId == null || _ambulanceId!.isEmpty || _collection == null) return;
+    final ambulanceId = _ambulanceId;
+    if (ambulanceId == null || ambulanceId.isEmpty) return;
     try {
-      // Calculate bearing from last position
       double bearing = 0;
-      if (_lastPosition != null &&
-          _lastPosition != pos) {
+      if (_lastPosition != null && _lastPosition != pos) {
         bearing = _calculateBearing(
           _lastPosition!.latitude,
           _lastPosition!.longitude,
@@ -103,42 +146,21 @@ class LocationService {
         );
       }
 
-      await FirebaseFirestore.instance
-          .collection(_collection!)
-          .doc(_ambulanceId!)
-          .update({
-        'lat': pos.latitude,
-        'lng': pos.longitude,
-        'latitude': pos.latitude,
-        'longitude': pos.longitude,
-        'area': '${pos.latitude}, ${pos.longitude}',
-        'bearing': bearing, // ← for marker rotation
-        'speed': pos.speed, // ← m/s
-        'accuracy': pos.accuracy,
-        'lastActiveAt': FieldValue.serverTimestamp(),
-        'lastSeen': FieldValue.serverTimestamp(),
-      });
+      await _writeTrackingPoint(
+        ambulanceId: ambulanceId,
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        bearing: bearing,
+        speed: pos.speed,
+        accuracy: pos.accuracy,
+      );
     } catch (e) {
       debugPrint('[GPS] Firestore update failed: $e');
     }
   }
 
-  // ── Bearing calculation ────────────────────────────────────────────
-  double _calculateBearing(
-    double lat1, double lng1, double lat2, double lng2) {
-    final dLat  = (lat2 - lat1) * pi / 180;
-    final dLng  = (lng2 - lng1) * pi / 180;
-    final rlat1 = lat1 * pi / 180;
-    final rlat2 = lat2 * pi / 180;
-    final y = sin(dLng) * cos(rlat2);
-    final x = cos(rlat1) * sin(rlat2) -
-              sin(rlat1) * cos(rlat2) * cos(dLng);
-    return (atan2(y, x) * 180 / pi + 360) % 360;
-  }
-
   // ── Background service setup ──────────────────────────────────────
-  Future<void> _initBackgroundService(
-      String ambulanceId, String collection) async {
+  Future<void> _initBackgroundService(String ambulanceId) async {
     final service = FlutterBackgroundService();
     await service.configure(
       androidConfiguration: AndroidConfiguration(
@@ -157,10 +179,7 @@ class LocationService {
       ),
     );
     await service.startService();
-    service.invoke('init', {
-      'ambulanceId': ambulanceId,
-      'collection':  collection,
-    });
+    service.invoke('init', {'ambulanceId': ambulanceId});
   }
 }
 
@@ -169,35 +188,38 @@ class LocationService {
 @pragma('vm:entry-point')
 void backgroundServiceMain(ServiceInstance service) async {
   String? ambulanceId;
-  String? collection;
+  Position? lastPos;
 
   service.on('init').listen((data) {
     ambulanceId = data?['ambulanceId'] as String?;
-    collection  = data?['collection']  as String?;
   });
 
   service.on('stop').listen((_) => service.stopSelf());
 
   // Send GPS every 5 seconds
   Timer.periodic(const Duration(seconds: 5), (_) async {
-    if (ambulanceId == null || ambulanceId!.isEmpty || collection == null) return;
+    final id = ambulanceId;
+    if (id == null || id.isEmpty) return;
     try {
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
         timeLimit: const Duration(seconds: 4),
       );
-      await FirebaseFirestore.instance
-          .collection(collection!)
-          .doc(ambulanceId!)
-          .update({
-        'lat': pos.latitude,
-        'lng': pos.longitude,
-        'latitude': pos.latitude,
-        'longitude': pos.longitude,
-        'area': '${pos.latitude}, ${pos.longitude}',
-        'lastActiveAt': FieldValue.serverTimestamp(),
-        'lastSeen': FieldValue.serverTimestamp(),
-      });
+      double bearing = 0;
+      if (lastPos != null && lastPos != pos) {
+        bearing = _calculateBearing(
+          lastPos!.latitude, lastPos!.longitude, pos.latitude, pos.longitude,
+        );
+      }
+      lastPos = pos;
+      await _writeTrackingPoint(
+        ambulanceId: id,
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        bearing: bearing,
+        speed: pos.speed,
+        accuracy: pos.accuracy,
+      );
     } catch (_) {}
   });
 }

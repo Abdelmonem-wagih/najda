@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/constants/firestore_contract.dart';
 import '../../domain/entities/app_user.dart';
 
 abstract class AuthRemoteDataSource {
@@ -22,7 +22,7 @@ abstract class AuthRemoteDataSource {
   Future<void> saveCitizenProfile(String uid, Map<String, dynamic> data);
   Future<void> updateCitizenProfile(String uid, Map<String, dynamic> data);
   Future<void> updateAmbulanceFcmToken(String ambulanceId, String? token);
-  Future<void> updateAmbulanceOnlineStatus(String ambulanceId, bool isOnline, {String? status});
+  Future<void> updateAmbulanceOnlineStatus(String ambulanceId, bool isOnline);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -114,28 +114,33 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<void> updateAmbulanceFcmToken(String ambulanceId, String? token) async {
-    final update = token == null 
-        ? {'fcmToken': FieldValue.delete()} 
-        : {'fcmToken': token, 'updatedAt': FieldValue.serverTimestamp()};
-        
+    // fcmToken lives in ambulance_private/{id} (never on the ambulances doc
+    // itself — see firebase/CONTRACT.md). Writing it to `ambulances` used
+    // to silently "succeed" against the pre-hardening rules, but it's the
+    // wrong document per the canonical schema, and the Phase 3 rules now
+    // reject this specific field on `ambulances` from the client anyway.
+    final update = token == null
+        ? {'fcmToken': FieldValue.delete()}
+        : {'fcmToken': token};
+
     await _firestore
-        .collection(AppConstants.ambulancesCollection)
+        .collection(FirestoreCollections.ambulancePrivate)
         .doc(ambulanceId)
         .set(update, SetOptions(merge: true));
   }
 
   @override
-  Future<void> updateAmbulanceOnlineStatus(String ambulanceId, bool isOnline, {String? status}) async {
-    final Map<String, dynamic> update = {
-      'isOnline': isOnline,
-      'lastActiveAt': FieldValue.serverTimestamp(),
-    };
-    if (status != null) {
-      update['status'] = status;
-    }
+  Future<void> updateAmbulanceOnlineStatus(String ambulanceId, bool isOnline) async {
+    // isOnline/lastActiveAt only — `status` is server-write-only (synced by
+    // the status-machine Cloud Function trigger) and firestore.rules now
+    // rejects a client write that touches it on this collection at all.
     await _firestore
         .collection(AppConstants.ambulancesCollection)
         .doc(ambulanceId)
-        .update(update);
+        .update({
+      'isOnline': isOnline,
+      'lastActiveAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 }

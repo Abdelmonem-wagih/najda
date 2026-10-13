@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/route/app_routes.dart';
+import '../../../core/services/location_service.dart';
 import '../../../core/theme/design.dart';
 import '../../auth/domain/entities/app_user.dart';
 import '../../auth/presentation/cubit/auth_cubit.dart';
@@ -95,7 +96,12 @@ class _AmbulanceHomePageState extends State<AmbulanceHomePage> {
     });
   }
 
-  // Toggle ONLINE/OFFLINE (driver's shift status)
+  // Toggle ONLINE/OFFLINE (driver's shift status). Writes isOnline ONLY —
+  // `status` is server-write-only (synced by the Cloud Function
+  // status-machine trigger) and firestore.rules now rejects a client write
+  // that touches it on this collection at all. Previously this wrote
+  // status:'available' on every toggle-to-online, which could race with a
+  // Cloud Function assignment landing at the same moment.
   Future<void> _toggleOnline(AppUser user) async {
     final newVal = !user.isOnline;
     final docId = user.ambulanceId ?? user.id;
@@ -105,11 +111,19 @@ class _AmbulanceHomePageState extends State<AmbulanceHomePage> {
           .doc(docId)
           .update({
         'isOnline': newVal,
-        // Operational status remains 'available' if not on mission
-        if (newVal && user.currentIncidentId == null)
-          'status': 'available',
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // GPS tracking is tied to the online toggle, not just login/logout —
+      // previously it only started/stopped at full sign-in/out, so a
+      // paramedic who went "offline" mid-shift kept broadcasting their
+      // position (and burning battery) until they fully logged out.
+      if (newVal) {
+        await LocationService.instance.startTracking(ambulanceId: docId);
+      } else {
+        await LocationService.instance.stopTracking();
+      }
+
       _showSnack(newVal ? 'أنت الآن متصل ✓' : 'أنت الآن غير متصل',
           newVal ? NC.success : NC.textMid);
     } catch (e) {

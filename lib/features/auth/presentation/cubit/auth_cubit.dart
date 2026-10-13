@@ -43,10 +43,7 @@ class AuthCubit extends Cubit<AuthState> {
           ));
         } else {
           if (user.isAmbulances) {
-            LocationService.instance.startTracking(
-              ambulanceId: user.id,
-              collection: AppConstants.ambulancesCollection,
-            );
+            LocationService.instance.startTracking(ambulanceId: user.id);
           }
           _startUserListener(user);
           emit(AuthAuthenticated(user));
@@ -129,10 +126,7 @@ class AuthCubit extends Cubit<AuthState> {
         ));
       } else {
         if (user.isAmbulances) {
-          LocationService.instance.startTracking(
-            ambulanceId: user.id,
-            collection: AppConstants.ambulancesCollection,
-          );
+          LocationService.instance.startTracking(ambulanceId: user.id);
         }
         _startUserListener(user);
         emit(AuthAuthenticated(user));
@@ -232,10 +226,7 @@ class AuthCubit extends Cubit<AuthState> {
       await _repository.updateAmbulanceFcmToken(user.id);
 
       if (user.isAmbulances) {
-        LocationService.instance.startTracking(
-          ambulanceId: user.id,
-          collection: AppConstants.ambulancesCollection,
-        );
+        LocationService.instance.startTracking(ambulanceId: user.id);
       }
       _startUserListener(user);
       emit(AuthAuthenticated(user));
@@ -244,10 +235,6 @@ class AuthCubit extends Cubit<AuthState> {
     } catch (e) {
       emit(AuthError(e.toString()));
     }
-  }
-
-  AppUser _ambulanceFromDoc(String uid, Map<String, dynamic> d) {
-    return UserModel.fromMap(d, uid);
   }
 
   // ─── Sign Out ────────────────────────────────────────────────────────────

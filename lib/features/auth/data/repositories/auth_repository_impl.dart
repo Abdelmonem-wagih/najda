@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -10,6 +11,10 @@ import '../datasources/auth_remote_datasource.dart';
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final AuthLocalDataSource localDataSource;
+
+  // Tracked so a re-login doesn't stack a second onTokenRefresh subscription
+  // on top of an earlier one that was never cancelled (CC11).
+  StreamSubscription<String>? _fcmTokenRefreshSub;
 
   AuthRepositoryImpl({
     required this.remoteDataSource,
@@ -190,8 +195,12 @@ class AuthRepositoryImpl implements AuthRepository {
     await localDataSource.saveUserId(uid);
     await localDataSource.saveUserEmail(email);
 
-    // Set online status to true upon login
-    await remoteDataSource.updateAmbulanceOnlineStatus(user.id, true, status: 'available');
+    // isOnline only — `status` is server-write-only (Phase 3 rules reject
+    // it from the client entirely; the Cloud Function status-machine
+    // trigger owns it). A previous login/logout force-resetting status to
+    // 'available' here could silently stomp a real 'assigned'/'on_mission'
+    // dispatch if the paramedic's app happened to re-authenticate mid-shift.
+    await remoteDataSource.updateAmbulanceOnlineStatus(user.id, true);
 
     if (user.role.isEmpty || user.role == AppConstants.roleCitizen) {
       return user.copyWith(
@@ -205,14 +214,17 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> signOut() async {
+    await _fcmTokenRefreshSub?.cancel();
+    _fcmTokenRefreshSub = null;
+
     final uid = await localDataSource.getUserId();
     final role = await localDataSource.getUserRole();
     if (role == AppConstants.roleAmbulances && uid != null) {
       final user = await remoteDataSource.fetchAmbulanceData(uid);
       if (user != null) {
         await remoteDataSource.updateAmbulanceFcmToken(user.id, null);
-        // Set online status to false upon logout
-        await remoteDataSource.updateAmbulanceOnlineStatus(user.id, false, status: 'available');
+        // isOnline only — see the matching comment in signInWithEmail.
+        await remoteDataSource.updateAmbulanceOnlineStatus(user.id, false);
       }
     }
 
@@ -226,7 +238,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) {
         await remoteDataSource.updateAmbulanceFcmToken(ambulanceId, token);
-        FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+        await _fcmTokenRefreshSub?.cancel();
+        _fcmTokenRefreshSub = FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
           remoteDataSource.updateAmbulanceFcmToken(ambulanceId, newToken);
         });
       }
