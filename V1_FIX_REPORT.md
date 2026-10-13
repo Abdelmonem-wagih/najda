@@ -102,7 +102,35 @@ Read `index.ts` in full before changing anything (confirmed the exact lines the 
 - Two simultaneous SOS creates genuinely resolve to two different ambulances (the transaction-conflict-retry behavior).
 - The dedupe-exclude-self fix actually prevents a simulated redelivery from downgrading a valid assignment.
 
-## Phase 3 — Rules (firestore.rules + storage.rules) — NOT STARTED (storage.rules has a Phase 1 baseline only)
+## Phase 3 — Rules (firestore.rules + storage.rules) — ✅ COMPLETE, but **UNVERIFIED against a live emulator** (see below — this is the biggest open risk in the whole pass)
+
+### 3.1 / 3.2 firestore.rules rewrite
+**Fixed.** Full rewrite (see commit `2ddb438` for the complete reasoning per collection). Highlights, mapped to original audit findings:
+- **SEC4** (any authenticated user could read/update any citizen's `criticals`/`incidents`): fixed — read limited to owner/assigned-ambulance/dashboard; update is transition-gated via `diff().affectedKeys().hasOnly([...])` so an ambulance can only advance status along the legal sequence and touch a specific field whitelist, a citizen can only cancel while pending/assigned, a dashboard user can only set the manual hospital pick.
+- **PARA5** (no server-side status-machine enforcement at the rules layer): fixed — rules now reject an illegal transition outright (on top of the Phase 2 trigger that reverts anything that somehow still gets through).
+- **ambulances**: `status`/`currentIncidentId`/`currentIncidentType` are now server-write-only; the owning crew can only touch `isOnline`/`lastActiveAt`/`updatedAt`.
+- **New rules** for `ambulance_private` (owner writes `fcmToken` only) and `tracking` (owning ambulance only, field-whitelisted) — these collections didn't exist before this hardening pass.
+- **notifications**: create is now server-only (old rule let any authenticated client forge a fake notification — not previously flagged by the original audit, found here).
+- **ambulance_history**: write is server-only (closes PARA8 at the rules layer too, on top of Phase 2's trigger that now actually performs the write).
+- **`_counters`**: was `allow read, write: if true` declared **twice** — genuinely public read/write on an internal collection. Fixed to `if false`, duplicate removed.
+- `dashboard_users`: a user can now update their own `name`/`prefs` (needed for Phase 5.7) but not their own `role`/`active`.
+- Pre-existing out-of-scope collections (`admins`, `patient_profiles`, `mission_cancellations`) left exactly as they were.
+
+**New discovery for Phase 5**: `join_requests` rules now require real field validation for a public create, but grep confirms the dashboard's `sendJoinRequest()` (`src/lib/functions.js`) calls a `joinRequest` **callable that no longer exists anywhere** (it only ever lived in the legacy `functions/index.js` deleted in step 1.2) — and `sendJoinRequest` itself is never called by any dashboard UI (dead code, no "join our fleet" form exists). Phase 5 needs to either build a real form that writes directly to Firestore, or just delete the dead function.
+
+### 3.3 storage.rules
+**Fixed.** `incidents/{uid}/*` read now requires owner **or** an active dashboard user (the Phase 1 baseline allowed any authenticated user). Confirmed via grep that no paramedic-side feature reads an incident's `imageUrl` today, so tightening this doesn't break anything live.
+
+### 3.4 Rules unit tests
+**Written, type-checks cleanly, but NOT executed.** `najda_functions/test/rules.test.ts` — 40+ `assertSucceeds`/`assertFails` cases using `@firebase/rules-unit-testing` (the one new dependency explicitly named in the brief), covering at least one allow and one deny per collection, including both specifically-requested cases ("citizen cannot read another citizen's critical", "ambulance cannot write ambulance.status or ambulance_history"). A minimal custom test runner (`test/testHarness.ts`) avoids pulling in jest/mocha just for this.
+
+**Could not run it.** `firebase emulators:exec` refuses to start on this machine: `firebase-tools no longer supports Java version before 21`, and this machine has Java 17. I asked whether to install a JDK 21 to unlock real verification; **the user chose to skip it and continue.** So: the rules file was hand-reviewed line by line for logic errors (null-safety on `isAssignedAmbulance` before its internal `get()` call, field-diff correctness, short-circuit evaluation order) and brace-balance-checked programmatically, and the test file type-checks (`tsc --noEmit`), but **neither has been proven correct by actually executing against a real Firestore engine.** This is the single biggest unverified risk in this entire hardening pass.
+
+### 3.5 App Check
+**Documented, not implemented here** (implementation is Phase 4.9, client-side). Added a "App Check" section to `firebase/CONTRACT.md`: console-level **Enforce** for Firestore/Storage/Functions must be turned on only *after* Phase 4.9's release-build client activation is confirmed live — flipping it first would break every user still on an old build. This is a console toggle, not something expressible in a committed file.
+
+### Manual verification needed (added to the checklist)
+Upgrade this (or any) machine to Java 21+, then run `npm --prefix najda_functions run test:rules` and fix anything that fails before trusting this rules file in production. Given the field-level `diff().affectedKeys()` logic is genuinely intricate, I'd treat passing this suite as a hard prerequisite for deploying these rules, not a nice-to-have.
 
 ## Phase 4 — Flutter app — NOT STARTED
 
