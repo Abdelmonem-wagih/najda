@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../constants/app_constants.dart';
 
 // Auth
+import '../../features/auth/presentation/cubit/auth_cubit.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/otp_page.dart';
@@ -16,7 +17,6 @@ import '../../features/citizen/home/citizen_home_page.dart';
 import '../../features/citizen/home/presentation/cubit/sos_cubit.dart';
 import '../../features/citizen/home/data/repositories/sos_repository_impl.dart';
 import '../../features/citizen/home/data/datasources/sos_remote_datasource.dart';
-import '../../features/citizen/home/presentation/pages/sos_tracking_screen.dart';
 import '../../features/citizen/hospitals/hospitals_page.dart';
 import '../../features/citizen/profile/presentation/pages/citizen_profile_page.dart';
 import '../../features/citizen/profile/presentation/pages/edit_profile_page.dart';
@@ -56,9 +56,8 @@ class AppRoutes {
   static const String citizenEmergency = '/citizen/emergency';
   static const String citizenProfile   = '/citizen/profile';
   static const String editProfile      = '/citizen/edit-profile';
-  static const String citizenTracking  = '/citizen/tracking';
   static const String trackIncident    = '/citizen/track';
-  
+
   // Settings
   static const String settings         = '/settings';
   static const String settingsLanguage = '/settings/language';
@@ -76,23 +75,34 @@ class AppRoutes {
   static const String ambulanceReportDetails = '/ambulance/report-details';
   static const String ambulanceNotifications = '/ambulance/notifications';
   static const String ambulanceHistory      = '/ambulance/history';
+
+  /// Routes reachable without being signed in at all.
+  static const Set<String> publicRoutes = {splash, login, otp, registration};
 }
 
 class AppRouter {
   static final navigatorKey = GlobalKey<NavigatorState>();
 
   static Route<dynamic> onGenerateRoute(RouteSettings s) {
+    final guarded = _applyRoleGuard(s);
+    if (guarded != null) return guarded;
+
     switch (s.name) {
       case AppRoutes.splash:
         return _fade(const SplashPage(), s);
       case AppRoutes.login:
         return _fade(const LoginPage(), s);
       case AppRoutes.otp:
-        return _slide(OtpPage(verificationId: s.arguments as String), s);
-      case AppRoutes.registration:
-        final a = s.arguments as Map<String, dynamic>;
-        return _slide(RegistrationPage(
-            uid: a['uid'], phoneNumber: a['phoneNumber']), s);
+        final verificationId = s.arguments;
+        if (verificationId is! String) return _fade(const LoginPage(), s);
+        return _slide(OtpPage(verificationId: verificationId), s);
+      case AppRoutes.registration: {
+        final a = _args(s);
+        final uid = a['uid'] as String?;
+        final phoneNumber = a['phoneNumber'] as String?;
+        if (uid == null || phoneNumber == null) return _fade(const LoginPage(), s);
+        return _slide(RegistrationPage(uid: uid, phoneNumber: phoneNumber), s);
+      }
 
       // Citizen
       case AppRoutes.citizenHome:
@@ -127,14 +137,14 @@ class AppRouter {
         return _slide(const HospitalsPage(), s);
       case AppRoutes.citizenEmergency:
         return _slide(const EmergencyNumbersPage(), s);
-      case AppRoutes.citizenTracking:
-        return _slide(SosTrackingScreen(reportId: s.arguments as String), s);
-      case AppRoutes.trackIncident:
-        final a = s.arguments as Map<String, dynamic>;
-        final reportId = a['reportId'] as String;
+      case AppRoutes.trackIncident: {
+        final a = _args(s);
+        final reportId = a['reportId'] as String?;
+        final reportType = a['reportType'] as String?;
+        if (reportId == null || reportType == null) return _fade(const SplashPage(), s);
         return _slide(TrackingPage(
           reportId:   reportId,
-          reportType: a['reportType'] as String,
+          reportType: reportType,
           // Falls back to a short id derived from the report id itself —
           // a notification tap's arguments don't carry a displayId.
           displayId:  (a['displayId'] as String?) ??
@@ -142,11 +152,12 @@ class AppRouter {
           patientLat: (a['patientLat'] as num?)?.toDouble(),
           patientLng: (a['patientLng'] as num?)?.toDouble(),
         ), s);
+      }
       case AppRoutes.citizenProfile:
         return _slide(const CitizenProfilePage(), s);
       case AppRoutes.editProfile:
         return _slide(const EditProfilePage(), s);
-        
+
       // Settings
       case AppRoutes.settings:
         return _slide(const SettingsPage(), s);
@@ -174,12 +185,13 @@ class AppRouter {
       // Ambulance
       case AppRoutes.ambulanceHome:
         return _fade(const AmbulanceMainScaffold(), s);
-      case AppRoutes.ambulanceReportDetails:
-        final a = s.arguments as Map<String, dynamic>;
-        return _slide(
-            ReportDetailsPage(
-                reportId: a['reportId'], reportType: a['reportType']),
-            s);
+      case AppRoutes.ambulanceReportDetails: {
+        final a = _args(s);
+        final reportId = a['reportId'] as String?;
+        final reportType = a['reportType'] as String?;
+        if (reportId == null || reportType == null) return _fade(const SplashPage(), s);
+        return _slide(ReportDetailsPage(reportId: reportId, reportType: reportType), s);
+      }
       case AppRoutes.ambulanceNotifications:
         return _slide(const NotificationsHistoryPage(showHistory: false), s);
       case AppRoutes.ambulanceHistory:
@@ -188,6 +200,56 @@ class AppRouter {
       default:
         return _fade(const SplashPage(), s);
     }
+  }
+
+  /// Returns the arguments as a Map, or an empty Map if they're missing or
+  /// the wrong type — every case above reads from this instead of doing its
+  /// own unguarded `s.arguments as Map<String, dynamic>`, which previously
+  /// threw an uncaught TypeError if a caller ever forgot to pass arguments
+  /// (or a notification/deep-link path supplied something unexpected).
+  static Map<String, dynamic> _args(RouteSettings s) {
+    final raw = s.arguments;
+    return raw is Map<String, dynamic> ? raw : <String, dynamic>{};
+  }
+
+  /// Blocks unauthenticated access to any non-public route, and blocks a
+  /// citizen from an /ambulance/* route or an ambulance user from a
+  /// /citizen/* route (silently redirecting to their own home instead of
+  /// letting the mismatched page build). Previously nothing re-checked
+  /// auth/role on every navigation — only the splash screen decided the
+  /// *initial* route, so anything with a BuildContext could successfully
+  /// pushNamed() an ambulance screen from the citizen app or vice versa.
+  static Route<dynamic>? _applyRoleGuard(RouteSettings s) {
+    final name = s.name;
+    if (name == null || AppRoutes.publicRoutes.contains(name)) return null;
+
+    final context = navigatorKey.currentContext;
+    if (context == null) return null; // nothing to check against yet
+
+    AuthState authState;
+    try {
+      authState = context.read<AuthCubit>().state;
+    } catch (_) {
+      return null; // AuthCubit not mounted yet (shouldn't normally happen)
+    }
+
+    if (authState is! AuthAuthenticated) {
+      return name == AppRoutes.login ? null : _fade(const LoginPage(), const RouteSettings(name: AppRoutes.login));
+    }
+
+    final isAmbulanceUser = authState.user.isAmbulances;
+    final isAmbulanceRoute = name.startsWith('/ambulance');
+    final isCitizenRoute = name.startsWith('/citizen') ||
+        name.startsWith('/settings') ||
+        name == AppRoutes.aiChat;
+
+    if (isAmbulanceRoute && !isAmbulanceUser) {
+      return _fade(const CitizenHomePage(), const RouteSettings(name: AppRoutes.citizenHome));
+    }
+    if (isCitizenRoute && isAmbulanceUser) {
+      return _fade(const AmbulanceMainScaffold(), const RouteSettings(name: AppRoutes.ambulanceHome));
+    }
+    return null;
   }
 
   static PageRoute _fade(Widget p, RouteSettings s) => PageRouteBuilder(
