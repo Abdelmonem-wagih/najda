@@ -41,6 +41,16 @@ class FirstAidDetailPage extends StatelessWidget {
                       'Referer': 'https://commons.wikimedia.org/',
                     },
                     fit: BoxFit.cover,
+                    placeholder: (_, __) => const ColoredBox(
+                      color: AppColors.navy,
+                      child: Center(child: CircularProgressIndicator(color: AppColors.white)),
+                    ),
+                    errorWidget: (_, __, ___) => const ColoredBox(
+                      color: AppColors.navy,
+                      child: Center(
+                        child: Icon(Icons.image_not_supported_outlined, color: AppColors.white, size: 40),
+                      ),
+                    ),
                   ),
                   const DecoratedBox(
                     decoration: BoxDecoration(
@@ -134,6 +144,18 @@ class _StepItem extends StatelessWidget {
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                    height: 200,
+                    color: AppColors.background,
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                  errorWidget: (_, __, ___) => Container(
+                    height: 200,
+                    color: AppColors.background,
+                    child: const Center(
+                      child: Icon(Icons.image_not_supported_outlined, color: AppColors.textSecondary, size: 32),
+                    ),
+                  ),
                 ),
               ),
             Padding(

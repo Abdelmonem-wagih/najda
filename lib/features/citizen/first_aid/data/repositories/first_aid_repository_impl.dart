@@ -68,7 +68,7 @@ final kFirstAidData = <FirstAidItem>[
     subtitle: 'انسداد مجرى الهواء',
     urgencyLevel: 'critical',
     heroImage:
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Heimlich_Maneuver.jpg/640px-Heimlich_Maneuver.jpg',
+        'https://commons.wikimedia.org/wiki/Special:Redirect/file/Heimlich_Maneuver.jpg',
     steps: [
       FirstAidStep(
         number: 1,
@@ -81,21 +81,21 @@ final kFirstAidData = <FirstAidItem>[
         instruction:
             'انحنِ المصاب للأمام (رأسه لأسفل أكثر من صدره). اضرب 5 ضربات قوية بكعب يدك بين لوحَي الكتف باتجاه الأسفل.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Back_blow_adult.jpg/480px-Back_blow_adult.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/Back_blow_adult.jpg',
       ),
       FirstAidStep(
         number: 3,
         instruction:
             'إن لم تنجح الضربات: قف خلفه، ضع قبضة يدك (الجانب الإبهامي) أسفل عظمة القفص الصدري وفوق السرة مباشرة.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Heimlich_Maneuver.jpg/480px-Heimlich_Maneuver.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/Heimlich_Maneuver.jpg',
       ),
       FirstAidStep(
         number: 4,
         instruction:
             'اقبض اليد الأخرى على قبضتك. اضغط بسرعة وقوة للداخل وللأعلى 5 مرات (مناورة هيمليك). كل ضغطة يجب أن تكون مستقلة وقوية.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Heimlich_Maneuver.jpg/480px-Heimlich_Maneuver.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/Heimlich_Maneuver.jpg',
       ),
       FirstAidStep(
         number: 5,
@@ -124,7 +124,7 @@ final kFirstAidData = <FirstAidItem>[
         instruction:
             'اضغط مباشرة على الجرح بقطعة قماش نظيفة أو ضمادة معقمة. الضغط يجب أن يكون قوياً وثابتاً دون انقطاع.',
         imageUrl:
-            'https://commons.wikimedia.org/wiki/Special:Redirect/file/Tourniquet_TCCC.jp',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/Tourniquet_TCCC.jpg',
       ),
       FirstAidStep(
         number: 3,
@@ -143,7 +143,7 @@ final kFirstAidData = <FirstAidItem>[
         instruction:
             'إن كان النزيف في ذراع أو ساق وشديداً جداً ولا يتوقف: استخدم رباطاً ضاغطاً (tourniquet) أعلى الجرح بـ 5-7 سم. دوّن وقت التطبيق.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Tourniquet_TCCC.jpg/480px-Tourniquet_TCCC.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/Tourniquet_TCCC.jpg',
       ),
     ],
   ),
@@ -153,7 +153,7 @@ final kFirstAidData = <FirstAidItem>[
     subtitle: 'حروق حرارية وكيميائية',
     urgencyLevel: 'high',
     heroImage:
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Running_water_on_burn.jpg/640px-Running_water_on_burn.jpg',
+        'https://commons.wikimedia.org/wiki/Special:Redirect/file/Running_water_on_burn.jpg',
     steps: [
       FirstAidStep(
         number: 1,
@@ -166,7 +166,7 @@ final kFirstAidData = <FirstAidItem>[
         instruction:
             'برّد الحرق فوراً بماء بارد جاري لمدة 20 دقيقة كاملة. لا تستخدم الثلج أو الماء المثلج لأنه يُفاقم الضرر.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Running_water_on_burn.jpg/480px-Running_water_on_burn.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/Running_water_on_burn.jpg',
       ),
       FirstAidStep(
         number: 3,
@@ -194,7 +194,7 @@ final kFirstAidData = <FirstAidItem>[
     subtitle: 'تثبيت العظام المكسورة',
     urgencyLevel: 'high',
     heroImage:
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Splint.jpg/640px-Splint.jpg',
+        'https://commons.wikimedia.org/wiki/Special:Redirect/file/Splint.jpg',
     steps: [
       FirstAidStep(
         number: 1,
@@ -207,7 +207,7 @@ final kFirstAidData = <FirstAidItem>[
         instruction:
             'جهّز جبيرة: ألواح خشبية، مجلات، عصا — أي شيء صلب أطول من الطرف. ضع قماشاً ناعماً بين الجبيرة والجلد.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Splint.jpg/480px-Splint.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/Splint.jpg',
       ),
       FirstAidStep(
         number: 3,
@@ -235,14 +235,14 @@ final kFirstAidData = <FirstAidItem>[
     subtitle: 'اختبار FAST السريع',
     urgencyLevel: 'critical',
     heroImage:
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/FAST_stroke_warning_signs.png/640px-FAST_stroke_warning_signs.png',
+        'https://commons.wikimedia.org/wiki/Special:Redirect/file/FAST_stroke_warning_signs.png',
     steps: [
       FirstAidStep(
         number: 1,
         instruction:
             'F — Face (الوجه): اطلب منه الابتسام. هل أحد جانبَي الفم مائل للأسفل أو متدلٍّ؟ هذا تحذير.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/2/28/FAST_stroke_warning_signs.png/480px-FAST_stroke_warning_signs.png',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/FAST_stroke_warning_signs.png',
       ),
       FirstAidStep(
         number: 2,
@@ -267,7 +267,7 @@ final kFirstAidData = <FirstAidItem>[
         instruction:
             'أضجعه بشكل مريح. لا تعطه طعاماً أو ماءً. لا تتركه وحده. إن فقد الوعي وتنفسه طبيعي: ضعه في وضع الإفاقة (على جانبه).',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Recovery_position.jpg/480px-Recovery_position.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/Recovery_position.jpg',
       ),
     ],
   ),
@@ -277,7 +277,7 @@ final kFirstAidData = <FirstAidItem>[
     subtitle: 'إنقاذ الغريق والإسعاف',
     urgencyLevel: 'critical',
     heroImage:
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/AED_training_05.jpg/640px-AED_training_05.jpg',
+        'https://commons.wikimedia.org/wiki/Special:Redirect/file/AED_training_05.jpg',
     steps: [
       FirstAidStep(
         number: 1,
@@ -296,7 +296,7 @@ final kFirstAidData = <FirstAidItem>[
         instruction:
             'إن لم يتنفس: ابدأ CPR فوراً (30 ضغطة + 2 نفس). للغريق يُبدأ بـ 5 أنفاس اصطناعية أولاً قبل الضغطات.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/CPR_training-09.jpg/480px-CPR_training-09.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/CPR_training-09.jpg',
       ),
       FirstAidStep(
         number: 4,
@@ -309,7 +309,7 @@ final kFirstAidData = <FirstAidItem>[
         instruction:
             'إن تنفس وواعٍ: ضعه في وضع الإفاقة (على جانبه). افرد بطانية لتدفئته — الغرق يسبب انخفاض حرارة خطير.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Recovery_position.jpg/480px-Recovery_position.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/Recovery_position.jpg',
       ),
     ],
   ),
@@ -319,7 +319,7 @@ final kFirstAidData = <FirstAidItem>[
     subtitle: 'دواء أو مواد كيميائية',
     urgencyLevel: 'high',
     heroImage:
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Activated_Charcoal_Antidote.jpg/640px-Activated_Charcoal_Antidote.jpg',
+        'https://commons.wikimedia.org/wiki/Special:Redirect/file/Activated_Charcoal_Antidote.jpg',
     steps: [
       FirstAidStep(
         number: 1,
@@ -359,7 +359,7 @@ final kFirstAidData = <FirstAidItem>[
     subtitle: 'التعامل مع نوبة تشنج',
     urgencyLevel: 'high',
     heroImage:
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Recovery_position.jpg/640px-Recovery_position.jpg',
+        'https://commons.wikimedia.org/wiki/Special:Redirect/file/Recovery_position.jpg',
     steps: [
       FirstAidStep(
         number: 1,
@@ -390,7 +390,7 @@ final kFirstAidData = <FirstAidItem>[
         instruction:
             'بعد النوبة: ضعه في وضع الإفاقة (على جانبه). سيكون مرتبكاً وتعباناً — هذا طبيعي. أبقَ بجانبه وطمئنه بهدوء.',
         imageUrl:
-            'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Recovery_position.jpg/480px-Recovery_position.jpg',
+            'https://commons.wikimedia.org/wiki/Special:Redirect/file/Recovery_position.jpg',
       ),
     ],
   ),
@@ -400,7 +400,7 @@ final kFirstAidData = <FirstAidItem>[
     subtitle: 'صدمة تحسسية — أنافيلاكسيس',
     urgencyLevel: 'critical',
     heroImage:
-        'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/AED_training_05.jpg/640px-AED_training_05.jpg',
+        'https://commons.wikimedia.org/wiki/Special:Redirect/file/AED_training_05.jpg',
     steps: [
       FirstAidStep(
         number: 1,
