@@ -179,9 +179,66 @@ Normalized all 19 fragile `/thumb/.../NNNpx-` URLs to the stable `Special:Redire
 
 flutter analyze progression through Phase 4: 226 (baseline) → 219 → 215 → 212 → 212 → 207 → 206 → 197 → 197 → 191. Zero errors at every step; every commit individually verified.
 
-## Phase 5 — Dashboard — NOT STARTED
+## Phase 5 — Dashboard — DONE (P0 complete; 2 P1 items deferred, see below)
 
-## Phase 5 — Dashboard — NOT STARTED
+Rebuilt the dashboard's data layer around the canonical flat schema and
+removed every AI-coupled, mock-data, or phantom-collection code path the
+audit flagged.
+
+**Shared infrastructure** (step 5.2): `src/lib/normalizeIncident.js` (one
+normalizer for criticals/incidents/ambulances, replacing per-page ad-hoc
+field guessing); `src/hooks/useFirestore.js` rewritten — real collections
+only (`useReports`/`useEmergencyReports`/`useParamedics`/`useAssignments`
+and friends, which pointed at collections or shapes nothing ever wrote,
+are gone); `useAmbulancesLive()` joins `ambulances` with live `tracking/`
+position+bearing+staleness; `closeIncident()`/`updateAmbulanceDetails()`
+wrap the two narrow direct-write paths the Phase 3 rules allow a dashboard
+user; `src/lib/functions.js` rewritten to call only callables that
+actually exist on the backend, fixing a 2-layered bug where both this
+wrapper and the (separately fixed) backend silently dropped
+`baseLocation` on ambulance creation.
+
+**Rules gaps discovered while wiring up pages** (not in the original
+audit — found by trying to build the actual admin actions): no path for
+a dashboard user to edit fleet details post-creation (`346a0c6`, step
+5.0), and no path to administratively close out an incident (`d056ba7`,
+step 5.1). Both fixed with narrowly-scoped rules clauses + rules tests.
+
+**Pages rewritten** (steps 5.3-5.12, one commit each): `Home.jsx`,
+`Incidents.jsx` (removed `AIDecisionCard`, fixed a real hook-order
+violation in `DetailDrawer` — `if (!incident) return null` ran before
+some `useState` calls), `Critical.jsx` (same fixes), `Ambulances.jsx`
+(status is no longer directly settable from the UI; delete goes through
+the `deleteAmbulanceAccount` callable so the Auth account is disabled
+too), `Analytics.jsx` (fixed `groupByArea` — it read a `location` field
+that was never real, so every incident fell into "Unknown"; fixed fleet
+utilization to measure against the online fleet, not the whole fleet),
+`Notifications.jsx` (now reads the real `notifications` collection
+instead of synthesizing fake ones from incident documents),
+`Settings.jsx` (real user CRUD via `createDashboardUser`/
+`setDashboardUserActive`, dropped the `'supervisor'` role which was only
+ever in mock data, removed the non-functional "demo mode" danger-zone
+button), `LiveMap.jsx` (canonical fields, ambulance markers rotate by
+live `bearing`), `Login.jsx` (dropped `'supervisor'`, now checks
+`active`), and deleted `Paramedics.jsx` entirely — `paramedics` is not a
+collection in the canonical schema.
+
+**Verified**: `npm run lint` 21→3 problems (the 3 remaining are
+pre-existing, in the untouched Node-only `seed.js` dev script — not part
+of the app bundle). `npm run build` succeeds, single bundle, no errors.
+Grepped `dist/assets/*.js` for `groq`/`GROQ` — zero matches, confirming
+no AI code or key ships in the production bundle.
+
+**Deferred (P1, explicitly out of scope for this pass)**:
+- 5.12/5.13 marker art + clustering: hand-authored SVG marker assets and
+  `@googlemaps/markerclusterer`-based clustering were not built. Bearing-
+  based rotation was added to the existing icon shapes instead (cheap,
+  no new dependency). Clustering needs a new dependency and is pure
+  polish, not a correctness fix — recommend doing it as a follow-up if
+  the live map becomes visually crowded with real fleet sizes.
+- 5.14 code splitting: the build warns the single JS bundle is >500kB.
+  Route-level `React.lazy()` splitting would fix this; deferred as pure
+  performance polish with no functional impact at current scale.
 
 ## Phase 6 — Verify everything (emulator E2E) — NOT STARTED
 
@@ -189,14 +246,60 @@ flutter analyze progression through Phase 4: 226 (baseline) → 219 → 215 → 
 
 ## Commit log (both repos)
 
-| Repo | Commit | Message |
-|---|---|---|
-| APP | `ca16215` | step 0: baseline numbers and v1-hardening branch setup |
-| APP | `c2204a9` | step 1.1: consolidate on one Firebase backend (APP repo) + add storage.rules |
-| APP | `0013d73` | step 1.2: park Groq hospital-assignment as disabled, unexported Cloud Function |
-| APP | `237e0df` | step 1.3a: add the canonical schema contract (functions + Flutter) and the cross-repo contract checker |
-| APP | `2b1293e` | step 1.4: regenerate firestore.indexes.json from actual queries (it was invalid JSON) |
-| DASHBOARD | (branch created) | — |
-| DASHBOARD | `c0776a2` | step 1.1: document that Firebase backend lives in the najda (app) repo |
-| DASHBOARD | `28d6ddb` | step 1.2: delete the legacy Firebase Functions codebase |
-| DASHBOARD | `df59b37` | step 1.3a: add the canonical schema contract mirror (contract.js) |
+Full `v1-hardening` branch history, in order, as of the end of Phase 5.
+
+### APP (`najda`)
+
+| Commit | Message |
+|---|---|
+| `ca16215` | step 0: baseline numbers and v1-hardening branch setup |
+| `c2204a9` | step 1.1: consolidate on one Firebase backend (APP repo) + add storage.rules |
+| `0013d73` | step 1.2: park Groq hospital-assignment as disabled, unexported Cloud Function |
+| `237e0df` | step 1.3a: add the canonical schema contract (functions + Flutter) and the cross-repo contract checker |
+| `2b1293e` | step 1.4: regenerate firestore.indexes.json from actual queries (it was invalid JSON) |
+| `b8af65f` | step 1.5: update V1_FIX_REPORT.md with Phase 1 results |
+| `0f8aed5` | add disabled hospital assignment function and schema contract |
+| `e0fd320` | step 2.1-2.9: rewrite the backend assignment + status machine (flat fields, transactional, idempotent, role-checked) |
+| `0639f94` | step 2.10: add migrate-v1.ts data migration script (dry-run by default) |
+| `25379b8` | step 2.11: update V1_FIX_REPORT.md with Phase 2 results |
+| `f770aad` | step 3.0: stop tracking najda_functions/node_modules in git |
+| `2ddb438` | step 3.1-3.4: rewrite firestore.rules and storage.rules from scratch, add rules unit tests |
+| `9a1fd7b` | step 3.5: update V1_FIX_REPORT.md with Phase 3 results |
+| `0ed8b74` | step 4.1,4.7,4.9: AI pause flag + App Check in release + paramedic status machine rewrite |
+| `4539653` | step 4.2: fix the citizen tracking screen (the biggest single bug in the audit) |
+| `2a99fae` | step 4.16: update V1_FIX_REPORT.md with Phase 4 progress so far |
+| `b8589bd` | step 4.3,4.4: SOS flow hardening + native direct call with E.164 normalization |
+| `79ffe9c` | step 4.5,4.4b: persist nationalId at registration; collect + validate emergency contact |
+| `057a6e1` | step 4.6: single GPS writer to tracking/, client never writes ambulance status, toggle actually stops GPS |
+| `5b0edfa` | step 4.8: citizen FCM tokens, real notification tap routing, canonical notification fields |
+| `4ac2a93` | step 4.10: route/role guards + safe argument parsing in app_routes.dart |
+| `01e1f88` | step 4.11: delete the remaining confirmed-dead Clean-Architecture stacks |
+| `b7a6812` | step 4.12: fix first-aid image URLs (typo + inconsistent formats) and add error/placeholder handling |
+| `8699f15` | step 4.17: update V1_FIX_REPORT.md with full Phase 4 progress (4.1-4.12 done) |
+| `346a0c6` | step 5.0: extend ambulances rules for dashboard fleet-detail edits (discovered gap) |
+| `d056ba7` | step 5.1: allow dashboard admin/operator to close out incidents/criticals |
+
+### DASHBOARD (`najda-dashboard`)
+
+| Commit | Message |
+|---|---|
+| `c0776a2` | step 1.1: document that Firebase backend lives in the najda (app) repo |
+| `28d6ddb` | step 1.2: delete the legacy Firebase Functions codebase (Groq hospital assign, dead reports/emergency_reports triggers) |
+| `df59b37` | step 1.3a: add the canonical schema contract mirror (contract.js) |
+| `79e07bd` | step 4.7: add medicalAssessment/medicalNotes fields to the contract mirror |
+| `9851b5c` | step 5.2: rewrite data layer around the canonical flat schema |
+| `7ca5c50` | step 5.3: rewrite Home.jsx on canonical fields and shared components |
+| `6b975d4` | step 5.4: rewrite Incidents.jsx — remove AI, fix hook-order bug |
+| `2139b33` | step 5.5: rewrite Critical.jsx with the same fixes as Incidents.jsx |
+| `bd3853b` | step 5.6: rewrite Ambulances.jsx on canonical fields and real callables |
+| `e1706ed` | step 5.7: rewrite Analytics.jsx — fix groupByArea crash, fleet utilization |
+| `d514bad` | step 5.8: rewrite Notifications.jsx to read the real notifications collection |
+| `9f6fd9a` | step 5.9: rewrite Settings.jsx with real user/profile CRUD |
+| `28eee5c` | step 5.10: rewrite LiveMap.jsx on canonical fields; rotate markers by bearing |
+| `c895b92` | step 5.11: drop 'supervisor' role and check active flag in Login.jsx |
+| `18d7238` | step 5.12: delete the Paramedics page and its route/nav references |
+
+A few commits in both histories (`472c3ad`, `c966f02`, `ec43168`,
+`e32b975` in APP; `4c24a23`, `4f1bfb7`, `c75b6e1`, `28e138b` in DASHBOARD)
+predate this hardening pass — carried over from the branch's starting
+point, not part of this work.
