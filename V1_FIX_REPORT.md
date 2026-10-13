@@ -4,6 +4,19 @@ Branches: `v1-hardening` in both `najda` (APP) and `najda-dashboard` (DASHBOARD)
 
 Status key per item below (filled in as work completes): **Fixed** / **Skipped (why)** / **Not applicable** / **Needs manual test**.
 
+## Executive summary
+
+1. Health score moved from the pre-hardening audit's 3/10 to a codebase that is internally consistent, contract-verified, and builds clean across all three stacks (Flutter, Cloud Functions, dashboard) — but has **not been run end-to-end against a live backend**.
+2. The single biggest original bug — citizens never seeing their assigned ambulance — is fixed: `tracking_page.dart` now reads the real flat fields the backend actually writes, instead of a nested `assignment` map nothing ever populated.
+3. AI is fully parked: `aiEnabled = false` client-side gates, server function disabled/unexported, and a bundle grep confirms zero Groq references ship to the browser. Hospital selection is manual-only in both the paramedic app and the dashboard.
+4. The backend assignment/status pipeline was rewritten to be transactional, idempotent, and role-checked; ambulance status fields are now server-write-only everywhere (rules + client code agree).
+5. Firestore/storage rules were rewritten from scratch with field-level write restrictions and 40+ unit tests — but **those tests have never executed**, because this environment's Java 17 can't run the required emulator (Java 21+), and the user chose to proceed unverified rather than install a JDK.
+6. The dashboard was rewritten page-by-page onto the canonical schema, removing every AI-coupled UI path, the mock user list, the phantom `paramedics` collection, and three real bugs found along the way (a hook-order violation, a `groupByArea` crash, and a double-layered `baseLocation`-dropping bug in ambulance account creation).
+7. Two Firestore rules gaps were discovered — not in the original audit — while actually building the dashboard's admin actions (fleet-detail editing, incident closeout); both are now fixed and covered by new rules tests.
+8. Dashboard lint went from 21 problems to 3 (all pre-existing, in an untouched Node seed script); `flutter analyze` is unchanged at 191 (0 errors) since Phase 4 touched no Flutter files in Phase 5/6.
+9. Every commit across both repos builds/compiles cleanly at the point it was made — nothing was left in a broken state.
+10. **Before shipping:** install JDK 21 and actually run the rules test suite, and have a human click through the dashboard against seeded/real data — see the manual checklist at the end of this report.
+
 ---
 
 ## Phase 0 — Prepare
@@ -240,7 +253,27 @@ no AI code or key ships in the production bundle.
   Route-level `React.lazy()` splitting would fix this; deferred as pure
   performance polish with no functional impact at current scale.
 
-## Phase 6 — Verify everything (emulator E2E) — NOT STARTED
+## Phase 6 — Verify everything — DONE except emulator E2E (blocked, see below)
+
+| Check | Result |
+|---|---|
+| `node scripts/check-contract.mjs` (with `DASHBOARD_CONTRACT` pointed at the dashboard's actual path — it lives on a different drive, not alongside the APP repo as the script's default assumes) | ✅ PASS — COLLECTIONS/INCIDENT_STATUS/AMBULANCE_STATUS all match across `contract.ts`, `firestore_contract.dart`, `contract.js` |
+| `npm --prefix najda_functions run build` (APP functions, TS) | ✅ Succeeds, no errors |
+| `flutter analyze` (APP) | ✅ 191 issues, 0 errors — unchanged from the end of Phase 4 (no Flutter files touched in Phase 5/6) |
+| `npm run build` (DASHBOARD) | ✅ Succeeds, single bundle, no errors |
+| `npm run lint` (DASHBOARD) | ✅ 3 problems (was 21 at baseline) — all 3 are pre-existing in the untouched Node-only `seed.js` dev script, not part of the shipped app |
+| Static `firestore.rules`/`storage.rules` brace-balance check | ✅ Balanced (47/47, 11/11) |
+| `firestore.indexes.json` | ✅ Valid JSON |
+| AI-off proof: `grep -ri groq dist/assets/*.js` (DASHBOARD production build) | ✅ Zero matches — no AI code or key reaches the shipped bundle |
+| `firebase deploy --only firestore:rules,storage --dry-run` | ❌ Could not run — the authenticated Firebase CLI account gets HTTP 403 (`firebasestorage.defaultBucket.get` denied) on project `ultra-bearing-402000` before it even reaches rule validation. This is a CLI/account permissions issue, unrelated to rule content, and I did not pursue it further since it was making live calls against the real project. **The user's own Firebase CLI login should be used to run this check** before any real deploy. |
+| Firebase Emulator Suite E2E tests (`najda_functions/test/rules.test.ts`, 40+ cases incl. the Phase 5 terminal-status and fleet-edit additions) | ❌ **BLOCKED, unresolved.** `firebase-tools` requires Java 21+; this machine has Java 17. User was asked and explicitly chose "Skip it, continue unverified" earlier in this pass. **This is the single biggest unverified risk in the whole project** — the rules logic is reviewed and internally consistent but has never actually executed against the emulator. |
+| Dashboard manual check against seeded emulator data | ❌ Not done — depends on the same blocked emulator. A lightweight static smoke-test (dev server + browser) was also not practical in this session because the dashboard lives in a separate repo/drive outside this session's browser-preview working directory. |
+
+### What's still genuinely unverified
+
+1. **Firestore/storage rules were never executed**, only read and reasoned about. The rules unit tests exist and look correct, but "looks correct" is not the same as "a real emulator agreed." Installing JDK 21 and running `npm --prefix najda_functions run test:rules` (or whatever the test script is named) is the single highest-value thing left to do before a real deploy.
+2. **The dashboard has never been run against live or seeded data in this pass** — only `npm run build`/`npm run lint` were used to verify it compiles and is free of obvious errors. The manual test checklist below covers what a human needs to click through.
+3. **The `migrate-v1.ts` migration script has never been run with `--apply`**, by design (dry-run only, per the original instructions) — someone needs to run it for real against a snapshot/staging project before go-live if there's pre-v1 data to migrate.
 
 ---
 
@@ -303,3 +336,45 @@ A few commits in both histories (`472c3ad`, `c966f02`, `ec43168`,
 `e32b975` in APP; `4c24a23`, `4f1bfb7`, `c75b6e1`, `28e138b` in DASHBOARD)
 predate this hardening pass — carried over from the branch's starting
 point, not part of this work.
+
+---
+
+## Manual test checklist (devices / human verification required)
+
+Nothing below was exercised against a live backend in this pass — the
+emulator is blocked (see Phase 6) and this session's tooling can't drive
+a browser against the separately-located dashboard repo. All of it needs
+a human with a real device and/or the dashboard running against the
+Firebase emulator or a staging project.
+
+### Before anything else
+- [ ] Install JDK 21, run `firebase emulators:exec --only firestore,auth,functions "npm --prefix najda_functions run test"` (or the equivalent rules-test script) and confirm the 40+ rules tests actually pass. This is the highest-priority item in the whole report.
+- [ ] Run `najda_functions/scripts/migrate-v1.ts` with `--apply` against a staging/snapshot project if there's pre-v1 data that needs the flat-field migration — it has only been dry-run so far.
+
+### Citizen app (Flutter)
+- [ ] Submit a SOS report with GPS available, and again with GPS denied/unavailable — confirm the report is still created (nullable lat/lng fallback) and the loading state never hangs.
+- [ ] After a dashboard operator or auto-assign assigns an ambulance, confirm the tracking screen shows the ambulance's live position (reads `tracking/{id}`), driver name, and vehicle ID.
+- [ ] Place an accident report via the wizard; confirm `nationalId` and `emergencyContactName` are saved and visible in the citizen's profile.
+- [ ] Tap "Call ambulance" on the home screen — confirm it places a native call via the direct-call plugin, and falls back to the system dialer if that plugin fails.
+- [ ] Verify the AI assistant FAB/menu entry is **not visible anywhere** in the citizen app (AI is off).
+- [ ] Check first-aid article images load (no broken Wikimedia thumbnails) and show a placeholder on failure.
+
+### Paramedic/ambulance app (Flutter)
+- [ ] Go online/offline from the paramedic home screen — confirm `isOnline` toggles in Firestore and GPS writes to `tracking/{id}` start/stop accordingly (not written to `ambulances/{id}`).
+- [ ] Walk an assigned incident through every status step (assigned → on_mission → arrived → to_hospital → completed) and confirm each is a legal transition the UI actually offers, and that `ambulance_history` gets a record on completion.
+- [ ] Submit a medical assessment/notes on a report; confirm it's visible to the dashboard operator viewing the same incident.
+- [ ] Confirm notifications (new assignment) arrive and tapping one routes to the correct report.
+
+### Dashboard (React)
+- [ ] Log in as an operator and as an admin; confirm an operator does NOT see the "User management" section in Settings, and a deactivated account is rejected at login with a clear message.
+- [ ] From Incidents/Critical, manually assign an ambulance to a pending case; confirm the eligible-ambulance list only shows online, unassigned, fresh-tracking ambulances, sorted by distance.
+- [ ] Manually select a hospital for an incident; confirm `hospitalId`/`suggestedHospitalName` save and the citizen-facing tracking screen picks it up.
+- [ ] Click "Mark as resolved" on an assigned/in-progress incident; confirm it actually completes (this exercises the new Phase 5 rules path) and shows up correctly in Analytics' completion stats.
+- [ ] Add a new ambulance (map-click base location), confirm the created account's `baseLocation` is NOT the old hardcoded Cairo point, and the generated credentials actually work to log into the paramedic app.
+- [ ] Edit an existing ambulance's plate/driver/area/base location; confirm the edit modal has no "Status" dropdown and the change saves.
+- [ ] Delete an ambulance; confirm its Auth account is disabled (crew can no longer log in), not just the Firestore doc removed.
+- [ ] Open the Live Map with at least one online ambulance; confirm its marker rotates to face its direction of travel and dims when its last tracking update is stale (>60s).
+- [ ] Create a new dashboard user and deactivate one; confirm the deactivated user is immediately locked out.
+- [ ] Toggle a notification preference and reload the page; confirm it persisted (reads back from `dashboard_users/{uid}.prefs`).
+- [ ] Approve/reject a join request; confirm the ambulance crew's expected next step (account creation) still works.
+- [ ] Open DevTools Network tab during normal use and confirm no request ever includes a Groq/AI API key.
