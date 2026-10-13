@@ -132,7 +132,7 @@ Read `index.ts` in full before changing anything (confirmed the exact lines the 
 ### Manual verification needed (added to the checklist)
 Upgrade this (or any) machine to Java 21+, then run `npm --prefix najda_functions run test:rules` and fix anything that fails before trusting this rules file in production. Given the field-level `diff().affectedKeys()` logic is genuinely intricate, I'd treat passing this suite as a hard prerequisite for deploying these rules, not a nice-to-have.
 
-## Phase 4 — Flutter app — IN PROGRESS (4.1, 4.2, 4.7, 4.9 done; 4.3-4.6, 4.8, 4.10-4.15 remaining)
+## Phase 4 — Flutter app — IN PROGRESS (4.1-4.12 done; 4.13-4.15 remaining)
 
 ### 4.1 AI pause — ✅ Fixed
 `AppConstants.aiEnabled = false`. Route guarded, global FAB guarded, both Groq methods throw immediately when off (defense-in-depth), About page text conditional. Deleted 5 dead `NajdaAIService` methods entirely (confirmed zero call sites via grep) rather than just gating them — three called Cloud Functions that were never defined on the backend at all, two were architecturally misplaced non-AI admin functions. `flutter analyze`: 226 → 219.
@@ -146,8 +146,38 @@ Added the real `on_mission` step (a "بدء المهمة" button between assigne
 ### 4.9 App Check in release — ✅ Fixed
 `main.dart`'s `activate()` call is no longer inside `if (kDebugMode)` — always runs now, with the real attestation providers in release.
 
+### 4.3 SOS flow hardening — ✅ Fixed
+`latitude`/`longitude`/`accuracy` are nullable end-to-end (cubit → repository → datasource → Firestore → `SOSSuccess`). `_resolvePosition()` tries a fresh fix, falls back to `getLastKnownPosition()` on denied permission/disabled services/timeout, and if even that fails the SOS still gets written with `null` coordinates rather than aborting — previously **any** GPS failure silently killed the whole report with no `criticals` doc and no dispatch. The Firestore write itself has an 8s timeout with a specific "check your connection" message (previously could hang in `SOSLoading` forever on a signal-less device, since Firestore's offline persistence means the native write-completion future never resolves without a server ack). Added a re-entrancy guard, mapped all errors to one of three localized Arabic messages (no more raw `e.toString()`), added the missing `emergencyContactName` field, and switched every hardcoded field string to the canonical constants.
+
+### 4.4 Family call hardening — ✅ Fixed
+New `lib/core/utils/phone_utils.dart` (`normalizeEgyptianPhone`/`isValidEgyptianPhone`) replaces the old ad-hoc `+2` prefix heuristic, which produced a malformed double-country-code number for any input that wasn't already a plain local `01XXXXXXXXX` string. Added `flutter_phone_direct_caller` (the one dependency named for this step) — on Android, requests the `CALL_PHONE` runtime permission (declared in the manifest since day one but never actually requested anywhere — confirmed via grep) and places the call directly; falls back to the dialer on iOS or if denied. WhatsApp/call failures now log and show a non-blocking notice instead of an empty catch block. Registration now also collects + validates the contact's name and phone (new l10n keys, both languages).
+
+### 4.5 Persist `nationalId` — ✅ Fixed
+`nationalId` was accepted as a required parameter in `completeRegistration` and then never added to the Firestore write at all (confirmed exactly as the audit found, CIT2/FC9) — fixed. Also fixed the hardcoded `'Emergency Contact'` name (CIT3) by threading a real `emergencyContactName` parameter through.
+
+### 4.6 Single GPS writer, client never writes ambulance `status` — ✅ Fixed
+This turned into the largest single rewrite in Phase 4. `location_service.dart` now writes **only** to `tracking/{ambulanceId}` with exactly the rules-whitelisted fields — previously it wrote `lat`/`lng`/`latitude`/`longitude`/`area`/`bearing`/`speed`/`accuracy`/`lastSeen` directly onto the `ambulances` doc, silently overwriting the admin-entered zone name with a raw coordinate string on every single GPS tick (FC13), and would now be **rejected outright** by the Phase 3 rules anyway. Fixed identically in both the foreground stream and the background-service isolate (bearing is now computed there too — it previously just wrote 0). `updateAmbulanceFcmToken` now writes to `ambulance_private/{id}` instead of `ambulances/{id}` (another field that moved collections and would otherwise be rejected). `updateAmbulanceOnlineStatus` drops its `status` parameter entirely. `paramedic_home_page.dart`'s toggle now calls `LocationService.startTracking()`/`stopTracking()` (previously GPS only started/stopped at full login/logout — PARA13 — so toggling "Offline" mid-shift kept broadcasting position until full sign-out) and no longer writes `status` at all (PARA3). Fixed the `onTokenRefresh` listener leak (CC11). Deleted `tracking_service.dart` (a second, entirely unused GPS-push mechanism) and the dead `paramedic/reports` data+domain+cubit stack that was its only consumer.
+
+### 4.7 — see earlier entry above (done in the same pass as 4.1/4.9)
+
+### 4.8 Citizen push notifications + real tap routing — ✅ Fixed
+New `firebase_citizen_token.dart` saves a citizen's FCM token to `citizens/{uid}.fcmToken` (closes CC10's client-side half — Phase 2 already added the backend send, but had nothing to send to). `notification_service.dart`'s local-notification tap handler was a **documented no-op** (comment: "For simplicity, let's assume..."); now actually parses the payload (switched from `message.data.toString()`, which isn't valid JSON, to `jsonEncode`/`jsonDecode`) and routes based on the canonical `type`/`incidentCollection` fields — a citizen notification opens `TrackingPage`, an ambulance one opens the paramedic report page (previously **every** tap always opened the paramedic screen, regardless of recipient). `tracking_page.dart`'s `patientLat`/`patientLng` are now nullable, sourced authoritatively from its own live Firestore listener, since neither a notification tap nor a no-GPS SOS carries them. `notifications_history_page.dart` now reads the canonical `recipientId`/`incidentId`/`incidentCollection` fields instead of `ambulanceId`/`reportId`/`reportType` (FC18 — the old fields never matched anything written, so tapping a notification could never navigate anywhere) and fixed the dead `type.contains('emergency')` styling check (FC17).
+
+### 4.9 — see earlier entry above
+
+### 4.10 Route/role guards — ✅ Fixed
+`onGenerateRoute` now checks auth state and role on **every** navigation, not just the initial splash decision — unauthenticated access to any non-public route redirects to login; an ambulance user hitting a `/citizen/*` route (or vice versa) redirects to their own home instead of building the mismatched page. Every unguarded `s.arguments as Map<String, dynamic>` cast (4 call sites) now goes through a shared `_args()` helper that can't throw. Deleted the dead `citizenTracking` route and `SosTrackingScreen` (confirmed zero call sites).
+
+### 4.11 Dead-stack deletion — ✅ Fixed (literal→constant replacement continues to happen file-by-file as touched, per the Phase 1.3 approach)
+Deleted, each proven dead via grep before removal and a clean `flutter analyze` after: the entire dead `paramedic/home` data+domain+presentation/cubit stack (the live `AmbulanceHomePage` imports none of it), `ambulance_model.dart` (never instantiated), the empty `paramedic_history_page.dart` stub, and the entire duplicate AI chat implementation under `citizen/ai/{data,domain,presentation}` (the live chat page calls `groq_service.dart` directly).
+
+### 4.12 First-aid images — ✅ Fixed
+Normalized all 19 fragile `/thumb/.../NNNpx-` URLs to the stable `Special:Redirect/file/` form, fixed the `Tourniquet_TCCC.jp` typo (404'd on every load), and added `placeholder`/`errorWidget` to both `CachedNetworkImage` usages.
+
 ### Remaining Phase 4 work (not yet done)
-4.3 (SOS flow hardening: location fallback/timeout, re-entrancy guard, localized errors), 4.4 (native direct call via `flutter_phone_direct_caller` + E.164 normalization), 4.5 (persist `nationalId` at registration), 4.6 (stop writing ambulance `status` from the client entirely, wire `stopTracking()`/`startTracking()` into the online/offline toggle, single GPS writer), 4.8 (citizen FCM token + local-notification tap handler), 4.10 (route/role guards), 4.11 (full dead-stack deletion + remaining literal→constant replacement), 4.12 (first-aid image fixes), 4.13 (marker asset), 4.14 (i18n for the two newest screens), 4.15 (remaining dead-code cleanup + real tests).
+4.13 (export a marker PNG from Phase 5's SVG art — blocked on Phase 5 existing first), 4.14 (i18n for `tracking_page.dart`/`notifications_history_page.dart` — large mechanical pass, deliberately deferred rather than rushed), 4.15 (remaining dead-code/warning cleanup + real test suite, currently still the unmodified Flutter template).
+
+flutter analyze progression through Phase 4: 226 (baseline) → 219 → 215 → 212 → 212 → 207 → 206 → 197 → 197 → 191. Zero errors at every step; every commit individually verified.
 
 ## Phase 5 — Dashboard — NOT STARTED
 
