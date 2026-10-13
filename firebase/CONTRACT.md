@@ -115,3 +115,19 @@ Existing shapes kept. `dashboard_users/{uid}`: `{role: 'admin' | 'operator', nam
 - The app **never** writes ambulance `status`. Login/logout/online-toggle write `isOnline` only.
 
 See `najda_functions/src/contract.ts` → `STATUS_TRANSITIONS` for the machine-readable version of the transition table.
+
+## Firestore composite indexes
+
+`firestore.indexes.json` cannot carry comments (it's parsed as strict JSON — the pre-hardening file had `//` comments and was **invalid JSON**, confirmed with `JSON.parse`; it would have failed outright on `firebase deploy --only firestore:indexes`). Rationale for each index lives here instead:
+
+| Collection | Fields | Used by |
+|---|---|---|
+| `criticals`, `incidents` | `assignedAmbulanceId` ASC, `status` ASC, `createdAt` DESC | Paramedic home screen's "my active incidents" query (`whereNotIn` on status requires this shape) |
+| `criticals`, `incidents` | `patientUid` ASC, `dedupeKey` ASC, `status` ASC | Cloud Functions duplicate-SOS detection (Phase 2.3) |
+| `criticals`, `incidents` | `status` ASC, `createdAt` DESC | Dashboard's pending/by-status lists; `retryPending`'s pending scan |
+| `ambulances` | `isOnline` ASC, `status` ASC | Nearest-ambulance candidate query (`getAvailableAmbulances`) |
+| `notifications` | `recipientId` ASC, `createdAt` DESC | Notification history list |
+| `notifications` | `recipientId` ASC, `isRead` ASC, `createdAt` DESC | Unread-count / unread-list query |
+| `ambulance_history` | `ambulanceId` ASC, `completedAt` DESC | Paramedic mission-history tab |
+
+Indexes removed because they referenced fields that don't exist in the live schema (dead/legacy): `reportedAt`, `reportedBy`, `assignment.ambulanceId`, `geohash` (on `ambulances`), `targetId`/`read` (old `notifications` field names), `resolvedAt` (old `ambulance_history` field name), and the whole `assignments`/`medical_reports`/`mission_cancellations` index groups (dead/legacy collections per the canonical schema — `mission_cancellations` is pre-existing and out of scope, see note above; its index was simply unused since nothing queries it with these field combinations — a single-field index is auto-created by Firestore if ever needed).

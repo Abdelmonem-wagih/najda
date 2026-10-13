@@ -1,192 +1,5 @@
 {
   "indexes": [
-
-    // ── incidents/ ────────────────────────────────────────────────────────
-    // Dashboard: all incidents sorted by date
-    {
-      "collectionGroup": "incidents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status",     "order": "ASCENDING"  },
-        { "fieldPath": "reportedAt", "order": "DESCENDING" }
-      ]
-    },
-    // Dashboard: filter by type + severity
-    {
-      "collectionGroup": "incidents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "type",       "order": "ASCENDING"  },
-        { "fieldPath": "severity",   "order": "ASCENDING"  },
-        { "fieldPath": "reportedAt", "order": "DESCENDING" }
-      ]
-    },
-    // useSOSIncidents: type == "sos" AND status != "resolved"
-    // (Firestore requires orderBy on the inequality field first)
-    {
-      "collectionGroup": "incidents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "type",       "order": "ASCENDING"  },
-        { "fieldPath": "status",     "order": "ASCENDING"  },
-        { "fieldPath": "reportedAt", "order": "DESCENDING" }
-      ]
-    },
-    // Flutter: citizen's own incidents
-    {
-      "collectionGroup": "incidents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "reportedBy", "order": "ASCENDING"  },
-        { "fieldPath": "reportedAt", "order": "DESCENDING" }
-      ]
-    },
-    // retryUnassigned scheduler
-    {
-      "collectionGroup": "incidents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status",     "order": "ASCENDING"  },
-        { "fieldPath": "reportedAt", "order": "ASCENDING"  }
-      ]
-    },
-    // Ambulance: find active incident assigned to them
-    {
-      "collectionGroup": "incidents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "assignment.ambulanceId", "order": "ASCENDING" },
-        { "fieldPath": "status",                 "order": "ASCENDING" }
-      ]
-    },
-
-    // assignAmbulance: status == "available" (+ geohash for proximity)
-    {
-      "collectionGroup": "ambulances",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status",  "order": "ASCENDING" },
-        { "fieldPath": "geohash", "order": "ASCENDING" }
-      ]
-    },
-
-    // ── assignments/ ──────────────────────────────────────────────────────
-    // Dashboard: all assignments sorted
-    {
-      "collectionGroup": "assignments",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "incidentId",  "order": "ASCENDING"  },
-        { "fieldPath": "assignedAt",  "order": "DESCENDING" }
-      ]
-    },
-    // onIncidentUpdated: find active assignment by incidentId
-    {
-      "collectionGroup": "assignments",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "incidentId", "order": "ASCENDING" },
-        { "fieldPath": "status",     "order": "ASCENDING" }
-      ]
-    },
-    // Ambulance: own assignments
-    {
-      "collectionGroup": "assignments",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "ambulanceId", "order": "ASCENDING"  },
-        { "fieldPath": "status",      "order": "ASCENDING"  },
-        { "fieldPath": "assignedAt",  "order": "DESCENDING" }
-      ]
-    },
-
-    // ── notifications/ ────────────────────────────────────────────────────
-    // Ambulance / citizen: own + broadcast notifications
-    {
-      "collectionGroup": "notifications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "targetId",   "order": "ASCENDING"  },
-        { "fieldPath": "createdAt",  "order": "DESCENDING" }
-      ]
-    },
-    // Unread notifications count
-    {
-      "collectionGroup": "notifications",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "targetId", "order": "ASCENDING" },
-        { "fieldPath": "read",     "order": "ASCENDING" },
-        { "fieldPath": "createdAt","order": "DESCENDING" }
-      ]
-    },
-
-    // ── ambulances/ ───────────────────────────────────────────────────────
-    // assignAmbulance: available + active
-    {
-      "collectionGroup": "ambulances",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "isOnline",  "order": "ASCENDING" },
-        { "fieldPath": "status",    "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "ambulances",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status",    "order": "ASCENDING" },
-        { "fieldPath": "updatedAt", "order": "DESCENDING" }
-      ]
-    },
-
-    // ── ambulance_history/ ────────────────────────────────────────────────
-    {
-      "collectionGroup": "ambulance_history",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "ambulanceId", "order": "ASCENDING"  },
-        { "fieldPath": "resolvedAt",  "order": "DESCENDING" }
-      ]
-    },
-
-    // ── medical_incidents/ ──────────────────────────────────────────────────
-    {
-      "collectionGroup": "medical_reports",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "ambulanceId", "order": "ASCENDING"  },
-        { "fieldPath": "submittedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "medical_reports",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "incidentId",  "order": "ASCENDING"  },
-        { "fieldPath": "submittedAt", "order": "DESCENDING" }
-      ]
-    },
-
-    // ── mission_cancellations/ ────────────────────────────────────────────
-    {
-      "collectionGroup": "mission_cancellations",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "ambulanceId", "order": "ASCENDING"  },
-        { "fieldPath": "cancelledAt", "order": "DESCENDING" }
-      ]
-    },
-
-    // ── join_requests/ ────────────────────────────────────────────────────
-    {
-      "collectionGroup": "join_requests",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status",      "order": "ASCENDING"  },
-        { "fieldPath": "submittedAt", "order": "DESCENDING" }
-      ]
-    },
     {
       "collectionGroup": "criticals",
       "queryScope": "COLLECTION",
@@ -204,8 +17,74 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "criticals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "patientUid", "order": "ASCENDING" },
+        { "fieldPath": "dedupeKey", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "incidents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "patientUid", "order": "ASCENDING" },
+        { "fieldPath": "dedupeKey", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "criticals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "incidents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "ambulances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isOnline", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "recipientId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "recipientId", "order": "ASCENDING" },
+        { "fieldPath": "isRead", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "ambulance_history",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ambulanceId", "order": "ASCENDING" },
+        { "fieldPath": "completedAt", "order": "DESCENDING" }
+      ]
     }
-
   ],
   "fieldOverrides": []
 }
