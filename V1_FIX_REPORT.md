@@ -14,8 +14,8 @@ Status key per item below (filled in as work completes): **Fixed** / **Skipped (
 6. The dashboard was rewritten page-by-page onto the canonical schema, removing every AI-coupled UI path, the mock user list, the phantom `paramedics` collection, and three real bugs found along the way (a hook-order violation, a `groupByArea` crash, and a double-layered `baseLocation`-dropping bug in ambulance account creation).
 7. Two Firestore rules gaps were discovered — not in the original audit — while actually building the dashboard's admin actions (fleet-detail editing, incident closeout); both are now fixed and covered by new rules tests.
 8. Dashboard lint went from 21 problems to 3 (all pre-existing, in an untouched Node seed script); `flutter analyze` is unchanged at 191 (0 errors) since Phase 4 touched no Flutter files in Phase 5/6.
-9. Every commit across both repos builds/compiles cleanly at the point it was made — nothing was left in a broken state.
-10. **Before shipping:** install JDK 21 and actually run the rules test suite, and have a human click through the dashboard against seeded/real data — see the manual checklist at the end of this report.
+9. Every commit across both repos *compiles* cleanly, but compiling isn't the same as running: a real deploy attempt (Phase 6, step 6.2) found a module-load-order bug that would have crashed every single Cloud Function in production the instant it ran — fixed and verified by an actual deploy, which is now live on `ultra-bearing-402000` along with the new Firestore rules and indexes.
+10. **Before relying on this in production:** install JDK 21 and actually run the rules test suite against the emulator (the rules are live now, not just theoretical), enable Firebase Storage in the console and deploy `storage.rules`, and have a human click through the dashboard against the now-live backend — see the manual checklist at the end of this report.
 
 ---
 
@@ -253,7 +253,24 @@ no AI code or key ships in the production bundle.
   Route-level `React.lazy()` splitting would fix this; deferred as pure
   performance polish with no functional impact at current scale.
 
-## Phase 6 — Verify everything — DONE except emulator E2E (blocked, see below)
+## Phase 6 — Verify everything — DONE, including a real production deploy
+
+**Update after this section was first written**: the user logged into the Firebase CLI with the correct account and asked to deploy rules/indexes/functions for real, and confirmed this project (`ultra-bearing-402000`) is pre-launch with no real users yet — so a direct deploy (letting `firebase deploy`'s own diffing clean up legacy artifacts, rather than a blind manual wipe) was safe. That deploy surfaced and fixed one more real bug, documented below.
+
+### Critical bug found only by actually deploying (step 6.2)
+
+`firebase deploy --only functions` failed at the "Loading and analyzing source code" step with `FirebaseAppError: The default Firebase app does not exist`. Root cause: every `lib/*.ts` and `triggers/*.ts` module computed `const db = admin.firestore();` at its own module top level. Since those modules are imported at the top of `index.ts`, Node's import hoisting executed all of them — including the `admin.firestore()` calls — **before** `index.ts`'s own `admin.initializeApp()` line ever ran. This meant **every single Cloud Function in the Phase 2 rewrite would have crashed the instant Cloud Functions tried to load the code** — a complete backend outage that neither `tsc` (type-checks only, doesn't execute) nor the blocked emulator could ever have caught; only a real deploy attempt surfaces a module-load-order bug like this.
+
+Fixed by adding `najda_functions/src/lib/firebaseAdmin.ts`, the one place `admin.initializeApp()` is called, exporting `db` for every other file to import instead of calling `admin.firestore()` itself. Verified by requiring the compiled entrypoint directly in Node (`node -e "require('./lib/index.js')"`) before redeploying — confirmed it no longer throws — then redeployed for real, successfully. Committed as `e904178`.
+
+### Live deploy results (project `ultra-bearing-402000`)
+
+- **Indexes**: deployed clean, including `--force`-deleting 32 stale indexes from the old pre-hardening schema (confirmed safe — pre-launch, no live reads depending on them).
+- **Functions**: deployed all 12 functions from the new backend (`autoAssignCritical`, `autoAssignIncident`, `onCriticalStatusChanged`, `onIncidentStatusChanged`, `retryPending`, `manualAssign`, `releaseAmbulance`, `createAmbulanceAccount`, `deleteAmbulanceAccount`, `createDashboardUser`, `setDashboardUserActive`, `markNotificationRead`). Also explicitly deleted 17 legacy functions from the pre-hardening architecture that `firebase deploy`'s own diff either flagged directly (`autoAssignEmergencyReport`, `autoAssignRegularReport`, `createAmbulancesAccount`, `createParamedicAccount`, `handleAmbulanceStatusChange`, `handleMedicalReportSubmission`, `handleParamedicStatusChange`, `najdaAIAssistant`, `notifyOnEmergencyAssign`, `notifyOnRegularAssign`, `retryPendingAssignments`, `selectHospitalWithAI`, `triageSymptoms`) or that belonged to the old dashboard-repo's separate functions codebase and so weren't part of this repo's diff at all (`assignHospital`, `joinRequest`, `onEmergencyReportCreated`, `onReportCreated`). `firebase functions:list` now shows exactly the 12 new functions — nothing else.
+- **Firestore rules**: deployed and live — `firebase deploy` independently confirmed `firestore.rules compiled successfully` against the real rules compiler (stronger evidence than the earlier static brace-count check, though still not the same as the emulator actually exercising the logic against data).
+- **Storage rules**: **not deployed** — Firebase Storage has never been enabled as a product on this project (`firebasestorage.googleapis.com` setup is required first, via the console's "Get Started" flow at `https://console.firebase.google.com/project/ultra-bearing-402000/storage`). This is a one-time product-enablement step with potential billing-plan implications, so it needs the user to do it in the console; `firebase deploy --only storage` can be run immediately after.
+
+### Everything else verified pre-deploy
 
 | Check | Result |
 |---|---|
@@ -265,15 +282,17 @@ no AI code or key ships in the production bundle.
 | Static `firestore.rules`/`storage.rules` brace-balance check | ✅ Balanced (47/47, 11/11) |
 | `firestore.indexes.json` | ✅ Valid JSON |
 | AI-off proof: `grep -ri groq dist/assets/*.js` (DASHBOARD production build) | ✅ Zero matches — no AI code or key reaches the shipped bundle |
-| `firebase deploy --only firestore:rules,storage --dry-run` | ❌ Could not run — the authenticated Firebase CLI account gets HTTP 403 (`firebasestorage.defaultBucket.get` denied) on project `ultra-bearing-402000` before it even reaches rule validation. This is a CLI/account permissions issue, unrelated to rule content, and I did not pursue it further since it was making live calls against the real project. **The user's own Firebase CLI login should be used to run this check** before any real deploy. |
+| `firebase deploy --only firestore:indexes,functions,firestore:rules` | ✅ **Deployed for real** to `ultra-bearing-402000` — see the new section above. Surfaced and fixed a critical admin-init bug that would have crashed every function. |
+| `firebase deploy --only storage` | ❌ Not yet — Firebase Storage isn't enabled as a product on this project yet. User needs to click "Get Started" at the Storage tab in console first (one-time, possibly billing-plan-gated), then this is a one-line deploy. |
 | Firebase Emulator Suite E2E tests (`najda_functions/test/rules.test.ts`, 40+ cases incl. the Phase 5 terminal-status and fleet-edit additions) | ❌ **BLOCKED, unresolved.** `firebase-tools` requires Java 21+; this machine has Java 17. User was asked and explicitly chose "Skip it, continue unverified" earlier in this pass. **This is the single biggest unverified risk in the whole project** — the rules logic is reviewed and internally consistent but has never actually executed against the emulator. |
 | Dashboard manual check against seeded emulator data | ❌ Not done — depends on the same blocked emulator. A lightweight static smoke-test (dev server + browser) was also not practical in this session because the dashboard lives in a separate repo/drive outside this session's browser-preview working directory. |
 
 ### What's still genuinely unverified
 
-1. **Firestore/storage rules were never executed**, only read and reasoned about. The rules unit tests exist and look correct, but "looks correct" is not the same as "a real emulator agreed." Installing JDK 21 and running `npm --prefix najda_functions run test:rules` (or whatever the test script is named) is the single highest-value thing left to do before a real deploy.
-2. **The dashboard has never been run against live or seeded data in this pass** — only `npm run build`/`npm run lint` were used to verify it compiles and is free of obvious errors. The manual test checklist below covers what a human needs to click through.
-3. **The `migrate-v1.ts` migration script has never been run with `--apply`**, by design (dry-run only, per the original instructions) — someone needs to run it for real against a snapshot/staging project before go-live if there's pre-v1 data to migrate.
+1. **Firestore/storage rules' actual *logic* was never executed against the emulator**, only read, reasoned about, and (as of the real deploy above) confirmed to *compile*. Compiling is a much weaker guarantee than the 40+ rules unit tests actually passing. Installing JDK 21 and running the rules test suite is still the single highest-value thing left to do, even though the rules are now live — a logic bug in them would currently be live in production, not just theoretical.
+2. **The dashboard has never been run against live or seeded data in this pass** — only `npm run build`/`npm run lint` were used to verify it compiles and is free of obvious errors. It can now be pointed at the real deployed backend, though, since the backend is live. The manual test checklist below covers what a human needs to click through.
+3. **The `migrate-v1.ts` migration script has never been run with `--apply`**, by design (dry-run only, per the original instructions) — not needed before go-live here since the project was confirmed pre-launch with no real pre-v1 data to migrate, but keep this in mind if that changes.
+4. **Storage rules are not deployed yet** — Storage isn't enabled as a product on this project. Until the user enables it and runs `firebase deploy --only storage`, the only live write-time protection on `incidents/{uid}/*` images is whatever Storage's default (currently non-existent) configuration provides — i.e., none, because there's no bucket at all yet.
 
 ---
 
@@ -341,15 +360,17 @@ point, not part of this work.
 
 ## Manual test checklist (devices / human verification required)
 
-Nothing below was exercised against a live backend in this pass — the
-emulator is blocked (see Phase 6) and this session's tooling can't drive
-a browser against the separately-located dashboard repo. All of it needs
-a human with a real device and/or the dashboard running against the
-Firebase emulator or a staging project.
+**Update**: the backend (functions, Firestore rules, indexes) is now
+actually deployed and live on `ultra-bearing-402000` (see Phase 6) — so
+everything below can be tested against the real thing, not just an
+emulator. Nothing in this checklist has been exercised yet in this pass,
+though; this session's tooling can't drive a device or a browser against
+the separately-located dashboard repo.
 
 ### Before anything else
-- [ ] Install JDK 21, run `firebase emulators:exec --only firestore,auth,functions "npm --prefix najda_functions run test"` (or the equivalent rules-test script) and confirm the 40+ rules tests actually pass. This is the highest-priority item in the whole report.
-- [ ] Run `najda_functions/scripts/migrate-v1.ts` with `--apply` against a staging/snapshot project if there's pre-v1 data that needs the flat-field migration — it has only been dry-run so far.
+- [ ] Enable Firebase Storage for this project (console → Storage → "Get Started"), then run `firebase deploy --only storage` from the APP repo — `storage.rules` exists and is reviewed but not live yet, so incident-photo uploads currently have no storage bucket at all to write to.
+- [ ] Install JDK 21, run `firebase emulators:exec --only firestore,auth,functions "npm --prefix najda_functions run test"` (or the equivalent rules-test script) and confirm the 40+ rules tests actually pass. This matters more now than before — the rules are live in production, so a logic bug in them is a live bug, not a theoretical one.
+- [ ] Run `najda_functions/scripts/migrate-v1.ts` with `--apply` only if real pre-v1-shaped data turns up later — not needed now since the project was confirmed pre-launch with no such data at deploy time.
 
 ### Citizen app (Flutter)
 - [ ] Submit a SOS report with GPS available, and again with GPS denied/unavailable — confirm the report is still created (nullable lat/lng fallback) and the loading state never hangs.
