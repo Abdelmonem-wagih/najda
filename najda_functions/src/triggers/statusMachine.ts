@@ -6,9 +6,8 @@ import {
   STATUS_TRANSITIONS,
   type IncidentStatus,
 } from '../contract';
+import { db } from '../lib/firebaseAdmin';
 import { notifyCitizenOfStatus } from '../lib/notify';
-
-const db = admin.firestore();
 
 const AMBULANCE_STATUS_FOR: Partial<Record<IncidentStatus, string>> = {
   [INCIDENT_STATUS.onMission]: AMBULANCE_STATUS.onMission,

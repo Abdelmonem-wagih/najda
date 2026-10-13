@@ -1,7 +1,6 @@
 import * as admin from 'firebase-admin';
 import { COLLECTIONS, AMBULANCE_STATUS, INCIDENT_STATUS } from '../contract';
-
-const db = admin.firestore();
+import { db } from './firebaseAdmin';
 
 export interface AppliedAssignment {
   ambulanceId: string;

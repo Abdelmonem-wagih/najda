@@ -4,14 +4,12 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 
 import { COLLECTIONS, INCIDENT_STATUS, INCIDENT_FIELDS, incidentKindFor } from './contract';
+import { db } from './lib/firebaseAdmin';
 import { tryAutoAssign } from './lib/autoAssign';
 import { applyAssignment, releaseAmbulanceInTx } from './lib/assignment';
 import { findNearestEligibleAmbulance, isAmbulanceEligible } from './lib/geo';
 import { notifyAmbulanceOfAssignment, notifyAdminsNoAmbulanceAvailable } from './lib/notify';
 import { handleIncidentStatusChange } from './triggers/statusMachine';
-
-admin.initializeApp();
-const db = admin.firestore();
 
 // ═══════════════════════════════════════════════════════════════════
 // SHARED HELPERS

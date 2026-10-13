@@ -40,7 +40,7 @@ exports.isAmbulanceEligible = isAmbulanceEligible;
 exports.findNearestEligibleAmbulance = findNearestEligibleAmbulance;
 const admin = __importStar(require("firebase-admin"));
 const contract_1 = require("../contract");
-const db = admin.firestore();
+const firebaseAdmin_1 = require("./firebaseAdmin");
 /** Candidates whose tracking/{id} doc is older than this are treated as stale (no live position). */
 exports.TRACKING_STALE_MS = 5 * 60 * 1000;
 function haversineKm(lat1, lng1, lat2, lng2) {
@@ -94,7 +94,7 @@ function isAmbulanceEligible(ambulance, tracking, now) {
  */
 async function findNearestEligibleAmbulance(tx, lat, lng) {
     const now = admin.firestore.Timestamp.now();
-    const snap = await tx.get(db.collection(contract_1.COLLECTIONS.ambulances)
+    const snap = await tx.get(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulances)
         .where(contract_1.AMBULANCE_FIELDS.isOnline, '==', true)
         .where(contract_1.AMBULANCE_FIELDS.status, '==', contract_1.AMBULANCE_STATUS.available));
     const candidates = [];
@@ -102,7 +102,7 @@ async function findNearestEligibleAmbulance(tx, lat, lng) {
         const amb = doc.data();
         if (amb[contract_1.AMBULANCE_FIELDS.currentIncidentId])
             continue;
-        const trackingSnap = await tx.get(db.collection(contract_1.COLLECTIONS.tracking).doc(doc.id));
+        const trackingSnap = await tx.get(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.tracking).doc(doc.id));
         const tracking = trackingSnap.exists ? trackingSnap.data() : null;
         if (!isAmbulanceEligible(amb, tracking, now))
             continue;

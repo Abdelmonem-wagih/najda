@@ -127,6 +127,8 @@ exports.INCIDENT_FIELDS = {
     suggestedHospitalName: 'suggestedHospitalName',
     hospitalId: 'hospitalId',
     medicalReportSubmitted: 'medicalReportSubmitted',
+    medicalAssessment: 'medicalAssessment',
+    medicalNotes: 'medicalNotes',
     enRouteAt: 'enRouteAt',
     arrivedAt: 'arrivedAt',
     toHospitalAt: 'toHospitalAt',

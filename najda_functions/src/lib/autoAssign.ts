@@ -1,9 +1,8 @@
 import * as admin from 'firebase-admin';
 import { COLLECTIONS, INCIDENT_STATUS, INCIDENT_FIELDS } from '../contract';
+import { db } from './firebaseAdmin';
 import { findNearestEligibleAmbulance, buildDedupeKey } from './geo';
 import { applyAssignment } from './assignment';
-
-const db = admin.firestore();
 
 /**
  * Finds the nearest eligible ambulance and assigns it, distance only, no AI.

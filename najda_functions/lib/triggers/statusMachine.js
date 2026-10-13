@@ -36,8 +36,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.handleIncidentStatusChange = handleIncidentStatusChange;
 const admin = __importStar(require("firebase-admin"));
 const contract_1 = require("../contract");
+const firebaseAdmin_1 = require("../lib/firebaseAdmin");
 const notify_1 = require("../lib/notify");
-const db = admin.firestore();
 const AMBULANCE_STATUS_FOR = {
     [contract_1.INCIDENT_STATUS.onMission]: contract_1.AMBULANCE_STATUS.onMission,
     [contract_1.INCIDENT_STATUS.arrived]: contract_1.AMBULANCE_STATUS.arrived,
@@ -87,7 +87,7 @@ async function handleIncidentStatusChange(beforeData, afterData, incidentRef, in
     const ambulanceId = afterData.assignedAmbulanceId;
     if (toStatus === contract_1.INCIDENT_STATUS.cancelled) {
         if (ambulanceId) {
-            await db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId).update({
+            await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId).update({
                 status: contract_1.AMBULANCE_STATUS.available,
                 currentIncidentId: null,
                 currentIncidentType: null,
@@ -98,13 +98,13 @@ async function handleIncidentStatusChange(beforeData, afterData, incidentRef, in
     }
     if (toStatus === contract_1.INCIDENT_STATUS.completed) {
         if (ambulanceId) {
-            await db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId).update({
+            await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId).update({
                 status: contract_1.AMBULANCE_STATUS.available,
                 currentIncidentId: null,
                 currentIncidentType: null,
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
-            await db.collection(contract_1.COLLECTIONS.ambulanceHistory).add({
+            await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulanceHistory).add({
                 ambulanceId,
                 incidentId,
                 incidentCollection,
@@ -120,7 +120,7 @@ async function handleIncidentStatusChange(beforeData, afterData, incidentRef, in
     // on_mission / arrived / to_hospital: ambulance status mirrors the incident, not released yet.
     const ambStatus = AMBULANCE_STATUS_FOR[toStatus];
     if (ambulanceId && ambStatus) {
-        await db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId).update({
+        await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId).update({
             status: ambStatus,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });

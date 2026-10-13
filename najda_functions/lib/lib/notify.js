@@ -41,7 +41,7 @@ exports.notifyCitizenOfStatus = notifyCitizenOfStatus;
 exports.notifyAdminsNoAmbulanceAvailable = notifyAdminsNoAmbulanceAvailable;
 const admin = __importStar(require("firebase-admin"));
 const contract_1 = require("../contract");
-const db = admin.firestore();
+const firebaseAdmin_1 = require("./firebaseAdmin");
 /** Sentinel recipientId for broadcast-to-all-dashboard-users notifications (no single admin uid to target). */
 exports.ADMIN_BROADCAST_RECIPIENT_ID = 'admin-broadcast';
 async function sendFcm(token, title, body, data, channelId = 'najda_emergency') {
@@ -64,7 +64,7 @@ async function sendFcm(token, title, body, data, channelId = 'najda_emergency') 
     }
 }
 async function saveNotification(recipientId, recipientRole, type, title, body, incidentId, incidentCollection) {
-    await db.collection(contract_1.COLLECTIONS.notifications).add({
+    await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.notifications).add({
         recipientId,
         recipientRole,
         type,
@@ -81,7 +81,7 @@ const INCIDENT_ASSIGN_TITLE = '📋 بلاغ حادث جديد';
 /** Notify the assigned ambulance crew (FCM token lives in ambulance_private, read here — never on the incident doc). */
 async function notifyAmbulanceOfAssignment(ambulanceId, incidentId, incidentKind, patientName, address) {
     const collection = (0, contract_1.incidentCollectionFor)(incidentKind);
-    const privateSnap = await db.collection(contract_1.COLLECTIONS.ambulancePrivate).doc(ambulanceId).get();
+    const privateSnap = await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulancePrivate).doc(ambulanceId).get();
     const fcmToken = privateSnap.exists ? privateSnap.data()?.fcmToken : undefined;
     const title = incidentKind === 'critical' ? CRITICAL_ASSIGN_TITLE : INCIDENT_ASSIGN_TITLE;
     const body = `${patientName ?? 'مريض غير محدد'} — ${address || 'تحقق من الموقع'}`;
@@ -120,7 +120,7 @@ async function notifyCitizenOfStatus(incidentId, incidentCollection, incidentDat
     const patientUid = incidentData.patientUid;
     if (!patientUid)
         return;
-    const citizenSnap = await db.collection(contract_1.COLLECTIONS.citizens).doc(patientUid).get();
+    const citizenSnap = await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.citizens).doc(patientUid).get();
     const fcmToken = citizenSnap.exists ? citizenSnap.data()?.fcmToken : undefined;
     const title = copy.title;
     const body = copy.body({ ambulanceName: incidentData.assignedAmbulanceName });

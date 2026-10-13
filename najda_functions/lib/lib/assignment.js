@@ -37,7 +37,7 @@ exports.applyAssignment = applyAssignment;
 exports.releaseAmbulanceInTx = releaseAmbulanceInTx;
 const admin = __importStar(require("firebase-admin"));
 const contract_1 = require("../contract");
-const db = admin.firestore();
+const firebaseAdmin_1 = require("./firebaseAdmin");
 /**
  * Writes the FLAT canonical assignment fields to the incident and syncs the
  * ambulance in the same transaction. Never writes an FCM token onto the
@@ -62,7 +62,7 @@ function applyAssignment(tx, incidentRef, incidentId, incidentCollection, ambula
         assignedBy,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    tx.update(db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId), {
+    tx.update(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId), {
         status: contract_1.AMBULANCE_STATUS.assigned,
         currentIncidentId: incidentId,
         currentIncidentType: incidentCollection,
@@ -72,7 +72,7 @@ function applyAssignment(tx, incidentRef, incidentId, incidentCollection, ambula
 }
 /** Frees an ambulance back to the pool — used on reassignment, cancellation, completion, and the releaseAmbulance callable. */
 function releaseAmbulanceInTx(tx, ambulanceId) {
-    tx.update(db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId), {
+    tx.update(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId), {
         status: contract_1.AMBULANCE_STATUS.available,
         currentIncidentId: null,
         currentIncidentType: null,

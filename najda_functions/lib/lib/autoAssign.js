@@ -36,9 +36,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.tryAutoAssign = tryAutoAssign;
 const admin = __importStar(require("firebase-admin"));
 const contract_1 = require("../contract");
+const firebaseAdmin_1 = require("./firebaseAdmin");
 const geo_1 = require("./geo");
 const assignment_1 = require("./assignment");
-const db = admin.firestore();
 /**
  * Finds the nearest eligible ambulance and assigns it, distance only, no AI.
  * Used by both onDocumentCreated triggers (first attempt) and retryPending
@@ -54,8 +54,8 @@ const db = admin.firestore();
  */
 async function tryAutoAssign(incidentId, incidentCollection) {
     let assignedAmbulanceId = null;
-    const incidentRef = db.collection(incidentCollection).doc(incidentId);
-    await db.runTransaction(async (tx) => {
+    const incidentRef = firebaseAdmin_1.db.collection(incidentCollection).doc(incidentId);
+    await firebaseAdmin_1.db.runTransaction(async (tx) => {
         const freshSnap = await tx.get(incidentRef);
         if (!freshSnap.exists)
             return;
@@ -67,7 +67,7 @@ async function tryAutoAssign(incidentId, incidentCollection) {
         if (lat == null || lng == null)
             return; // no location yet — nothing to assign against
         const dedupeKey = (0, geo_1.buildDedupeKey)(lat, lng, data[contract_1.INCIDENT_FIELDS.createdAt]);
-        const dupSnap = await tx.get(db.collection(incidentCollection)
+        const dupSnap = await tx.get(firebaseAdmin_1.db.collection(incidentCollection)
             .where(contract_1.INCIDENT_FIELDS.patientUid, '==', data[contract_1.INCIDENT_FIELDS.patientUid])
             .where(contract_1.INCIDENT_FIELDS.dedupeKey, '==', dedupeKey)
             .where(contract_1.INCIDENT_FIELDS.status, 'in', [

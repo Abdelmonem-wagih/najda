@@ -39,21 +39,20 @@ const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
 const admin = __importStar(require("firebase-admin"));
 const contract_1 = require("./contract");
+const firebaseAdmin_1 = require("./lib/firebaseAdmin");
 const autoAssign_1 = require("./lib/autoAssign");
 const assignment_1 = require("./lib/assignment");
 const geo_1 = require("./lib/geo");
 Object.defineProperty(exports, "findNearestEligibleAmbulance", { enumerable: true, get: function () { return geo_1.findNearestEligibleAmbulance; } });
 const notify_1 = require("./lib/notify");
 const statusMachine_1 = require("./triggers/statusMachine");
-admin.initializeApp();
-const db = admin.firestore();
 // ═══════════════════════════════════════════════════════════════════
 // SHARED HELPERS
 // ═══════════════════════════════════════════════════════════════════
 async function requireDashboardUser(uid, allowedRoles) {
     if (!uid)
         throw new https_1.HttpsError('unauthenticated', 'Not authenticated');
-    const snap = await db.collection(contract_1.COLLECTIONS.dashboardUsers).doc(uid).get();
+    const snap = await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.dashboardUsers).doc(uid).get();
     if (!snap.exists)
         throw new https_1.HttpsError('permission-denied', 'Not a dashboard user');
     const data = snap.data();
@@ -64,7 +63,7 @@ async function requireDashboardUser(uid, allowedRoles) {
     return data;
 }
 async function afterAssignment(incidentId, incidentCollection, ambulanceId) {
-    const snap = await db.collection(incidentCollection).doc(incidentId).get();
+    const snap = await firebaseAdmin_1.db.collection(incidentCollection).doc(incidentId).get();
     const data = snap.data();
     await (0, notify_1.notifyAmbulanceOfAssignment)(ambulanceId, incidentId, (0, contract_1.incidentKindFor)(incidentCollection), data?.[contract_1.INCIDENT_FIELDS.patientName], data?.[contract_1.INCIDENT_FIELDS.address]);
     // The citizen is notified of 'assigned' via the status-machine trigger,
@@ -126,8 +125,8 @@ exports.onIncidentStatusChanged = (0, firestore_1.onDocumentUpdated)('incidents/
 const MAX_RETRY_ATTEMPTS = 5;
 exports.retryPending = (0, scheduler_1.onSchedule)('every 3 minutes', async () => {
     const [critSnap, incSnap] = await Promise.all([
-        db.collection(contract_1.COLLECTIONS.criticals).where(contract_1.INCIDENT_FIELDS.status, '==', contract_1.INCIDENT_STATUS.pending).get(),
-        db.collection(contract_1.COLLECTIONS.incidents).where(contract_1.INCIDENT_FIELDS.status, '==', contract_1.INCIDENT_STATUS.pending).get(),
+        firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.criticals).where(contract_1.INCIDENT_FIELDS.status, '==', contract_1.INCIDENT_STATUS.pending).get(),
+        firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.incidents).where(contract_1.INCIDENT_FIELDS.status, '==', contract_1.INCIDENT_STATUS.pending).get(),
     ]);
     const all = [
         ...critSnap.docs.map(doc => ({ doc, collection: contract_1.COLLECTIONS.criticals })),
@@ -173,14 +172,14 @@ exports.manualAssign = (0, https_1.onCall)(async (request) => {
         throw new https_1.HttpsError('invalid-argument', 'incidentCollection must be "criticals" or "incidents"');
     }
     const forceOverride = force === true && dashboardUser.role === 'admin';
-    const incidentRef = db.collection(incidentCollection).doc(incidentId);
-    const ambulanceRef = db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId);
+    const incidentRef = firebaseAdmin_1.db.collection(incidentCollection).doc(incidentId);
+    const ambulanceRef = firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId);
     let releasedPreviousAmbulanceId = null;
-    await db.runTransaction(async (tx) => {
+    await firebaseAdmin_1.db.runTransaction(async (tx) => {
         const [incSnap, ambSnap, trackingSnap] = await Promise.all([
             tx.get(incidentRef),
             tx.get(ambulanceRef),
-            tx.get(db.collection(contract_1.COLLECTIONS.tracking).doc(ambulanceId)),
+            tx.get(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.tracking).doc(ambulanceId)),
         ]);
         if (!incSnap.exists)
             throw new https_1.HttpsError('not-found', 'Incident not found');
@@ -211,7 +210,7 @@ exports.releaseAmbulance = (0, https_1.onCall)(async (request) => {
     const { ambulanceId } = request.data;
     if (!ambulanceId)
         throw new https_1.HttpsError('invalid-argument', 'ambulanceId required');
-    await db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId).update({
+    await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId).update({
         status: 'available',
         currentIncidentId: null,
         currentIncidentType: null,
@@ -236,8 +235,8 @@ exports.createAmbulanceAccount = (0, https_1.onCall)(async (request) => {
             displayName: driverName,
         });
         await admin.auth().setCustomUserClaims(userRecord.uid, { role: 'ambulance', ambulanceId });
-        const batch = db.batch();
-        batch.set(db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId), {
+        const batch = firebaseAdmin_1.db.batch();
+        batch.set(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId), {
             uid: userRecord.uid,
             ambulanceId,
             driverName: driverName ?? '',
@@ -250,7 +249,7 @@ exports.createAmbulanceAccount = (0, https_1.onCall)(async (request) => {
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
-        batch.set(db.collection(contract_1.COLLECTIONS.ambulancePrivate).doc(ambulanceId), {
+        batch.set(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulancePrivate).doc(ambulanceId), {
             email,
             phone: phone ?? null,
             fcmToken: null,
@@ -270,7 +269,7 @@ exports.deleteAmbulanceAccount = (0, https_1.onCall)(async (request) => {
     const { ambulanceId } = request.data;
     if (!ambulanceId)
         throw new https_1.HttpsError('invalid-argument', 'ambulanceId required');
-    const ambSnap = await db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId).get();
+    const ambSnap = await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId).get();
     if (!ambSnap.exists)
         throw new https_1.HttpsError('not-found', 'Ambulance not found');
     const uid = ambSnap.data()?.uid;
@@ -282,10 +281,10 @@ exports.deleteAmbulanceAccount = (0, https_1.onCall)(async (request) => {
             console.warn(`[deleteAmbulanceAccount] could not disable Auth user ${uid}:`, err);
         }
     }
-    const batch = db.batch();
-    batch.delete(db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId));
-    batch.delete(db.collection(contract_1.COLLECTIONS.ambulancePrivate).doc(ambulanceId));
-    batch.delete(db.collection(contract_1.COLLECTIONS.tracking).doc(ambulanceId));
+    const batch = firebaseAdmin_1.db.batch();
+    batch.delete(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId));
+    batch.delete(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulancePrivate).doc(ambulanceId));
+    batch.delete(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.tracking).doc(ambulanceId));
     await batch.commit();
     return { success: true };
 });
@@ -301,7 +300,7 @@ exports.createDashboardUser = (0, https_1.onCall)(async (request) => {
     try {
         const userRecord = await admin.auth().createUser({ email, password, displayName: name });
         await admin.auth().setCustomUserClaims(userRecord.uid, { role: 'dashboard', dashboardRole: role });
-        await db.collection(contract_1.COLLECTIONS.dashboardUsers).doc(userRecord.uid).set({
+        await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.dashboardUsers).doc(userRecord.uid).set({
             role,
             name,
             email,
@@ -322,7 +321,7 @@ exports.setDashboardUserActive = (0, https_1.onCall)(async (request) => {
     const { uid, active } = request.data;
     if (!uid || typeof active !== 'boolean')
         throw new https_1.HttpsError('invalid-argument', 'uid and active are required');
-    await db.collection(contract_1.COLLECTIONS.dashboardUsers).doc(uid).update({ active });
+    await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.dashboardUsers).doc(uid).update({ active });
     try {
         await admin.auth().updateUser(uid, { disabled: !active });
     }
@@ -340,7 +339,7 @@ exports.markNotificationRead = (0, https_1.onCall)(async (request) => {
     const { notificationId } = request.data;
     if (!notificationId)
         throw new https_1.HttpsError('invalid-argument', 'notificationId required');
-    const ref = db.collection(contract_1.COLLECTIONS.notifications).doc(notificationId);
+    const ref = firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.notifications).doc(notificationId);
     const snap = await ref.get();
     if (!snap.exists)
         throw new https_1.HttpsError('not-found', 'Notification not found');
@@ -348,7 +347,7 @@ exports.markNotificationRead = (0, https_1.onCall)(async (request) => {
     const isOwnNotification = data.recipientId === request.auth.uid;
     let isDashboardCaller = false;
     if (data.recipientRole === 'admin') {
-        const dashSnap = await db.collection(contract_1.COLLECTIONS.dashboardUsers).doc(request.auth.uid).get();
+        const dashSnap = await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.dashboardUsers).doc(request.auth.uid).get();
         isDashboardCaller = dashSnap.exists && dashSnap.data()?.active === true;
     }
     if (!isOwnNotification && !isDashboardCaller) {

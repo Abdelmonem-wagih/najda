@@ -7,8 +7,7 @@ import {
   type IncidentKind,
   incidentCollectionFor,
 } from '../contract';
-
-const db = admin.firestore();
+import { db } from './firebaseAdmin';
 
 /** Sentinel recipientId for broadcast-to-all-dashboard-users notifications (no single admin uid to target). */
 export const ADMIN_BROADCAST_RECIPIENT_ID = 'admin-broadcast';

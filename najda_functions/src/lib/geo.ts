@@ -1,7 +1,6 @@
 import * as admin from 'firebase-admin';
 import { COLLECTIONS, AMBULANCE_FIELDS, AMBULANCE_STATUS } from '../contract';
-
-const db = admin.firestore();
+import { db } from './firebaseAdmin';
 
 /** Candidates whose tracking/{id} doc is older than this are treated as stale (no live position). */
 export const TRACKING_STALE_MS = 5 * 60 * 1000;
