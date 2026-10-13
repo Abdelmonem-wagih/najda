@@ -156,6 +156,12 @@ async function main() {
   test('ambulances: no client can create an ambulance doc', async () => {
     await assertFails(ctxFor('admin1').firestore().collection('ambulances').doc('amb3').set({ uid: 'amb3', isOnline: false, status: 'available' }));
   });
+  test('ambulances: dashboard user can edit non-operational fleet details', async () => {
+    await assertSucceeds(ctxFor('operator1').firestore().collection('ambulances').doc('amb1').update({ driverName: 'New Driver', updatedAt: new Date() }));
+  });
+  test('ambulances: dashboard user editing fleet details CANNOT also sneak in a status change', async () => {
+    await assertFails(ctxFor('operator1').firestore().collection('ambulances').doc('amb1').update({ driverName: 'New Driver', status: 'assigned', updatedAt: new Date() }));
+  });
 
   // ── ambulance_private ─────────────────────────────────────────────────
   test('ambulance_private: owner can update own fcmToken', async () => {

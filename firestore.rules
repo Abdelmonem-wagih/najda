@@ -148,8 +148,18 @@ service cloud.firestore {
         || (ambId == request.auth.uid)
         || isDashboardUser();
 
-      allow update: if ((resource.data.uid == request.auth.uid) || (ambId == request.auth.uid))
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["isOnline", "lastActiveAt", "updatedAt"]);
+      allow update: if (
+          ((resource.data.uid == request.auth.uid) || (ambId == request.auth.uid))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["isOnline", "lastActiveAt", "updatedAt"])
+        ) || (
+          // Dashboard admin/operator editing non-operational fleet details
+          // (plate, driver name, area, base location) — discovered missing
+          // during Phase 5 (step 5.8): there was no way for the dashboard
+          // to edit these after account creation at all. Never status/
+          // isOnline/currentIncidentId — those stay owner/server-only above.
+          isDashboardUser()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["plateNumber", "driverName", "area", "baseLocation", "updatedAt"])
+        );
 
       allow create, delete: if false;
     }
