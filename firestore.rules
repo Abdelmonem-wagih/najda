@@ -107,6 +107,16 @@ service cloud.firestore {
         ) || (
           isDashboardUser()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["hospitalId", "suggestedHospitalName", "updatedAt"])
+        ) || (
+          // Dashboard admin/operator administratively closing out an
+          // incident (resolved manually, marked duplicate, or cancelled) —
+          // discovered missing while wiring up the dashboard's "mark
+          // resolved" action: there was no legal write path for this at
+          // all under the rules above, only the assigned ambulance could
+          // move status. Deliberately narrow to just the 3 terminal values.
+          isDashboardUser()
+          && request.resource.data.status in ["completed", "cancelled", "duplicate"]
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt", "completedAt"])
         ) || isAdmin();
 
       allow delete: if false;
@@ -131,6 +141,16 @@ service cloud.firestore {
         ) || (
           isDashboardUser()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["hospitalId", "suggestedHospitalName", "updatedAt"])
+        ) || (
+          // Dashboard admin/operator administratively closing out an
+          // incident (resolved manually, marked duplicate, or cancelled) —
+          // discovered missing while wiring up the dashboard's "mark
+          // resolved" action: there was no legal write path for this at
+          // all under the rules above, only the assigned ambulance could
+          // move status. Deliberately narrow to just the 3 terminal values.
+          isDashboardUser()
+          && request.resource.data.status in ["completed", "cancelled", "duplicate"]
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt", "completedAt"])
         ) || isAdmin();
 
       allow delete: if false;

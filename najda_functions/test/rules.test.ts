@@ -136,6 +136,12 @@ async function main() {
   test('criticals: no client can delete', async () => {
     await assertFails(ctxFor('admin1').firestore().collection('criticals').doc('crit1').delete());
   });
+  test('criticals: dashboard user can administratively mark completed', async () => {
+    await assertSucceeds(ctxFor('operator1').firestore().collection('criticals').doc('crit1').update({ status: 'completed', updatedAt: new Date(), completedAt: new Date() }));
+  });
+  test('criticals: dashboard user cannot set an intermediate status directly', async () => {
+    await assertFails(ctxFor('operator1').firestore().collection('criticals').doc('crit1').update({ status: 'on_mission', updatedAt: new Date() }));
+  });
 
   // ── ambulances ────────────────────────────────────────────────────────
   test('ambulances: owner can toggle isOnline', async () => {
