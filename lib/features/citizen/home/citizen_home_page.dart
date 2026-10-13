@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/design.dart';
@@ -11,6 +15,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/shared/widgets/app_widgets.dart';
 import '../../../core/l10n/generated/app_localizations.dart';
+import '../../../core/utils/phone_utils.dart';
 import '../../auth/presentation/cubit/auth_cubit.dart';
 import 'presentation/cubit/sos_cubit.dart';
 import 'presentation/widgets/home_header.dart';
@@ -57,17 +62,20 @@ class _CitizenHomePageState extends State<CitizenHomePage>
   Future<void> _handleSOSSuccess(SOSSuccess state) async {
     final user = (context.read<AuthCubit>().state as AuthAuthenticated).user;
 
-    // 1. WhatsApp & Call (non-blocking)
+    // 1. WhatsApp & Call — fires only AFTER the report write already
+    // succeeded (we're reacting to SOSSuccess), and is never awaited by the
+    // confirmation dialog below, so a blocked/failed call or message can
+    // never delay or hide the fact that the report itself went through.
     final contactRaw = user.emergencyContact;
     if (contactRaw.isNotEmpty) {
-      _sendWhatsAppAndCall(
+      unawaited(_sendWhatsAppAndCall(
         phone: contactRaw,
         patientName: user.fullName,
         shortId: state.shortId,
         lat: state.latitude,
         lng: state.longitude,
         address: state.address,
-      );
+      ));
     }
 
     // 2. Show confirmation
@@ -85,20 +93,25 @@ class _CitizenHomePageState extends State<CitizenHomePage>
     required String phone,
     required String patientName,
     required String shortId,
-    required double lat,
-    required double lng,
+    double? lat,
+    double? lng,
     required String address,
   }) async {
-    // Clean phone number
-    String cleanPhone = phone.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-    if (!cleanPhone.startsWith('+')) cleanPhone = '+2$cleanPhone';
+    final cleanPhone = normalizeEgyptianPhone(phone);
+    if (cleanPhone == null) {
+      debugPrint('[SOS] emergency contact "$phone" is not a valid Egyptian number — skipping WhatsApp/call');
+      _showNonBlockingNotice('تعذر الوصول لجهة اتصال الطوارئ — الرقم المسجل غير صحيح');
+      return;
+    }
 
-    final mapsLink = 'https://maps.google.com/?q=$lat,$lng';
+    final mapsLink = (lat != null && lng != null)
+        ? 'https://maps.google.com/?q=$lat,$lng'
+        : null;
     final msg = Uri.encodeComponent(
       '🚨 *تنبيه طوارئ — نجدة*\n\n'
       '$patientName يحتاج مساعدة طارئة!\n\n'
       '📍 *الموقع:* ${address.isNotEmpty ? address : 'غير محدد'}\n'
-      '🗺️ *خريطة:* $mapsLink\n'
+      '${mapsLink != null ? '🗺️ *خريطة:* $mapsLink\n' : ''}'
       '🆔 *رقم البلاغ:* $shortId\n'
       '🕐 *الوقت:* ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}\n\n'
       '✅ تم إرسال الإسعاف تلقائياً.',
@@ -107,27 +120,72 @@ class _CitizenHomePageState extends State<CitizenHomePage>
     // Send WhatsApp
     final waUri =
         Uri.parse('https://wa.me/${cleanPhone.replaceAll('+', '')}?text=$msg');
+    bool whatsAppSent = false;
     try {
       if (await canLaunchUrl(waUri)) {
-        await launchUrl(waUri, mode: LaunchMode.externalApplication);
+        whatsAppSent = await launchUrl(waUri, mode: LaunchMode.externalApplication);
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[SOS] WhatsApp launch failed: $e');
+    }
+    if (!whatsAppSent) {
+      debugPrint('[SOS] WhatsApp not available for $cleanPhone');
+    }
 
     // Wait 3 seconds then call
     await Future.delayed(const Duration(seconds: 3));
-    final callUri = Uri.parse('tel:$cleanPhone');
+    await _callEmergencyContact(cleanPhone);
+  }
+
+  /// Android: places the call directly (no dialer confirmation step) via
+  /// flutter_phone_direct_caller, after requesting the runtime CALL_PHONE
+  /// permission (declared in the manifest but previously never actually
+  /// requested or used anywhere in the app). Falls back to opening the
+  /// dialer (url_launcher tel:) if the permission is denied, or on iOS,
+  /// where no app is allowed to silently place a call — the user still has
+  /// to tap Call themselves there.
+  Future<void> _callEmergencyContact(String e164Phone) async {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final status = await Permission.phone.request();
+      if (status.isGranted) {
+        try {
+          final placed = await FlutterPhoneDirectCaller.callNumber(e164Phone);
+          if (placed == true) return;
+        } catch (e) {
+          debugPrint('[SOS] Direct call failed: $e');
+        }
+      }
+    }
+
+    // iOS, or Android permission denied, or the direct call failed.
     try {
+      final callUri = Uri.parse('tel:$e164Phone');
       if (await canLaunchUrl(callUri)) {
         await launchUrl(callUri, mode: LaunchMode.externalApplication);
+        return;
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[SOS] Dialer launch failed: $e');
+    }
+
+    _showNonBlockingNotice('تعذر الاتصال بجهة اتصال الطوارئ تلقائياً — يرجى الاتصال بهم يدوياً');
+  }
+
+  void _showNonBlockingNotice(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg, style: NC.label(13, color: Colors.white)),
+      backgroundColor: NC.warning,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
   }
 
   void _showSOSConfirm({
     required String shortId,
     required String docId,
-    required double lat,
-    required double lng,
+    double? lat,
+    double? lng,
   }) {
     showDialog(
       context: context,
@@ -163,31 +221,34 @@ class _CitizenHomePageState extends State<CitizenHomePage>
             ),
             const SizedBox(height: 10),
             Text(
-              'الإسعاف في الطريق إليك.\nتم إرسال رسالة واتساب لجهة اتصال الطوارئ.',
+              lat != null && lng != null
+                  ? 'الإسعاف في الطريق إليك.\nتم إرسال رسالة واتساب لجهة اتصال الطوارئ.'
+                  : 'تم استلام بلاغك ولكن تعذر تحديد موقعك بدقة.\nسيتواصل معك فريق الطوارئ، وتم إرسال رسالة واتساب لجهة اتصال الطوارئ.',
               style: NC.body(13),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            GradientButton(
-              label: 'تتبع الإسعاف على الخريطة',
-              icon: Icons.my_location_rounded,
-              gradient: NC.primaryGrad,
-              height: 50,
-              onTap: () {
-                Navigator.pop(context); // close dialog
-                Navigator.pushNamed(
-                  context,
-                  AppRoutes.trackIncident,
-                  arguments: {
-                    'reportId': docId,
-                    'reportType': 'critical',    // ← was 'emergency_report'
-                    'displayId': shortId,
-                    'patientLat': lat,
-                    'patientLng': lng,
-                  },
-                );
-              },
-            ),
+            if (lat != null && lng != null)
+              GradientButton(
+                label: 'تتبع الإسعاف على الخريطة',
+                icon: Icons.my_location_rounded,
+                gradient: NC.primaryGrad,
+                height: 50,
+                onTap: () {
+                  Navigator.pop(context); // close dialog
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.trackIncident,
+                    arguments: {
+                      'reportId': docId,
+                      'reportType': 'critical',
+                      'displayId': shortId,
+                      'patientLat': lat,
+                      'patientLng': lng,
+                    },
+                  );
+                },
+              ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: () => Navigator.pop(context),

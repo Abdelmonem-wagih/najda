@@ -1,11 +1,13 @@
 import '../../../../auth/domain/entities/app_user.dart';
 
 abstract class SOSRepository {
+  /// [latitude]/[longitude]/[accuracy] are nullable — a report must never be
+  /// blocked by GPS failing.
   Future<String> triggerSOS({
     required UserModel user,
-    required double latitude,
-    required double longitude,
-    required double accuracy,
+    double? latitude,
+    double? longitude,
+    double? accuracy,
     required String address,
     required String shortId,
   });
