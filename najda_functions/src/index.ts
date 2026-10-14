@@ -243,10 +243,11 @@ export const releaseAmbulance = onCall(async (request) => {
 export const createAmbulanceAccount = onCall(async (request) => {
   await requireDashboardUser(request.auth?.uid, ['admin']);
 
-  const { ambulanceId, email, password, driverName, phone, area, baseLocation } = request.data as {
+  const { ambulanceId, email, password, plateNumber, driverName, phone, area, baseLocation } = request.data as {
     ambulanceId: string;
     email: string;
     password: string;
+    plateNumber?: string;
     driverName: string;
     phone?: string;
     area: string;
@@ -270,6 +271,7 @@ export const createAmbulanceAccount = onCall(async (request) => {
     batch.set(db.collection(COLLECTIONS.ambulances).doc(ambulanceId), {
       uid: userRecord.uid,
       ambulanceId,
+      plateNumber: plateNumber ?? '',
       driverName: driverName ?? '',
       area: area ?? '',
       baseLocation,

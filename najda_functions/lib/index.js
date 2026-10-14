@@ -223,7 +223,7 @@ exports.releaseAmbulance = (0, https_1.onCall)(async (request) => {
 // ═══════════════════════════════════════════════════════════════════
 exports.createAmbulanceAccount = (0, https_1.onCall)(async (request) => {
     await requireDashboardUser(request.auth?.uid, ['admin']);
-    const { ambulanceId, email, password, driverName, phone, area, baseLocation } = request.data;
+    const { ambulanceId, email, password, plateNumber, driverName, phone, area, baseLocation } = request.data;
     if (!ambulanceId || !email || !password || !baseLocation) {
         throw new https_1.HttpsError('invalid-argument', 'Missing required fields: ambulanceId, email, password, baseLocation');
     }
@@ -239,6 +239,7 @@ exports.createAmbulanceAccount = (0, https_1.onCall)(async (request) => {
         batch.set(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId), {
             uid: userRecord.uid,
             ambulanceId,
+            plateNumber: plateNumber ?? '',
             driverName: driverName ?? '',
             area: area ?? '',
             baseLocation,
