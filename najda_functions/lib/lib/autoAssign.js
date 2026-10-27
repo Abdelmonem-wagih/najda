@@ -39,6 +39,7 @@ const contract_1 = require("../contract");
 const firebaseAdmin_1 = require("./firebaseAdmin");
 const geo_1 = require("./geo");
 const assignment_1 = require("./assignment");
+const hospitalMatch_1 = require("./hospitalMatch");
 /**
  * Finds the nearest eligible ambulance and assigns it, distance only, no AI.
  * Used by both onDocumentCreated triggers (first attempt) and retryPending
@@ -93,8 +94,23 @@ async function tryAutoAssign(incidentId, incidentCollection) {
             tx.update(incidentRef, { dedupeKey, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
             return; // stays pending; retryPending will try again
         }
+        // Read the hospital directory now, before any write in this transaction
+        // (Firestore requires all transaction reads before any write) — the
+        // dashboard's manual hospital picker can always override this suggestion.
+        const hospitalsSnap = await tx.get(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.hospitals));
+        const hospitalCandidates = hospitalsSnap.docs.map(d => ({
+            id: d.id,
+            ...d.data(),
+        }));
+        const suggestion = (0, hospitalMatch_1.pickNearestHospital)(lat, lng, hospitalCandidates);
         (0, assignment_1.applyAssignment)(tx, incidentRef, incidentId, incidentCollection, nearest.ambulanceDoc, 'auto');
-        tx.update(incidentRef, { dedupeKey });
+        tx.update(incidentRef, {
+            dedupeKey,
+            ...(suggestion && {
+                [contract_1.INCIDENT_FIELDS.hospitalId]: suggestion.hospitalId,
+                [contract_1.INCIDENT_FIELDS.suggestedHospitalName]: suggestion.hospitalName,
+            }),
+        });
         assignedAmbulanceId = nearest.ambulanceDoc.id;
     });
     return assignedAmbulanceId;

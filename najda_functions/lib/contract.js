@@ -13,7 +13,7 @@
  * any of them.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DASHBOARD_USER_FIELDS = exports.AMBULANCE_HISTORY_FIELDS = exports.NOTIFICATION_FIELDS = exports.NOTIFICATION_RECIPIENT_ROLE = exports.CITIZEN_FIELDS = exports.TRACKING_FIELDS = exports.AMBULANCE_PRIVATE_FIELDS = exports.AMBULANCE_FIELDS = exports.INCIDENT_FIELDS = exports.STATUS_TRANSITIONS = exports.AMBULANCE_STATUS = exports.INCIDENT_STATUS = exports.COLLECTIONS = void 0;
+exports.DASHBOARD_USER_FIELDS = exports.DASHBOARD_ROLES = exports.HOSPITAL_FIELDS = exports.AMBULANCE_HISTORY_FIELDS = exports.NOTIFICATION_FIELDS = exports.NOTIFICATION_RECIPIENT_ROLE = exports.CITIZEN_FIELDS = exports.TRACKING_FIELDS = exports.AMBULANCE_PRIVATE_FIELDS = exports.SERVICE_TYPES = exports.AMBULANCE_FIELDS = exports.INCIDENT_FIELDS = exports.STATUS_TRANSITIONS = exports.AMBULANCE_STATUS = exports.INCIDENT_STATUS = exports.COLLECTIONS = void 0;
 exports.incidentCollectionFor = incidentCollectionFor;
 exports.incidentKindFor = incidentKindFor;
 exports.isLegalTransition = isLegalTransition;
@@ -28,7 +28,6 @@ exports.COLLECTIONS = {
     notifications: 'notifications',
     ambulanceHistory: 'ambulance_history',
     hospitals: 'hospitals',
-    joinRequests: 'join_requests',
     dashboardUsers: 'dashboard_users',
     counters: '_counters',
 };
@@ -91,6 +90,7 @@ function isLegalTransition(from, to, by) {
     return (exports.STATUS_TRANSITIONS[from] ?? []).some(t => t.to === to && t.by === by);
 }
 // ─── Field name constants (criticals + incidents share this shape) ────────
+// CONTRACT:INCIDENT_FIELDS:START
 exports.INCIDENT_FIELDS = {
     shortId: 'shortId',
     incidentType: 'incidentType',
@@ -136,6 +136,8 @@ exports.INCIDENT_FIELDS = {
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
 };
+// CONTRACT:INCIDENT_FIELDS:END
+// CONTRACT:AMBULANCE_FIELDS:START
 exports.AMBULANCE_FIELDS = {
     uid: 'uid',
     ambulanceId: 'ambulanceId',
@@ -146,17 +148,26 @@ exports.AMBULANCE_FIELDS = {
     baseLocation: 'baseLocation',
     isOnline: 'isOnline',
     status: 'status',
+    serviceType: 'serviceType', // 'ambulance' today; reserved for future fire/police vehicles
     currentIncidentId: 'currentIncidentId',
     currentIncidentType: 'currentIncidentType',
     lastActiveAt: 'lastActiveAt',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
 };
+// CONTRACT:AMBULANCE_FIELDS:END
+/** Service types a dispatchable vehicle can have. Only 'ambulance' is built today. */
+exports.SERVICE_TYPES = {
+    ambulance: 'ambulance',
+};
+// CONTRACT:AMBULANCE_PRIVATE_FIELDS:START
 exports.AMBULANCE_PRIVATE_FIELDS = {
     fcmToken: 'fcmToken',
     email: 'email',
     phone: 'phone',
 };
+// CONTRACT:AMBULANCE_PRIVATE_FIELDS:END
+// CONTRACT:TRACKING_FIELDS:START
 exports.TRACKING_FIELDS = {
     latitude: 'latitude',
     longitude: 'longitude',
@@ -165,6 +176,8 @@ exports.TRACKING_FIELDS = {
     accuracy: 'accuracy',
     updatedAt: 'updatedAt',
 };
+// CONTRACT:TRACKING_FIELDS:END
+// CONTRACT:CITIZEN_FIELDS:START
 exports.CITIZEN_FIELDS = {
     role: 'role',
     phoneNumber: 'phoneNumber',
@@ -176,6 +189,8 @@ exports.CITIZEN_FIELDS = {
     fcmToken: 'fcmToken',
     createdAt: 'createdAt',
 };
+// CONTRACT:CITIZEN_FIELDS:END
+// CONTRACT:NOTIFICATION_FIELDS:START
 exports.NOTIFICATION_RECIPIENT_ROLE = {
     ambulance: 'ambulance',
     citizen: 'citizen',
@@ -193,6 +208,8 @@ exports.NOTIFICATION_FIELDS = {
     readAt: 'readAt',
     createdAt: 'createdAt',
 };
+// CONTRACT:NOTIFICATION_FIELDS:END
+// CONTRACT:AMBULANCE_HISTORY_FIELDS:START
 exports.AMBULANCE_HISTORY_FIELDS = {
     ambulanceId: 'ambulanceId',
     incidentId: 'incidentId',
@@ -202,11 +219,33 @@ exports.AMBULANCE_HISTORY_FIELDS = {
     status: 'status',
     completedAt: 'completedAt',
 };
+// CONTRACT:AMBULANCE_HISTORY_FIELDS:END
+// CONTRACT:HOSPITAL_FIELDS:START
+exports.HOSPITAL_FIELDS = {
+    name: 'name',
+    address: 'address',
+    latitude: 'latitude',
+    longitude: 'longitude',
+    phoneNumber: 'phoneNumber',
+    specialties: 'specialties',
+    hasER: 'hasER',
+    isGovernment: 'isGovernment',
+    bedsAvailable: 'bedsAvailable',
+    is24Hours: 'is24Hours',
+    hours: 'hours',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+};
+// CONTRACT:HOSPITAL_FIELDS:END
+// CONTRACT:DASHBOARD_ROLES:START
+exports.DASHBOARD_ROLES = ['admin', 'operator', 'hospital'];
+// CONTRACT:DASHBOARD_USER_FIELDS:START
 exports.DASHBOARD_USER_FIELDS = {
-    role: 'role', // 'admin' | 'operator'
+    role: 'role', // one of DASHBOARD_ROLES
     name: 'name',
     email: 'email',
     active: 'active',
     createdAt: 'createdAt',
 };
+// CONTRACT:DASHBOARD_USER_FIELDS:END
 //# sourceMappingURL=contract.js.map

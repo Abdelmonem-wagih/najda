@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.findNearestEligibleAmbulance = exports.markNotificationRead = exports.setDashboardUserActive = exports.createDashboardUser = exports.deleteAmbulanceAccount = exports.createAmbulanceAccount = exports.releaseAmbulance = exports.manualAssign = exports.retryPending = exports.onIncidentStatusChanged = exports.onCriticalStatusChanged = exports.autoAssignIncident = exports.autoAssignCritical = void 0;
+exports.findNearestEligibleAmbulance = exports.markNotificationRead = exports.setDashboardUserActive = exports.createDashboardUser = exports.deleteHospitalAccount = exports.createHospitalAccount = exports.deleteAmbulanceAccount = exports.createAmbulanceAccount = exports.releaseAmbulance = exports.manualAssign = exports.retryPending = exports.onIncidentStatusChanged = exports.onCriticalStatusChanged = exports.autoAssignIncident = exports.autoAssignCritical = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
@@ -287,6 +287,66 @@ exports.deleteAmbulanceAccount = (0, https_1.onCall)(async (request) => {
     batch.delete(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulancePrivate).doc(ambulanceId));
     batch.delete(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.tracking).doc(ambulanceId));
     await batch.commit();
+    return { success: true };
+});
+// ═══════════════════════════════════════════════════════════════════
+// HOSPITAL ACCOUNT MANAGEMENT (dashboard — admin only)
+// ═══════════════════════════════════════════════════════════════════
+exports.createHospitalAccount = (0, https_1.onCall)(async (request) => {
+    await requireDashboardUser(request.auth?.uid, ['admin']);
+    const { hospitalId, email, password, name, address, latitude, longitude, phoneNumber, specialties, hasER, isGovernment, bedsAvailable, is24Hours, hours, } = request.data;
+    if (!hospitalId || !email || !password || !name || latitude == null || longitude == null) {
+        throw new https_1.HttpsError('invalid-argument', 'Missing required fields: hospitalId, email, password, name, latitude, longitude');
+    }
+    try {
+        const userRecord = await admin.auth().createUser({ email, password, displayName: name });
+        await admin.auth().setCustomUserClaims(userRecord.uid, { role: 'hospital', hospitalId });
+        await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.hospitals).doc(hospitalId).set({
+            name,
+            address: address ?? '',
+            latitude,
+            longitude,
+            phoneNumber: phoneNumber ?? '',
+            specialties: specialties ?? [],
+            hasER: hasER === true,
+            isGovernment: isGovernment === true,
+            bedsAvailable: bedsAvailable ?? 0,
+            is24Hours: is24Hours === true,
+            hours: hours ?? '',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return { success: true, uid: userRecord.uid, hospitalId };
+    }
+    catch (err) {
+        console.error('[createHospitalAccount] error:', err);
+        if (err.code === 'auth/email-already-exists')
+            throw new https_1.HttpsError('already-exists', 'Email already registered');
+        throw new https_1.HttpsError('internal', err.message || 'Failed to create hospital account');
+    }
+});
+exports.deleteHospitalAccount = (0, https_1.onCall)(async (request) => {
+    await requireDashboardUser(request.auth?.uid, ['admin']);
+    const { hospitalId } = request.data;
+    if (!hospitalId)
+        throw new https_1.HttpsError('invalid-argument', 'hospitalId required');
+    const hospSnap = await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.hospitals).doc(hospitalId).get();
+    if (!hospSnap.exists)
+        throw new https_1.HttpsError('not-found', 'Hospital not found');
+    // The hospital's Auth uid isn't stored on the hospitals doc (unlike
+    // ambulances/ambulance_private) — custom claims carry hospitalId, not the
+    // reverse, so we look the user up by the claim instead of by a stored uid.
+    const list = await admin.auth().listUsers();
+    const match = list.users.find(u => u.customClaims?.hospitalId === hospitalId);
+    if (match) {
+        try {
+            await admin.auth().updateUser(match.uid, { disabled: true });
+        }
+        catch (err) {
+            console.warn(`[deleteHospitalAccount] could not disable Auth user ${match.uid}:`, err);
+        }
+    }
+    await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.hospitals).doc(hospitalId).delete();
     return { success: true };
 });
 // ═══════════════════════════════════════════════════════════════════
