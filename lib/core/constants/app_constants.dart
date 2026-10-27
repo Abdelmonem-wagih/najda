@@ -16,7 +16,6 @@ class AppConstants {
   static const String hospitalsCollection        = 'hospitals';
   static const String assignmentsCollection       = 'assignments';
   static const String notificationsCollection    = 'notifications';
-  static const String joinRequestsCollection     = 'join_requests';
   static const String medicalReportsCollection   = 'medical_reports';
 
   // ─── User Roles ──────────────────────────────────────────────────────────

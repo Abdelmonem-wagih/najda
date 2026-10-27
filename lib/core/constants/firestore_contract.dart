@@ -24,7 +24,6 @@ class FirestoreCollections {
   static const notifications = 'notifications';
   static const ambulanceHistory = 'ambulance_history';
   static const hospitals = 'hospitals';
-  static const joinRequests = 'join_requests';
   static const dashboardUsers = 'dashboard_users';
   static const counters = '_counters';
 }
@@ -124,7 +123,9 @@ class IncidentFields {
   static const createdAt = 'createdAt';
   static const updatedAt = 'updatedAt';
 }
+// CONTRACT:INCIDENT_FIELDS:END
 
+// CONTRACT:AMBULANCE_FIELDS:START
 class AmbulanceFields {
   AmbulanceFields._();
 
@@ -137,13 +138,23 @@ class AmbulanceFields {
   static const baseLocation = 'baseLocation';
   static const isOnline = 'isOnline';
   static const status = 'status';
+  static const serviceType = 'serviceType'; // 'ambulance' today; reserved for future fire/police vehicles
   static const currentIncidentId = 'currentIncidentId';
   static const currentIncidentType = 'currentIncidentType';
   static const lastActiveAt = 'lastActiveAt';
   static const createdAt = 'createdAt';
   static const updatedAt = 'updatedAt';
 }
+// CONTRACT:AMBULANCE_FIELDS:END
 
+/// Service types a dispatchable vehicle can have. Only 'ambulance' is built today.
+class ServiceTypes {
+  ServiceTypes._();
+
+  static const ambulance = 'ambulance';
+}
+
+// CONTRACT:AMBULANCE_PRIVATE_FIELDS:START
 class AmbulancePrivateFields {
   AmbulancePrivateFields._();
 
@@ -151,7 +162,9 @@ class AmbulancePrivateFields {
   static const email = 'email';
   static const phone = 'phone';
 }
+// CONTRACT:AMBULANCE_PRIVATE_FIELDS:END
 
+// CONTRACT:TRACKING_FIELDS:START
 class TrackingFields {
   TrackingFields._();
 
@@ -162,7 +175,9 @@ class TrackingFields {
   static const accuracy = 'accuracy';
   static const updatedAt = 'updatedAt';
 }
+// CONTRACT:TRACKING_FIELDS:END
 
+// CONTRACT:CITIZEN_FIELDS:START
 class CitizenFields {
   CitizenFields._();
 
@@ -176,7 +191,9 @@ class CitizenFields {
   static const fcmToken = 'fcmToken';
   static const createdAt = 'createdAt';
 }
+// CONTRACT:CITIZEN_FIELDS:END
 
+// CONTRACT:NOTIFICATION_FIELDS:START
 class NotificationRecipientRole {
   NotificationRecipientRole._();
 
@@ -199,7 +216,9 @@ class NotificationFields {
   static const readAt = 'readAt';
   static const createdAt = 'createdAt';
 }
+// CONTRACT:NOTIFICATION_FIELDS:END
 
+// CONTRACT:AMBULANCE_HISTORY_FIELDS:START
 class AmbulanceHistoryFields {
   AmbulanceHistoryFields._();
 
@@ -211,4 +230,4 @@ class AmbulanceHistoryFields {
   static const status = 'status';
   static const completedAt = 'completedAt';
 }
-// CONTRACT:INCIDENT_FIELDS:END
+// CONTRACT:AMBULANCE_HISTORY_FIELDS:END

@@ -325,6 +325,92 @@ export const deleteAmbulanceAccount = onCall(async (request) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// HOSPITAL ACCOUNT MANAGEMENT (dashboard — admin only)
+// ═══════════════════════════════════════════════════════════════════
+
+export const createHospitalAccount = onCall(async (request) => {
+  await requireDashboardUser(request.auth?.uid, ['admin']);
+
+  const {
+    hospitalId, email, password, name, address, latitude, longitude,
+    phoneNumber, specialties, hasER, isGovernment, bedsAvailable, is24Hours, hours,
+  } = request.data as {
+    hospitalId: string;
+    email: string;
+    password: string;
+    name: string;
+    address?: string;
+    latitude: number;
+    longitude: number;
+    phoneNumber?: string;
+    specialties?: string[];
+    hasER?: boolean;
+    isGovernment?: boolean;
+    bedsAvailable?: number;
+    is24Hours?: boolean;
+    hours?: string;
+  };
+
+  if (!hospitalId || !email || !password || !name || latitude == null || longitude == null) {
+    throw new HttpsError('invalid-argument', 'Missing required fields: hospitalId, email, password, name, latitude, longitude');
+  }
+
+  try {
+    const userRecord = await admin.auth().createUser({ email, password, displayName: name });
+    await admin.auth().setCustomUserClaims(userRecord.uid, { role: 'hospital', hospitalId });
+
+    await db.collection(COLLECTIONS.hospitals).doc(hospitalId).set({
+      name,
+      address: address ?? '',
+      latitude,
+      longitude,
+      phoneNumber: phoneNumber ?? '',
+      specialties: specialties ?? [],
+      hasER: hasER === true,
+      isGovernment: isGovernment === true,
+      bedsAvailable: bedsAvailable ?? 0,
+      is24Hours: is24Hours === true,
+      hours: hours ?? '',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return { success: true, uid: userRecord.uid, hospitalId };
+  } catch (err: any) {
+    console.error('[createHospitalAccount] error:', err);
+    if (err.code === 'auth/email-already-exists') throw new HttpsError('already-exists', 'Email already registered');
+    throw new HttpsError('internal', err.message || 'Failed to create hospital account');
+  }
+});
+
+export const deleteHospitalAccount = onCall(async (request) => {
+  await requireDashboardUser(request.auth?.uid, ['admin']);
+
+  const { hospitalId } = request.data as { hospitalId: string };
+  if (!hospitalId) throw new HttpsError('invalid-argument', 'hospitalId required');
+
+  const hospSnap = await db.collection(COLLECTIONS.hospitals).doc(hospitalId).get();
+  if (!hospSnap.exists) throw new HttpsError('not-found', 'Hospital not found');
+
+  // The hospital's Auth uid isn't stored on the hospitals doc (unlike
+  // ambulances/ambulance_private) — custom claims carry hospitalId, not the
+  // reverse, so we look the user up by the claim instead of by a stored uid.
+  const list = await admin.auth().listUsers();
+  const match = list.users.find(u => (u.customClaims as any)?.hospitalId === hospitalId);
+  if (match) {
+    try {
+      await admin.auth().updateUser(match.uid, { disabled: true });
+    } catch (err) {
+      console.warn(`[deleteHospitalAccount] could not disable Auth user ${match.uid}:`, err);
+    }
+  }
+
+  await db.collection(COLLECTIONS.hospitals).doc(hospitalId).delete();
+
+  return { success: true };
+});
+
+// ═══════════════════════════════════════════════════════════════════
 // DASHBOARD USER MANAGEMENT (admin only)
 // ═══════════════════════════════════════════════════════════════════
 
@@ -411,7 +497,12 @@ export const markNotificationRead = onCall(async (request) => {
 // The legacy dashboard functions/index.js had one; it was deleted (step 1.2).
 // ═══════════════════════════════════════════════════════════════════
 
-// NOTE on AI: assignHospitalDisabled (src/ai/assignHospital.disabled.ts) is
-// intentionally not exported/imported here. v1 hospital selection is manual.
+// NOTE on hospital assignment: auto-suggestion now runs inside tryAutoAssign
+// (see lib/autoAssign.ts -> lib/hospitalMatch.ts), a deterministic distance/
+// ER/bed-count rule — not AI. The previous Groq-LLM-based approach
+// (ai/assignHospital.disabled.ts) was deleted rather than revived: an LLM
+// call is unnecessary latency/cost/nondeterminism for a decision this
+// mechanical. The dashboard's manual hospital picker always remains
+// available to override the auto-suggestion.
 
 export { findNearestEligibleAmbulance }; // re-exported for the Phase 6 emulator test suite

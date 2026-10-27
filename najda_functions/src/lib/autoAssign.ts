@@ -3,6 +3,7 @@ import { COLLECTIONS, INCIDENT_STATUS, INCIDENT_FIELDS } from '../contract';
 import { db } from './firebaseAdmin';
 import { findNearestEligibleAmbulance, buildDedupeKey } from './geo';
 import { applyAssignment } from './assignment';
+import { pickNearestHospital, type HospitalCandidate } from './hospitalMatch';
 
 /**
  * Finds the nearest eligible ambulance and assigns it, distance only, no AI.
@@ -68,8 +69,24 @@ export async function tryAutoAssign(
       return; // stays pending; retryPending will try again
     }
 
+    // Read the hospital directory now, before any write in this transaction
+    // (Firestore requires all transaction reads before any write) — the
+    // dashboard's manual hospital picker can always override this suggestion.
+    const hospitalsSnap = await tx.get(db.collection(COLLECTIONS.hospitals));
+    const hospitalCandidates: HospitalCandidate[] = hospitalsSnap.docs.map(d => ({
+      id: d.id,
+      ...(d.data() as Omit<HospitalCandidate, 'id'>),
+    }));
+    const suggestion = pickNearestHospital(lat, lng, hospitalCandidates);
+
     applyAssignment(tx, incidentRef, incidentId, incidentCollection, nearest.ambulanceDoc, 'auto');
-    tx.update(incidentRef, { dedupeKey });
+    tx.update(incidentRef, {
+      dedupeKey,
+      ...(suggestion && {
+        [INCIDENT_FIELDS.hospitalId]: suggestion.hospitalId,
+        [INCIDENT_FIELDS.suggestedHospitalName]: suggestion.hospitalName,
+      }),
+    });
     assignedAmbulanceId = nearest.ambulanceDoc.id;
   });
 

@@ -57,6 +57,17 @@ service cloud.firestore {
       );
     }
 
+    // Hospital account (created via createHospitalAccount): a standalone
+    // Firebase Auth user — like an ambulance account — identified by the
+    // role + hospitalId custom claims, not a dashboard_users doc.
+    function isHospitalRole() {
+      return isAuthenticated() && request.auth.token.role == "hospital";
+    }
+
+    function isOwnHospital(hospitalId) {
+      return hospitalId != null && isHospitalRole() && request.auth.token.hospitalId == hospitalId;
+    }
+
     // ── Incident status machine (mirrors najda_functions/src/contract.ts
     //    STATUS_TRANSITIONS — this is the actor-level half of enforcement;
     //    the Cloud Function status-machine trigger is the structural
@@ -91,7 +102,8 @@ service cloud.firestore {
     match /criticals/{docId} {
       allow read: if isOwner(resource.data.patientUid)
         || isAssignedAmbulance(resource.data.get("assignedAmbulanceId", null))
-        || isDashboardUser();
+        || isDashboardUser()
+        || isOwnHospital(resource.data.get("hospitalId", null));
 
       allow create: if isOwner(request.resource.data.patientUid) && isValidNewIncident(request.resource.data);
 
@@ -125,7 +137,8 @@ service cloud.firestore {
     match /incidents/{docId} {
       allow read: if isOwner(resource.data.patientUid)
         || isAssignedAmbulance(resource.data.get("assignedAmbulanceId", null))
-        || isDashboardUser();
+        || isDashboardUser()
+        || isOwnHospital(resource.data.get("hospitalId", null));
 
       allow create: if isOwner(request.resource.data.patientUid) && isValidNewIncident(request.resource.data);
 
@@ -252,31 +265,21 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // hospitals — directory for manual hospital selection in v1.
+    // hospitals — directory, managed by the dashboard. A hospital's own
+    // account (custom claims role:"hospital" + hospitalId, created via
+    // createHospitalAccount) may update a narrow operational-field
+    // whitelist on its own doc only; name/location/specialties stay
+    // admin-only.
     // ═══════════════════════════════════════════════════════════════════════
 
     match /hospitals/{id} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // join_requests — public create (no auth required — this is a "join
-    // our fleet" form, filled out before anyone has an account), strict
-    // field validation. Only dashboard/admin can read and process.
-    // ═══════════════════════════════════════════════════════════════════════
-
-    function isValidJoinRequest(data) {
-      return data.keys().hasOnly(["name", "phone", "email", "ambulanceId", "area", "status", "createdAt", "submittedAt"])
-        && data.name is string && data.name.size() > 0
-        && data.phone is string && data.phone.size() > 0
-        && data.status == "pending";
-    }
-
-    match /join_requests/{requestId} {
-      allow create: if isValidJoinRequest(request.resource.data);
-      allow read, update: if isDashboardUser();
-      allow delete: if isAdmin();
+      allow update: if isAdmin() || (
+          isOwnHospital(id)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(["phoneNumber", "hours", "bedsAvailable", "hasER", "updatedAt"])
+        );
+      allow create, delete: if isAdmin();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -324,12 +327,23 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // Default — authenticated read / admin write only.
+    // Default — deny by default. Every real collection has its own explicit
+    // match block above; this only catches anything unlisted.
+    //
+    // IMPORTANT: Firestore evaluates ALL matching `match` blocks for a path
+    // and allows a request if ANY of them allows it (not "most specific
+    // wins"). Because `{document=**}` matches every path, this catch-all
+    // runs ALONGSIDE every collection's own rule above — so it previously
+    // read `allow read: if isAuthenticated()`, which silently granted every
+    // signed-in user (any citizen, any ambulance, any hospital account)
+    // read access to EVERY document in the database — including other
+    // citizens' medical profiles and ambulance_private's emails/phones —
+    // regardless of what the specific rules above tried to restrict. Fixed
+    // to admin-only, matching `write`.
     // ═══════════════════════════════════════════════════════════════════════
 
     match /{document=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
   }
 }

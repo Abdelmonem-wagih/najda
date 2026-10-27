@@ -23,7 +23,6 @@ export const COLLECTIONS = {
   notifications: 'notifications',
   ambulanceHistory: 'ambulance_history',
   hospitals: 'hospitals',
-  joinRequests: 'join_requests',
   dashboardUsers: 'dashboard_users',
   counters: '_counters',
 } as const;
@@ -106,6 +105,7 @@ export function isLegalTransition(
 }
 
 // ─── Field name constants (criticals + incidents share this shape) ────────
+// CONTRACT:INCIDENT_FIELDS:START
 export const INCIDENT_FIELDS = {
   shortId: 'shortId',
   incidentType: 'incidentType',
@@ -151,7 +151,9 @@ export const INCIDENT_FIELDS = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
 } as const;
+// CONTRACT:INCIDENT_FIELDS:END
 
+// CONTRACT:AMBULANCE_FIELDS:START
 export const AMBULANCE_FIELDS = {
   uid: 'uid',
   ambulanceId: 'ambulanceId',
@@ -162,19 +164,29 @@ export const AMBULANCE_FIELDS = {
   baseLocation: 'baseLocation',
   isOnline: 'isOnline',
   status: 'status',
+  serviceType: 'serviceType', // 'ambulance' today; reserved for future fire/police vehicles
   currentIncidentId: 'currentIncidentId',
   currentIncidentType: 'currentIncidentType',
   lastActiveAt: 'lastActiveAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
 } as const;
+// CONTRACT:AMBULANCE_FIELDS:END
 
+/** Service types a dispatchable vehicle can have. Only 'ambulance' is built today. */
+export const SERVICE_TYPES = {
+  ambulance: 'ambulance',
+} as const;
+
+// CONTRACT:AMBULANCE_PRIVATE_FIELDS:START
 export const AMBULANCE_PRIVATE_FIELDS = {
   fcmToken: 'fcmToken',
   email: 'email',
   phone: 'phone',
 } as const;
+// CONTRACT:AMBULANCE_PRIVATE_FIELDS:END
 
+// CONTRACT:TRACKING_FIELDS:START
 export const TRACKING_FIELDS = {
   latitude: 'latitude',
   longitude: 'longitude',
@@ -183,7 +195,9 @@ export const TRACKING_FIELDS = {
   accuracy: 'accuracy',
   updatedAt: 'updatedAt',
 } as const;
+// CONTRACT:TRACKING_FIELDS:END
 
+// CONTRACT:CITIZEN_FIELDS:START
 export const CITIZEN_FIELDS = {
   role: 'role',
   phoneNumber: 'phoneNumber',
@@ -195,7 +209,9 @@ export const CITIZEN_FIELDS = {
   fcmToken: 'fcmToken',
   createdAt: 'createdAt',
 } as const;
+// CONTRACT:CITIZEN_FIELDS:END
 
+// CONTRACT:NOTIFICATION_FIELDS:START
 export const NOTIFICATION_RECIPIENT_ROLE = {
   ambulance: 'ambulance',
   citizen: 'citizen',
@@ -214,7 +230,9 @@ export const NOTIFICATION_FIELDS = {
   readAt: 'readAt',
   createdAt: 'createdAt',
 } as const;
+// CONTRACT:NOTIFICATION_FIELDS:END
 
+// CONTRACT:AMBULANCE_HISTORY_FIELDS:START
 export const AMBULANCE_HISTORY_FIELDS = {
   ambulanceId: 'ambulanceId',
   incidentId: 'incidentId',
@@ -224,11 +242,37 @@ export const AMBULANCE_HISTORY_FIELDS = {
   status: 'status',
   completedAt: 'completedAt',
 } as const;
+// CONTRACT:AMBULANCE_HISTORY_FIELDS:END
 
+// CONTRACT:HOSPITAL_FIELDS:START
+export const HOSPITAL_FIELDS = {
+  name: 'name',
+  address: 'address',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  phoneNumber: 'phoneNumber',
+  specialties: 'specialties',
+  hasER: 'hasER',
+  isGovernment: 'isGovernment',
+  bedsAvailable: 'bedsAvailable',
+  is24Hours: 'is24Hours',
+  hours: 'hours',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+} as const;
+// CONTRACT:HOSPITAL_FIELDS:END
+
+// CONTRACT:DASHBOARD_ROLES:START
+export const DASHBOARD_ROLES = ['admin', 'operator', 'hospital'] as const;
+// CONTRACT:DASHBOARD_ROLES:END
+export type DashboardRole = typeof DASHBOARD_ROLES[number];
+
+// CONTRACT:DASHBOARD_USER_FIELDS:START
 export const DASHBOARD_USER_FIELDS = {
-  role: 'role', // 'admin' | 'operator'
+  role: 'role', // one of DASHBOARD_ROLES
   name: 'name',
   email: 'email',
   active: 'active',
   createdAt: 'createdAt',
 } as const;
+// CONTRACT:DASHBOARD_USER_FIELDS:END

@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 /**
- * Fails (exit 1) if the collection names or status enums declared in the
- * three mirrored contract files have drifted apart:
+ * Fails (exit 1) if any shared schema block declared in the mirrored contract
+ * files has drifted apart:
  *   - najda_functions/src/contract.ts
  *   - lib/core/constants/firestore_contract.dart
  *   - ../najda-dashboard/src/lib/contract.js  (override with DASHBOARD_CONTRACT env var)
  *
- * Each file must contain matching `// CONTRACT:<BLOCK>:START` / `:END`
- * marker comments (works across Dart/TS/JS since all three use `//`).
- * Within each marked block, every single- or double-quoted string literal
- * is extracted and the resulting *set* of values is compared across files.
- * This deliberately ignores key names/ordering/language syntax — only the
- * actual collection-name/status-value strings have to match.
+ * Each file marks its blocks with matching `// CONTRACT:<BLOCK>:START` / `:END`
+ * comments (works across Dart/TS/JS since all three use `//`). Within each
+ * marked block, every single- or double-quoted string literal is extracted
+ * and the resulting *set* of values is compared across every file that
+ * declares that block — a file is free to not declare a block that doesn't
+ * apply to it (e.g. the Flutter app has no use for dashboard-only blocks),
+ * but any two files that BOTH declare a block must agree on its values.
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -21,23 +22,43 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '..');
 
 const DASHBOARD_CONTRACT =
-  process.env.DASHBOARD_CONTRACT || join(repoRoot, '..', 'najda-dashboard', 'src', 'lib', 'contract.js');
+  process.env.DASHBOARD_CONTRACT || 'E:\\najda-dashboard\\src\\lib\\contract.js';
 
 const FILES = [
   { label: 'functions (contract.ts)', path: join(repoRoot, 'najda_functions', 'src', 'contract.ts') },
   { label: 'flutter (firestore_contract.dart)', path: join(repoRoot, 'lib', 'core', 'constants', 'firestore_contract.dart') },
-  { label: 'dashboard (contract.js)', path: DASHBOARD_CONTRACT, optional: true },
+  { label: 'dashboard (contract.js)', path: DASHBOARD_CONTRACT },
 ];
 
-const BLOCKS = ['COLLECTIONS', 'INCIDENT_STATUS', 'AMBULANCE_STATUS'];
+// Every file that DOES declare a block must agree on its values. A file that
+// doesn't declare a block at all (no markers) is simply left out of that
+// block's comparison — see extractBlock(). Only a malformed marker pair
+// (start without end, or vice versa) is an error.
+const BLOCKS = [
+  'COLLECTIONS',
+  'INCIDENT_STATUS',
+  'AMBULANCE_STATUS',
+  'INCIDENT_FIELDS',
+  'AMBULANCE_FIELDS',
+  'AMBULANCE_PRIVATE_FIELDS',
+  'TRACKING_FIELDS',
+  'CITIZEN_FIELDS',
+  'NOTIFICATION_FIELDS',
+  'AMBULANCE_HISTORY_FIELDS',
+  'HOSPITAL_FIELDS',
+  'DASHBOARD_ROLES',
+  'DASHBOARD_USER_FIELDS',
+];
 
-function extractBlock(source, blockName, fileLabel) {
+/** Returns the text between a block's markers, or null if the file doesn't declare that block at all. */
+function extractBlock(source, blockName) {
   const startMarker = `CONTRACT:${blockName}:START`;
   const endMarker = `CONTRACT:${blockName}:END`;
   const startIdx = source.indexOf(startMarker);
   const endIdx = source.indexOf(endMarker);
+  if (startIdx === -1 && endIdx === -1) return null;
   if (startIdx === -1 || endIdx === -1 || endIdx < startIdx) {
-    throw new Error(`[${fileLabel}] missing or malformed ${blockName} markers`);
+    throw new Error(`malformed ${blockName} markers`);
   }
   return source.slice(startIdx + startMarker.length, endIdx);
 }
@@ -69,10 +90,6 @@ const loaded = [];
 
 for (const f of FILES) {
   if (!existsSync(f.path)) {
-    if (f.optional) {
-      console.warn(`⚠️  skipping ${f.label}: ${f.path} not found (dashboard repo not alongside this one?)`);
-      continue;
-    }
     console.error(`❌ required contract file missing: ${f.path}`);
     failed = true;
     continue;
@@ -86,17 +103,23 @@ if (loaded.length < 2) {
 }
 
 for (const blockName of BLOCKS) {
-  const extracted = loaded.map(f => {
+  const extracted = [];
+  for (const f of loaded) {
     try {
-      return { label: f.label, values: extractStringLiterals(extractBlock(f.source, blockName, f.label)) };
+      const block = extractBlock(f.source, blockName);
+      if (block !== null) extracted.push({ label: f.label, values: extractStringLiterals(block) });
     } catch (err) {
-      console.error(`❌ ${err.message}`);
+      console.error(`❌ [${f.label}] ${err.message}`);
       failed = true;
-      return null;
     }
-  }).filter(Boolean);
+  }
 
-  if (extracted.length < 2) continue;
+  if (extracted.length < 2) {
+    if (extracted.length === 1) {
+      console.log(`ℹ️  ${blockName}: only declared by ${extracted[0].label}, nothing to compare`);
+    }
+    continue;
+  }
 
   const [first, ...rest] = extracted;
   for (const other of rest) {

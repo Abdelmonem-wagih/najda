@@ -3,13 +3,15 @@
  * Firestore and Storage emulators running (run via `npm run test:rules`,
  * which wraps this in `firebase emulators:exec`).
  *
- * NOTE: could not be executed in this environment — the Firestore emulator
- * in this firebase-tools version requires Java 21+, and this machine has
- * Java 17 (confirmed via `firebase emulators:exec`, which refused to start
- * with "firebase-tools no longer supports Java version before 21"). This
- * file type-checks cleanly (`tsc --noEmit`) and was carefully hand-reviewed
- * against firestore.rules/storage.rules line by line, but running it for
- * real against the emulator is a manual step — see V1_FIX_REPORT.md.
+ * NOTE: still could not be executed in this environment — Java is now 21
+ * (the earlier Java-17 blocker is gone), but the Firestore emulator's
+ * embedded Netty server fails to open a loopback selector on this machine
+ * (`java.net.SocketException: Invalid argument: connect` inside
+ * `WEPollSelectorProvider`), a Windows-networking issue unrelated to these
+ * rules. This file type-checks cleanly (`tsc --noEmit`) and the hospital-role
+ * additions below were hand-reviewed line by line against the new
+ * firestore.rules helpers, but running it for real against the emulator is
+ * still a manual step — see V1_FIX_REPORT.md.
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -59,7 +61,8 @@ async function setup(): Promise<void> {
     await db.collection('criticals').doc('crit1').set({
       patientUid: 'citizen1', status: 'assigned', assignedAmbulanceId: 'amb1', assignedAmbulanceName: 'ABC-1',
       assignedDriverName: 'Driver One', patientName: 'Test Patient', phoneNumber: '01011111111',
-      emergencyContact: '01022222222', latitude: 30.01, longitude: 31.01, address: 'Test St', createdAt: now, updatedAt: now,
+      emergencyContact: '01022222222', latitude: 30.01, longitude: 31.01, address: 'Test St',
+      hospitalId: 'hosp1', createdAt: now, updatedAt: now,
     });
     await db.collection('criticals').doc('critPending').set({
       patientUid: 'citizen1', status: 'pending', assignedAmbulanceId: null, patientName: 'Pending Patient',
@@ -73,6 +76,11 @@ async function setup(): Promise<void> {
     await db.collection('ambulance_history').doc('hist1').set({ ambulanceId: 'amb1', incidentId: 'crit1', incidentCollection: 'criticals', patientName: 'Test Patient', address: 'Test St', status: 'completed', completedAt: now });
 
     await db.collection('hospitals').doc('hosp1').set({ name: 'Test Hospital', lat: 30.0, lng: 31.0, bedsAvailable: 5 });
+    await db.collection('hospitals').doc('hosp2').set({
+      name: 'Other Hospital', latitude: 30.1, longitude: 31.1, phoneNumber: '0200000000',
+      specialties: ['general'], hasER: true, isGovernment: false, bedsAvailable: 10, is24Hours: true,
+      createdAt: now, updatedAt: now,
+    });
 
     await db.collection('citizens').doc('citizen1').set({ role: 'citizen', phoneNumber: '01011111111', firstName: 'A', lastName: 'B', createdAt: now });
 
@@ -238,6 +246,9 @@ async function main() {
   test('citizens: a different citizen cannot write someone else\'s profile', async () => {
     await assertFails(ctxFor('citizen2').firestore().collection('citizens').doc('citizen1').update({ firstName: 'Hacked' }));
   });
+  test('citizens: a different citizen CANNOT read someone else\'s profile (regression: catch-all must not leak this)', async () => {
+    await assertFails(ctxFor('citizen2').firestore().collection('citizens').doc('citizen1').get());
+  });
   test('citizens: ambulance crew can read for incident context', async () => {
     await assertSucceeds(ctxFor('amb1', { role: 'ambulance', ambulanceId: 'amb1' }).firestore().collection('citizens').doc('citizen1').get());
   });
@@ -246,25 +257,28 @@ async function main() {
   test('hospitals: any signed-in user can read', async () => {
     await assertSucceeds(ctxFor('citizen1').firestore().collection('hospitals').doc('hosp1').get());
   });
-  test('hospitals: a non-admin cannot write', async () => {
+  test('hospitals: a non-admin, non-owning dashboard user cannot write', async () => {
     await assertFails(ctxFor('operator1').firestore().collection('hospitals').doc('hosp1').update({ bedsAvailable: 0 }));
   });
   test('hospitals: dashboard admin can write', async () => {
     await assertSucceeds(ctxFor('admin1').firestore().collection('hospitals').doc('hosp1').update({ bedsAvailable: 4 }));
   });
+  test('hospitals: own hospital account can update its own whitelisted operational field', async () => {
+    await assertSucceeds(ctxFor('hosp1', { role: 'hospital', hospitalId: 'hosp1' }).firestore().collection('hospitals').doc('hosp1').update({ bedsAvailable: 3, updatedAt: new Date() }));
+  });
+  test('hospitals: own hospital account CANNOT update its name (admin-only field)', async () => {
+    await assertFails(ctxFor('hosp1', { role: 'hospital', hospitalId: 'hosp1' }).firestore().collection('hospitals').doc('hosp1').update({ name: 'Renamed Hospital', updatedAt: new Date() }));
+  });
+  test('hospitals: a hospital account cannot update a DIFFERENT hospital\'s doc', async () => {
+    await assertFails(ctxFor('hosp1', { role: 'hospital', hospitalId: 'hosp1' }).firestore().collection('hospitals').doc('hosp2').update({ bedsAvailable: 0, updatedAt: new Date() }));
+  });
 
-  // ── join_requests ─────────────────────────────────────────────────────
-  test('join_requests: a well-formed public submission succeeds, even unauthenticated', async () => {
-    await assertSucceeds(ctxFor(null).firestore().collection('join_requests').add({ name: 'Volunteer', phone: '01099999999', status: 'pending', createdAt: new Date() }));
+  // ── hospitals: incident/critical read scoping ──────────────────────────
+  test('criticals: the hospital a case is assigned to can read it', async () => {
+    await assertSucceeds(ctxFor('hosp1', { role: 'hospital', hospitalId: 'hosp1' }).firestore().collection('criticals').doc('crit1').get());
   });
-  test('join_requests: a submission missing a name is rejected', async () => {
-    await assertFails(ctxFor(null).firestore().collection('join_requests').add({ phone: '01099999999', status: 'pending', createdAt: new Date() }));
-  });
-  test('join_requests: a submission with an unexpected field is rejected', async () => {
-    await assertFails(ctxFor(null).firestore().collection('join_requests').add({ name: 'X', phone: '01099999999', status: 'pending', createdAt: new Date(), isAdmin: true }));
-  });
-  test('join_requests: a random citizen cannot read submissions', async () => {
-    await assertFails(ctxFor('citizen1').firestore().collection('join_requests').doc('whatever').get());
+  test('criticals: a DIFFERENT hospital cannot read a case assigned elsewhere', async () => {
+    await assertFails(ctxFor('hosp2', { role: 'hospital', hospitalId: 'hosp2' }).firestore().collection('criticals').doc('crit1').get());
   });
 
   // ── dashboard_users ───────────────────────────────────────────────────
@@ -282,6 +296,9 @@ async function main() {
   });
   test('dashboard_users: a deactivated dashboard user has no dashboard access', async () => {
     await assertFails(ctxFor('inactive1').firestore().collection('ambulances').doc('amb1').get());
+  });
+  test('dashboard_users: a random citizen CANNOT read a dashboard_users doc (regression: catch-all must not leak this)', async () => {
+    await assertFails(ctxFor('citizen1').firestore().collection('dashboard_users').doc('operator1').get());
   });
 
   // ── _counters ─────────────────────────────────────────────────────────
