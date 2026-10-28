@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.findNearestEligibleAmbulance = exports.markNotificationRead = exports.setDashboardUserActive = exports.createDashboardUser = exports.deleteHospitalAccount = exports.createHospitalAccount = exports.deleteAmbulanceAccount = exports.createAmbulanceAccount = exports.releaseAmbulance = exports.manualAssign = exports.retryPending = exports.onIncidentStatusChanged = exports.onCriticalStatusChanged = exports.autoAssignIncident = exports.autoAssignCritical = void 0;
+exports.findNearestEligibleAmbulance = exports.markNotificationRead = exports.setDashboardUserActive = exports.createDashboardUser = exports.resetHospitalPassword = exports.deleteHospitalAccount = exports.createHospitalAccount = exports.resetAmbulancePassword = exports.deleteAmbulanceAccount = exports.createAmbulanceAccount = exports.releaseAmbulance = exports.manualAssign = exports.retryPending = exports.onIncidentStatusChanged = exports.onCriticalStatusChanged = exports.autoAssignIncident = exports.autoAssignCritical = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
@@ -61,6 +61,15 @@ async function requireDashboardUser(uid, allowedRoles) {
     if (!allowedRoles.includes(data.role))
         throw new https_1.HttpsError('permission-denied', 'Insufficient role');
     return data;
+}
+// Alphanumeric, avoids visually-ambiguous characters (0/O, 1/l/I) since this
+// is read off a screen and typed in by whoever receives it.
+function generatePassword(length = 10) {
+    const alphabet = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    let out = '';
+    for (let i = 0; i < length; i++)
+        out += alphabet[Math.floor(Math.random() * alphabet.length)];
+    return out;
 }
 async function afterAssignment(incidentId, incidentCollection, ambulanceId) {
     const snap = await firebaseAdmin_1.db.collection(incidentCollection).doc(incidentId).get();
@@ -223,7 +232,7 @@ exports.releaseAmbulance = (0, https_1.onCall)(async (request) => {
 // ═══════════════════════════════════════════════════════════════════
 exports.createAmbulanceAccount = (0, https_1.onCall)(async (request) => {
     await requireDashboardUser(request.auth?.uid, ['admin']);
-    const { ambulanceId, email, password, plateNumber, driverName, phone, area, baseLocation } = request.data;
+    const { ambulanceId, email, password, plateNumber, driverName, paramedicName, phone, area, baseLocation } = request.data;
     if (!ambulanceId || !email || !password || !baseLocation) {
         throw new https_1.HttpsError('invalid-argument', 'Missing required fields: ambulanceId, email, password, baseLocation');
     }
@@ -241,6 +250,7 @@ exports.createAmbulanceAccount = (0, https_1.onCall)(async (request) => {
             ambulanceId,
             plateNumber: plateNumber ?? '',
             driverName: driverName ?? '',
+            paramedicName: paramedicName ?? '',
             area: area ?? '',
             baseLocation,
             isOnline: false,
@@ -289,6 +299,25 @@ exports.deleteAmbulanceAccount = (0, https_1.onCall)(async (request) => {
     await batch.commit();
     return { success: true };
 });
+// The login password itself can never be shown again once set — Firebase
+// Auth stores it one-way hashed, same as every other Auth provider — so
+// "I forgot the password I set at creation" is handled by setting a brand
+// new one here and showing that once, not by recovering the old one.
+exports.resetAmbulancePassword = (0, https_1.onCall)(async (request) => {
+    await requireDashboardUser(request.auth?.uid, ['admin']);
+    const { ambulanceId } = request.data;
+    if (!ambulanceId)
+        throw new https_1.HttpsError('invalid-argument', 'ambulanceId required');
+    const ambSnap = await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.ambulances).doc(ambulanceId).get();
+    if (!ambSnap.exists)
+        throw new https_1.HttpsError('not-found', 'Ambulance not found');
+    const uid = ambSnap.data()?.uid;
+    if (!uid)
+        throw new https_1.HttpsError('failed-precondition', 'No Auth account linked to this ambulance');
+    const password = generatePassword();
+    await admin.auth().updateUser(uid, { password });
+    return { success: true, password };
+});
 // ═══════════════════════════════════════════════════════════════════
 // HOSPITAL ACCOUNT MANAGEMENT (dashboard — admin only)
 // ═══════════════════════════════════════════════════════════════════
@@ -301,7 +330,8 @@ exports.createHospitalAccount = (0, https_1.onCall)(async (request) => {
     try {
         const userRecord = await admin.auth().createUser({ email, password, displayName: name });
         await admin.auth().setCustomUserClaims(userRecord.uid, { role: 'hospital', hospitalId });
-        await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.hospitals).doc(hospitalId).set({
+        const batch = firebaseAdmin_1.db.batch();
+        batch.set(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.hospitals).doc(hospitalId), {
             name,
             address: address ?? '',
             latitude,
@@ -316,6 +346,17 @@ exports.createHospitalAccount = (0, https_1.onCall)(async (request) => {
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
+        // Login email + Auth uid live in hospital_private, not the public
+        // hospitals doc (readable by any authenticated user) — same separation
+        // ambulance_private already keeps for ambulance accounts. Storing uid
+        // here (rather than searching listUsers() by custom claim, the old
+        // workaround) is what lets deleteHospitalAccount/resetHospitalPassword
+        // find the Auth user directly.
+        batch.set(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.hospitalPrivate).doc(hospitalId), {
+            email,
+            uid: userRecord.uid,
+        });
+        await batch.commit();
         return { success: true, uid: userRecord.uid, hospitalId };
     }
     catch (err) {
@@ -333,21 +374,50 @@ exports.deleteHospitalAccount = (0, https_1.onCall)(async (request) => {
     const hospSnap = await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.hospitals).doc(hospitalId).get();
     if (!hospSnap.exists)
         throw new https_1.HttpsError('not-found', 'Hospital not found');
-    // The hospital's Auth uid isn't stored on the hospitals doc (unlike
-    // ambulances/ambulance_private) — custom claims carry hospitalId, not the
-    // reverse, so we look the user up by the claim instead of by a stored uid.
-    const list = await admin.auth().listUsers();
-    const match = list.users.find(u => u.customClaims?.hospitalId === hospitalId);
-    if (match) {
+    const privateSnap = await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.hospitalPrivate).doc(hospitalId).get();
+    const uid = privateSnap.data()?.uid;
+    if (uid) {
         try {
-            await admin.auth().updateUser(match.uid, { disabled: true });
+            await admin.auth().updateUser(uid, { disabled: true });
         }
         catch (err) {
-            console.warn(`[deleteHospitalAccount] could not disable Auth user ${match.uid}:`, err);
+            console.warn(`[deleteHospitalAccount] could not disable Auth user ${uid}:`, err);
         }
     }
-    await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.hospitals).doc(hospitalId).delete();
+    else {
+        // Pre-this-change hospital accounts never had a stored uid — fall back
+        // to the old listUsers()-by-claim lookup so they can still be deleted.
+        const list = await admin.auth().listUsers();
+        const match = list.users.find(u => u.customClaims?.hospitalId === hospitalId);
+        if (match) {
+            try {
+                await admin.auth().updateUser(match.uid, { disabled: true });
+            }
+            catch (err) {
+                console.warn(`[deleteHospitalAccount] could not disable Auth user ${match.uid}:`, err);
+            }
+        }
+    }
+    const batch = firebaseAdmin_1.db.batch();
+    batch.delete(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.hospitals).doc(hospitalId));
+    batch.delete(firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.hospitalPrivate).doc(hospitalId));
+    await batch.commit();
     return { success: true };
+});
+// See the comment on resetAmbulancePassword — the old password is gone for
+// good the moment it's set; this issues a new one.
+exports.resetHospitalPassword = (0, https_1.onCall)(async (request) => {
+    await requireDashboardUser(request.auth?.uid, ['admin']);
+    const { hospitalId } = request.data;
+    if (!hospitalId)
+        throw new https_1.HttpsError('invalid-argument', 'hospitalId required');
+    const privateSnap = await firebaseAdmin_1.db.collection(contract_1.COLLECTIONS.hospitalPrivate).doc(hospitalId).get();
+    const uid = privateSnap.data()?.uid;
+    if (!uid)
+        throw new https_1.HttpsError('failed-precondition', 'No Auth account linked to this hospital');
+    const password = generatePassword();
+    await admin.auth().updateUser(uid, { password });
+    return { success: true, password };
 });
 // ═══════════════════════════════════════════════════════════════════
 // DASHBOARD USER MANAGEMENT (admin only)

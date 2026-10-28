@@ -24,6 +24,8 @@ class FirestoreCollections {
   static const notifications = 'notifications';
   static const ambulanceHistory = 'ambulance_history';
   static const hospitals = 'hospitals';
+  static const hospitalPrivate = 'hospital_private';
+  static const staff = 'staff';
   static const dashboardUsers = 'dashboard_users';
   static const counters = '_counters';
 }
@@ -133,6 +135,7 @@ class AmbulanceFields {
   static const ambulanceId = 'ambulanceId';
   static const plateNumber = 'plateNumber';
   static const driverName = 'driverName';
+  static const paramedicName = 'paramedicName';
   static const name = 'name';
   static const area = 'area';
   static const baseLocation = 'baseLocation';

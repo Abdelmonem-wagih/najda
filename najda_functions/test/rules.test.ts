@@ -84,6 +84,10 @@ async function setup(): Promise<void> {
 
     await db.collection('citizens').doc('citizen1').set({ role: 'citizen', phoneNumber: '01011111111', firstName: 'A', lastName: 'B', createdAt: now });
 
+    await db.collection('hospital_private').doc('hosp1').set({ email: 'hosp1@x.com', uid: 'hosp1' });
+
+    await db.collection('staff').doc('staff1').set({ name: 'Paramedic One', phone: '01033333333', role: 'paramedic', assignedAmbulanceId: 'amb1', createdAt: now, updatedAt: now });
+
     await db.collection('_counters').doc('counter1').set({ value: 1 });
   });
 }
@@ -271,6 +275,37 @@ async function main() {
   });
   test('hospitals: a hospital account cannot update a DIFFERENT hospital\'s doc', async () => {
     await assertFails(ctxFor('hosp1', { role: 'hospital', hospitalId: 'hosp1' }).firestore().collection('hospitals').doc('hosp2').update({ bedsAvailable: 0, updatedAt: new Date() }));
+  });
+
+  // ── hospital_private ──────────────────────────────────────────────────
+  test('hospital_private: own hospital account can read its own', async () => {
+    await assertSucceeds(ctxFor('hosp1', { role: 'hospital', hospitalId: 'hosp1' }).firestore().collection('hospital_private').doc('hosp1').get());
+  });
+  test('hospital_private: dashboard user can read it', async () => {
+    await assertSucceeds(ctxFor('operator1').firestore().collection('hospital_private').doc('hosp1').get());
+  });
+  test('hospital_private: a DIFFERENT hospital cannot read it', async () => {
+    await assertFails(ctxFor('hosp2', { role: 'hospital', hospitalId: 'hosp2' }).firestore().collection('hospital_private').doc('hosp1').get());
+  });
+  test('hospital_private: a citizen cannot read it', async () => {
+    await assertFails(ctxFor('citizen1').firestore().collection('hospital_private').doc('hosp1').get());
+  });
+  test('hospital_private: no client (not even admin) can write it directly — server-only', async () => {
+    await assertFails(ctxFor('admin1').firestore().collection('hospital_private').doc('hosp1').update({ email: 'new@x.com' }));
+  });
+
+  // ── staff (paramedics/drivers roster) ───────────────────────────────────
+  test('staff: dashboard operator can read the roster', async () => {
+    await assertSucceeds(ctxFor('operator1').firestore().collection('staff').doc('staff1').get());
+  });
+  test('staff: dashboard operator can edit a staff member', async () => {
+    await assertSucceeds(ctxFor('operator1').firestore().collection('staff').doc('staff1').update({ assignedAmbulanceId: 'amb2' }));
+  });
+  test('staff: an ambulance account cannot read the roster', async () => {
+    await assertFails(ctxFor('amb1', { role: 'ambulance', ambulanceId: 'amb1' }).firestore().collection('staff').doc('staff1').get());
+  });
+  test('staff: a citizen cannot read the roster', async () => {
+    await assertFails(ctxFor('citizen1').firestore().collection('staff').doc('staff1').get());
   });
 
   // ── hospitals: incident/critical read scoping ──────────────────────────

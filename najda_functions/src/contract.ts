@@ -23,6 +23,8 @@ export const COLLECTIONS = {
   notifications: 'notifications',
   ambulanceHistory: 'ambulance_history',
   hospitals: 'hospitals',
+  hospitalPrivate: 'hospital_private',
+  staff: 'staff',
   dashboardUsers: 'dashboard_users',
   counters: '_counters',
 } as const;
@@ -159,6 +161,7 @@ export const AMBULANCE_FIELDS = {
   ambulanceId: 'ambulanceId',
   plateNumber: 'plateNumber',
   driverName: 'driverName',
+  paramedicName: 'paramedicName',
   name: 'name',
   area: 'area',
   baseLocation: 'baseLocation',
@@ -261,6 +264,29 @@ export const HOSPITAL_FIELDS = {
   updatedAt: 'updatedAt',
 } as const;
 // CONTRACT:HOSPITAL_FIELDS:END
+
+// CONTRACT:HOSPITAL_PRIVATE_FIELDS:START
+export const HOSPITAL_PRIVATE_FIELDS = {
+  email: 'email',
+  uid: 'uid',
+} as const;
+// CONTRACT:HOSPITAL_PRIVATE_FIELDS:END
+
+// CONTRACT:STAFF_ROLES:START
+export const STAFF_ROLES = ['paramedic', 'driver'] as const;
+// CONTRACT:STAFF_ROLES:END
+export type StaffRole = typeof STAFF_ROLES[number];
+
+// CONTRACT:STAFF_FIELDS:START
+export const STAFF_FIELDS = {
+  name: 'name',
+  phone: 'phone',
+  role: 'role', // one of STAFF_ROLES
+  assignedAmbulanceId: 'assignedAmbulanceId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+} as const;
+// CONTRACT:STAFF_FIELDS:END
 
 // CONTRACT:DASHBOARD_ROLES:START
 export const DASHBOARD_ROLES = ['admin', 'operator', 'hospital'] as const;

@@ -191,7 +191,7 @@ service cloud.firestore {
           // to edit these after account creation at all. Never status/
           // isOnline/currentIncidentId — those stay owner/server-only above.
           isDashboardUser()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["plateNumber", "driverName", "area", "baseLocation", "updatedAt"])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["plateNumber", "driverName", "paramedicName", "area", "baseLocation", "updatedAt"])
         );
 
       allow create, delete: if false;
@@ -280,6 +280,29 @@ service cloud.firestore {
                .hasOnly(["phoneNumber", "hours", "bedsAvailable", "hasER", "updatedAt"])
         );
       allow create, delete: if isAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // hospital_private — secrets (login email + Auth uid). Mirrors
+    // ambulance_private: the owning hospital account and dashboard users may
+    // read; create/update/delete happen only via the account-management
+    // callables (Admin SDK).
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /hospital_private/{hospId} {
+      allow read: if isOwnHospital(hospId) || isDashboardUser();
+      allow create, update, delete: if false;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // staff — paramedics/drivers roster. Plain dispatch-admin data, no Auth
+    // accounts involved (people don't log in individually — the ambulance's
+    // shared login covers that), so any dashboard user (admin or operator)
+    // may manage it, same as they already can edit ambulance fleet details.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /staff/{staffId} {
+      allow read, write: if isDashboardUser();
     }
 
     // ═══════════════════════════════════════════════════════════════════════

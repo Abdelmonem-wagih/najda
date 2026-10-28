@@ -13,7 +13,7 @@
  * any of them.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DASHBOARD_USER_FIELDS = exports.DASHBOARD_ROLES = exports.HOSPITAL_FIELDS = exports.AMBULANCE_HISTORY_FIELDS = exports.NOTIFICATION_FIELDS = exports.NOTIFICATION_RECIPIENT_ROLE = exports.CITIZEN_FIELDS = exports.TRACKING_FIELDS = exports.AMBULANCE_PRIVATE_FIELDS = exports.SERVICE_TYPES = exports.AMBULANCE_FIELDS = exports.INCIDENT_FIELDS = exports.STATUS_TRANSITIONS = exports.AMBULANCE_STATUS = exports.INCIDENT_STATUS = exports.COLLECTIONS = void 0;
+exports.DASHBOARD_USER_FIELDS = exports.DASHBOARD_ROLES = exports.STAFF_FIELDS = exports.STAFF_ROLES = exports.HOSPITAL_PRIVATE_FIELDS = exports.HOSPITAL_FIELDS = exports.AMBULANCE_HISTORY_FIELDS = exports.NOTIFICATION_FIELDS = exports.NOTIFICATION_RECIPIENT_ROLE = exports.CITIZEN_FIELDS = exports.TRACKING_FIELDS = exports.AMBULANCE_PRIVATE_FIELDS = exports.SERVICE_TYPES = exports.AMBULANCE_FIELDS = exports.INCIDENT_FIELDS = exports.STATUS_TRANSITIONS = exports.AMBULANCE_STATUS = exports.INCIDENT_STATUS = exports.COLLECTIONS = void 0;
 exports.incidentCollectionFor = incidentCollectionFor;
 exports.incidentKindFor = incidentKindFor;
 exports.isLegalTransition = isLegalTransition;
@@ -28,6 +28,8 @@ exports.COLLECTIONS = {
     notifications: 'notifications',
     ambulanceHistory: 'ambulance_history',
     hospitals: 'hospitals',
+    hospitalPrivate: 'hospital_private',
+    staff: 'staff',
     dashboardUsers: 'dashboard_users',
     counters: '_counters',
 };
@@ -143,6 +145,7 @@ exports.AMBULANCE_FIELDS = {
     ambulanceId: 'ambulanceId',
     plateNumber: 'plateNumber',
     driverName: 'driverName',
+    paramedicName: 'paramedicName',
     name: 'name',
     area: 'area',
     baseLocation: 'baseLocation',
@@ -237,6 +240,24 @@ exports.HOSPITAL_FIELDS = {
     updatedAt: 'updatedAt',
 };
 // CONTRACT:HOSPITAL_FIELDS:END
+// CONTRACT:HOSPITAL_PRIVATE_FIELDS:START
+exports.HOSPITAL_PRIVATE_FIELDS = {
+    email: 'email',
+    uid: 'uid',
+};
+// CONTRACT:HOSPITAL_PRIVATE_FIELDS:END
+// CONTRACT:STAFF_ROLES:START
+exports.STAFF_ROLES = ['paramedic', 'driver'];
+// CONTRACT:STAFF_FIELDS:START
+exports.STAFF_FIELDS = {
+    name: 'name',
+    phone: 'phone',
+    role: 'role', // one of STAFF_ROLES
+    assignedAmbulanceId: 'assignedAmbulanceId',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+};
+// CONTRACT:STAFF_FIELDS:END
 // CONTRACT:DASHBOARD_ROLES:START
 exports.DASHBOARD_ROLES = ['admin', 'operator', 'hospital'];
 // CONTRACT:DASHBOARD_USER_FIELDS:START
